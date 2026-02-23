@@ -115,13 +115,4 @@ enum SplitType: String, Codable, CaseIterable {
     }
 }
 
-enum Equipment: String, Codable, CaseIterable {
-    case barbell    = "barbell"
-    case dumbbell   = "dumbbell"
-    case cable      = "cable"
-    case machine    = "machine"
-    case bodyweight = "bodyweight"
-    case kettlebell = "kettlebell"
-    case band       = "band"
-    case trx        = "trx"
-}
+// Equipment enum je nyní v Data/Models/Exercise.swift

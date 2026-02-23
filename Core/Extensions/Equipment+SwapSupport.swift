@@ -3,20 +3,12 @@
 // + integrace SwapExerciseSheet do WorkoutView
 
 import SwiftUI
+import SwiftData
 
 // MARK: - Equipment enum
 // Přidej toto do Exercise.swift
 
-enum Equipment: String, Codable, CaseIterable {
-    case barbell        = "barbell"
-    case dumbbell       = "dumbbell"
-    case cable          = "cable"
-    case machine        = "machine"
-    case bodyweight     = "bodyweight"
-    case resistanceBand = "resistanceBand"
-    case kettlebell     = "kettlebell"
-    case pullupBar      = "pullupBar"
-}
+// Equipment enum je nyní v Data/Models/Exercise.swift
 
 // MARK: - Integrace do WorkoutView
 // Přidej do WorkoutView.swift:

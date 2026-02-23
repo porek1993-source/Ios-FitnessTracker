@@ -11,15 +11,15 @@ final class Exercise {
     var nameEN: String
     var category: ExerciseCategory
     var movementPattern: MovementPattern
-    var equipment: [Equipment]
-    var musclesTarget: [MuscleGroup]
-    var musclesSecondary: [MuscleGroup]
-    var isUnilateral: Bool
-    var instructions: String
+    var equipment: [Equipment] = []
+    var musclesTarget: [MuscleGroup] = []
+    var musclesSecondary: [MuscleGroup] = []
+    var isUnilateral: Bool = false
+    var instructions: String = ""
     var videoURL: String?
 
     @Relationship(deleteRule: .cascade)
-    var weightHistory: [WeightEntry]
+    var weightHistory: [WeightEntry] = []
 
     // MARK: - Progressive Overload Memory
 
@@ -62,6 +62,19 @@ final class Exercise {
         self.instructions = instructions
         self.weightHistory = []
     }
+}
+
+enum Equipment: String, Codable, CaseIterable {
+    case barbell        = "barbell"
+    case dumbbell       = "dumbbell"
+    case cable          = "cable"
+    case machine        = "machine"
+    case bodyweight     = "bodyweight"
+    case resistanceBand = "resistanceBand"
+    case kettlebell     = "kettlebell"
+    case pullupBar      = "pullupBar"
+    case band           = "band"
+    case trx            = "trx"
 }
 
 enum ExerciseCategory: String, Codable, CaseIterable {

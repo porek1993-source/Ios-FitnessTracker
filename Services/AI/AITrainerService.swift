@@ -47,13 +47,13 @@ final class AITrainerService: ObservableObject {
             // Pokusíme se o standardní API volání s timeoutem
             let response = try await withTimeout(seconds: apiTimeoutSeconds) {
                 let context     = try await self.contextBuilder.buildContext(for: date, profile: profile)
-                let userMessage = try self.buildUserMessage(context: context)
+                let userMessage = try await self.buildUserMessage(context: context)
                 let rawJSON     = try await self.apiClient.generate(
                     systemPrompt:   self.systemPrompt,
                     userMessage:    userMessage,
                     responseSchema: self.trainerResponseSchema
                 )
-                return try self.parseResponse(rawJSON: rawJSON)
+                return try await self.parseResponse(rawJSON: rawJSON)
             }
 
             await persistAIMetadata(response: response, date: date, profile: profile)

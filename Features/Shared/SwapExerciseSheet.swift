@@ -902,20 +902,7 @@ private struct MuscleColumn: View {
 
 // MARK: - Extensions
 
-extension Equipment {
-    var emoji: String {
-        switch self {
-        case .barbell:          return "🏋️"
-        case .dumbbell:         return "💪"
-        case .cable:            return "🔗"
-        case .machine:          return "⚙️"
-        case .bodyweight:       return "🤸"
-        case .resistanceBand:   return "🔴"
-        case .kettlebell:       return "🔔"
-        case .pullupBar:        return "🏃"
-        }
-    }
-}
+// Equipment emoji helper — nyní v Data/Models/Exercise.swift nebo podobně
 
 extension ExerciseCategory {
     var displayName: String {
@@ -953,11 +940,7 @@ extension MuscleGroup {
     }
 }
 
-// Equipment enum — pokud není v projektu, přidej sem:
-// (pravděpodobně je součástí Exercise.swift)
-// enum Equipment: String, Codable, CaseIterable {
-//     case barbell, dumbbell, cable, machine, bodyweight, resistanceBand, kettlebell, pullupBar
-// }
+// Equipment enum je nyní v Data/Models/Exercise.swift
 
 // MARK: - Preview
 

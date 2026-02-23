@@ -83,6 +83,12 @@ struct OverloadEntry: Codable {
 
 // MARK: - RESPONSE
 
+struct ResponsePlan: Codable {
+    let motivationalMessage: String
+    let warmupUrl: String?
+    let exercises: [ResponseExercise]
+}
+
 struct TrainerResponse: Codable {
     let coachMessage: String
     let sessionLabel: String
@@ -113,7 +119,8 @@ struct ResponseExercise: Codable {
     let repsMin: Int
     let repsMax: Int
     let weightKg: Double?
-    let rir: Int
+    let rir: Int?
+    let rpe: Int?
     let restSeconds: Int
     let tempo: String?
     let coachTip: String?

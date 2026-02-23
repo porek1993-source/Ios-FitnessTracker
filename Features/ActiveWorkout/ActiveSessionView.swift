@@ -514,7 +514,7 @@ private struct SetLoggerBlock: View {
 struct ActiveSetRow: View {
 
     let setNumber:  Int
-    @Binding var set: SetState
+    @Binding var currentSet: SetState
     let isActive:   Bool
     let onComplete: () -> Void
 
@@ -530,7 +530,7 @@ struct ActiveSetRow: View {
         HStack(spacing: 0) {
 
             // ① Badge
-            SetBadge(number: setNumber, isCompleted: set.isCompleted, isActive: isActive)
+            SetBadge(number: setNumber, isCompleted: currentSet.isCompleted, isActive: isActive)
                 .frame(width: 38)
 
             // ② Weight
@@ -541,34 +541,34 @@ struct ActiveSetRow: View {
                 keyboard:    .decimalPad,
                 isFocused:   _wFocus,
                 isActive:    isActive,
-                isCompleted: set.isCompleted
+                isCompleted: currentSet.isCompleted
             )
             .frame(maxWidth: .infinity)
             .padding(.horizontal, 4)
             .onChange(of: weightText) { _, v in
-                set.weightKg = Double(v.replacingOccurrences(of: ",", with: "."))
+                currentSet.weightKg = Double(v.replacingOccurrences(of: ",", with: "."))
             }
 
             // ③ Reps
             InlineField(
                 text:        $repsText,
-                hint:        "\(set.targetRepsMin)–\(set.targetRepsMax)",
+                hint:        "\(currentSet.targetRepsMin)–\(currentSet.targetRepsMax)",
                 suffix:      nil,
                 keyboard:    .numberPad,
                 isFocused:   _rFocus,
                 isActive:    isActive,
-                isCompleted: set.isCompleted
+                isCompleted: currentSet.isCompleted
             )
             .frame(width: 66)
             .padding(.horizontal, 4)
-            .onChange(of: repsText) { _, v in set.reps = Int(v) }
+            .onChange(of: repsText) { _, v in currentSet.reps = Int(v) }
 
             // ④ RPE
-            RPECell(value: $set.rpe, isActive: isActive, isCompleted: set.isCompleted)
+            RPECell(value: $currentSet.rpe, isActive: isActive, isCompleted: currentSet.isCompleted)
                 .frame(width: 52)
-                .onTapGesture { if isActive && !set.isCompleted { showRPE = true } }
+                .onTapGesture { if isActive && !currentSet.isCompleted { showRPE = true } }
                 .sheet(isPresented: $showRPE) {
-                    RPEPickerView(selected: $set.rpe)
+                    RPEPickerView(selected: $currentSet.rpe)
                         .presentationDetents([.height(280)])
                 }
 
@@ -576,7 +576,7 @@ struct ActiveSetRow: View {
             CompleteButton(
                 canComplete: canComplete,
                 isActive:    isActive,
-                isCompleted: set.isCompleted,
+                isCompleted: currentSet.isCompleted,
                 bounce:      bounce,
                 action:      handleComplete
             )
@@ -587,23 +587,23 @@ struct ActiveSetRow: View {
         .background(rowBG)
         .opacity(rowOpacity)
         .animation(.easeInOut(duration: 0.18), value: isActive)
-        .animation(.easeInOut(duration: 0.18), value: set.isCompleted)
+        .animation(.easeInOut(duration: 0.18), value: currentSet.isCompleted)
         .onAppear {
-            if let prev = set.previousWeightKg {
+            if let prev = currentSet.previousWeightKg {
                 weightText   = prev.truncatingRemainder(dividingBy: 1) == 0
                     ? String(format: "%.0f", prev) : String(format: "%.1f", prev)
-                set.weightKg = prev
+                currentSet.weightKg = prev
             }
         }
     }
 
     private var previousWeightHint: String {
-        guard let prev = set.previousWeightKg else { return "—" }
+        guard let prev = currentSet.previousWeightKg else { return "—" }
         return prev.truncatingRemainder(dividingBy: 1) == 0
             ? String(format: "%.0f", prev) : String(format: "%.1f", prev)
     }
 
-    private var canComplete: Bool { set.weightKg != nil && set.reps != nil }
+    private var canComplete: Bool { currentSet.weightKg != nil && currentSet.reps != nil }
 
     private func handleComplete() {
         withAnimation(.spring(response: 0.12, dampingFraction: 0.45)) { bounce = 0.80 }
@@ -622,7 +622,7 @@ struct ActiveSetRow: View {
     }
 
     private var rowOpacity: Double {
-        set.isCompleted ? 0.50 : (isActive ? 1.0 : 0.45)
+        currentSet.isCompleted ? 0.50 : (isActive ? 1.0 : 0.45)
     }
 }
 
