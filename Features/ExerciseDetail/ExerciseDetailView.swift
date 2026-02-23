@@ -217,7 +217,7 @@ private struct TagChip: View {
 }
 
 /// Jednoduchý FlowLayout pro dynamické zalamování tagů.
-struct FlowLayout: Layout {
+private struct FlowLayout: Layout {
     var spacing: CGFloat = 8
 
     func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {

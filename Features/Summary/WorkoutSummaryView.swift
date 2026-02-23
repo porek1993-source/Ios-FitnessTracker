@@ -815,8 +815,11 @@ private struct EllipticalGlow: View {
         equipment: [.barbell], musclesTarget: [.pecs], musclesSecondary: [.triceps, .delts]
     )
 
-    let mockSession = WorkoutSession(plan: nil, plannedDay: nil)
-    mockSession.durationMinutes = 62
+    let mockSession: WorkoutSession = {
+        let session = WorkoutSession(plan: nil, plannedDay: nil)
+        session.durationMinutes = 62
+        return session
+    }()
 
     let mockGains: [XPGain] = [
         XPGain(muscleGroup: .pecs,     xpEarned: 1850, volumeKg: 1850,

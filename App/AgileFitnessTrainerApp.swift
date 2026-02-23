@@ -29,7 +29,7 @@ struct RootView: View {
         if profiles.isEmpty {
             OnboardingView()
         } else {
-            DashboardView()
+            TrainerDashboardView()
         }
     }
 }

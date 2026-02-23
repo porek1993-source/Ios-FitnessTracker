@@ -194,9 +194,9 @@ final class DashboardViewModel: ObservableObject {
     }
 }
 
-// MARK: - DashboardView
+// MARK: - TrainerDashboardView
 
-struct DashboardView: View {
+struct TrainerDashboardView: View {
     @Query private var profiles: [UserProfile]
     @Environment(\.modelContext) private var modelContext
     @EnvironmentObject private var healthKit: HealthKitService
@@ -1072,7 +1072,7 @@ private struct FlowLayout: Layout {
 // MARK: - Preview
 
 #Preview {
-    DashboardView()
+    TrainerDashboardView()
         .modelContainer(for: [UserProfile.self, WorkoutPlan.self,
                                PlannedWorkoutDay.self, PlannedExercise.self,
                                Exercise.self, WorkoutSession.self,

@@ -1010,7 +1010,7 @@ struct SmartSwapSheet: View {
     @State private var appeared    = false
     @State private var searchText  = ""
 
-    private var candidates: [SwapCandidate] {
+    private var candidates: [WorkoutSwapCandidate] {
         SwapDatabase.candidates(for: exercise.slug, filter: filter)
             .filter { searchText.isEmpty || $0.name.localizedCaseInsensitiveContains(searchText) }
     }
@@ -1157,7 +1157,7 @@ private struct FilterScroll: View {
 // MARK: - Candidate Card
 
 private struct SwapCandidateCard: View {
-    let candidate: SwapCandidate
+    let candidate: WorkoutSwapCandidate
     let rank:      Int
     let onSelect:  () -> Void
     @State private var expanded = false
@@ -1267,7 +1267,7 @@ private struct SwapCandidateCard: View {
 // MARK: SwapCandidate Data Layer
 // MARK: ═══════════════════════════════════════════════════════════════════════
 
-struct SwapCandidate: Identifiable {
+struct WorkoutSwapCandidate: Identifiable {
     let id          = UUID()
     let name:       String
     let slug:       String
@@ -1289,8 +1289,8 @@ struct SwapCandidate: Identifiable {
 }
 
 enum SwapDatabase {
-    static func candidates(for slug: String, filter: EquipmentFilter) -> [SwapCandidate] {
-        let pool: [SwapCandidate]
+    static func candidates(for slug: String, filter: EquipmentFilter) -> [WorkoutSwapCandidate] {
+        let pool: [WorkoutSwapCandidate]
         switch slugCategory(slug) {
         case "chest":    pool = chest
         case "back":     pool = back
@@ -1316,74 +1316,74 @@ enum SwapDatabase {
         return "general"
     }
 
-    static let chest: [SwapCandidate] = [
-        SwapCandidate(name: "Tlaky s jednoručkami",  slug: "db-bench-press",       matchScore: 95,
+    static let chest: [WorkoutSwapCandidate] = [
+        WorkoutSwapCandidate(name: "Tlaky s jednoručkami",  slug: "db-bench-press",       matchScore: 95,
                       equipment: "Jednoručky", muscles: "Prsní, triceps, deltoid",
                       coachTip: "Větší rozsah pohybu než s osou — cítíš protažení v dolní poloze."),
-        SwapCandidate(name: "Chest Press (stroj)",   slug: "machine-chest-press",  matchScore: 90,
+        WorkoutSwapCandidate(name: "Chest Press (stroj)",   slug: "machine-chest-press",  matchScore: 90,
                       equipment: "Stroj",       muscles: "Prsní, triceps",
                       coachTip: "Ideální pokud je volná lavička obsazená. Konstantní napětí svalů."),
-        SwapCandidate(name: "Cable Fly (kabelák)",   slug: "cable-fly",            matchScore: 82,
+        WorkoutSwapCandidate(name: "Cable Fly (kabelák)",   slug: "cable-fly",            matchScore: 82,
                       equipment: "Kabelák",     muscles: "Prsní (izolace)",
                       coachTip: "Mírně pokrčené lokty po celou dobu. Setkej ruce před hrudníkem."),
-        SwapCandidate(name: "Dips na tyčích",        slug: "dips",                 matchScore: 78,
+        WorkoutSwapCandidate(name: "Dips na tyčích",        slug: "dips",                 matchScore: 78,
                       equipment: "Bodyweight",  muscles: "Prsní, triceps",
                       coachTip: "Nakloň se dopředu pro větší zapojení prsního vs. tricepsu."),
-        SwapCandidate(name: "Push-up (kliky)",       slug: "push-up",              matchScore: 65,
+        WorkoutSwapCandidate(name: "Push-up (kliky)",       slug: "push-up",              matchScore: 65,
                       equipment: "Bodyweight",  muscles: "Prsní, triceps, core",
                       coachTip: "Kliky na stupních zvýší rozsah a efektivitu."),
     ]
 
-    static let back: [SwapCandidate] = [
-        SwapCandidate(name: "Přítahy jednoručkou",  slug: "db-row",               matchScore: 93,
+    static let back: [WorkoutSwapCandidate] = [
+        WorkoutSwapCandidate(name: "Přítahy jednoručkou",  slug: "db-row",               matchScore: 93,
                       equipment: "Jednoručky", muscles: "Lat, zadní deltoid, biceps",
                       coachTip: "Loket blízko těla, v horní pozici rotuj pro max kontrakci latu."),
-        SwapCandidate(name: "Lat Pulldown (kabel)", slug: "lat-pulldown",          matchScore: 88,
+        WorkoutSwapCandidate(name: "Lat Pulldown (kabel)", slug: "lat-pulldown",          matchScore: 88,
                       equipment: "Kabelák",     muscles: "Latissimus, teres major",
                       coachTip: "Mírně lean dozadu, stahuj k hrudníku — ne za hlavu."),
-        SwapCandidate(name: "Seated Row (stroj)",   slug: "seated-cable-row",     matchScore: 85,
+        WorkoutSwapCandidate(name: "Seated Row (stroj)",   slug: "seated-cable-row",     matchScore: 85,
                       equipment: "Stroj",       muscles: "Střed zad, romboid",
                       coachTip: nil),
-        SwapCandidate(name: "TRX Row",              slug: "trx-row",               matchScore: 74,
+        WorkoutSwapCandidate(name: "TRX Row",              slug: "trx-row",               matchScore: 74,
                       equipment: "Bodyweight",  muscles: "Záda, biceps, core",
                       coachTip: "Čím nižší úhel těla k zemi, tím větší obtížnost."),
     ]
 
-    static let legs: [SwapCandidate] = [
-        SwapCandidate(name: "Leg Press",            slug: "leg-press",             matchScore: 91,
+    static let legs: [WorkoutSwapCandidate] = [
+        WorkoutSwapCandidate(name: "Leg Press",            slug: "leg-press",             matchScore: 91,
                       equipment: "Stroj",       muscles: "Kvadriceps, hýžďové, hamstringy",
                       coachTip: "Šíře nohou mění zapojení svalů — nohy nahoře = více hýždě."),
-        SwapCandidate(name: "Bulharský dřep",       slug: "bulgarian-split-squat", matchScore: 88,
+        WorkoutSwapCandidate(name: "Bulharský dřep",       slug: "bulgarian-split-squat", matchScore: 88,
                       equipment: "Jednoručky",  muscles: "Kvadriceps, hýžďové (unilat.)",
                       coachTip: "Opřená noha jen stabilizuje — veškerá práce vpředu."),
-        SwapCandidate(name: "Výpady s jednoručkami",slug: "dumbbell-lunge",        matchScore: 84,
+        WorkoutSwapCandidate(name: "Výpady s jednoručkami",slug: "dumbbell-lunge",        matchScore: 84,
                       equipment: "Jednoručky",  muscles: "Kvadriceps, hýžďové",
                       coachTip: "Přední koleno nepřesahuje špičku. Vzpřímený trup."),
-        SwapCandidate(name: "Goblet Squat",         slug: "goblet-squat",          matchScore: 78,
+        WorkoutSwapCandidate(name: "Goblet Squat",         slug: "goblet-squat",          matchScore: 78,
                       equipment: "Jednoručky",  muscles: "Kvadriceps, hýžďové, core",
                       coachTip: "Váha před hrudníkem vynucuje přirozeně vzpřímený trup."),
     ]
 
-    static let shoulders: [SwapCandidate] = [
-        SwapCandidate(name: "Arnold Press",         slug: "arnold-press",          matchScore: 89,
+    static let shoulders: [WorkoutSwapCandidate] = [
+        WorkoutSwapCandidate(name: "Arnold Press",         slug: "arnold-press",          matchScore: 89,
                       equipment: "Jednoručky",  muscles: "Přední + boční deltoid, triceps",
                       coachTip: "Rotace v pohybu zapojí více svalových vláken než standard press."),
-        SwapCandidate(name: "Shoulder Press (stroj)",slug: "machine-shoulder-press",matchScore: 85,
+        WorkoutSwapCandidate(name: "Shoulder Press (stroj)",slug: "machine-shoulder-press",matchScore: 85,
                       equipment: "Stroj",       muscles: "Deltoid, triceps",
                       coachTip: nil),
-        SwapCandidate(name: "Upright Row (kabel)",  slug: "cable-upright-row",    matchScore: 75,
+        WorkoutSwapCandidate(name: "Upright Row (kabel)",  slug: "cable-upright-row",    matchScore: 75,
                       equipment: "Kabelák",     muscles: "Boční deltoid, trapéz",
                       coachTip: "Lokty vedou pohyb výše než zápěstí po celou dobu tahu."),
     ]
 
-    static let arms: [SwapCandidate] = [
-        SwapCandidate(name: "Hammer Curl",          slug: "hammer-curl",           matchScore: 90,
+    static let arms: [WorkoutSwapCandidate] = [
+        WorkoutSwapCandidate(name: "Hammer Curl",          slug: "hammer-curl",           matchScore: 90,
                       equipment: "Jednoručky",  muscles: "Biceps, brachialis",
                       coachTip: "Neutrální grip zapojuje brachialis — klíč k šíři paže."),
-        SwapCandidate(name: "Cable Curl",           slug: "cable-curl",            matchScore: 86,
+        WorkoutSwapCandidate(name: "Cable Curl",           slug: "cable-curl",            matchScore: 86,
                       equipment: "Kabelák",     muscles: "Biceps (konst. napětí)",
                       coachTip: "I v horní poloze je stálý tah — výhoda oproti čince."),
-        SwapCandidate(name: "Tricep Pushdown",      slug: "cable-pushdown",        matchScore: 85,
+        WorkoutSwapCandidate(name: "Tricep Pushdown",      slug: "cable-pushdown",        matchScore: 85,
                       equipment: "Kabelák",     muscles: "Triceps",
                       coachTip: nil),
     ]
