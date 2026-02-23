@@ -1,0 +1,152 @@
+# ═══════════════════════════════════════════════════════════════════════
+# project.yml — XcodeGen konfigurace pro AgileFitnessTrainer
+# ═══════════════════════════════════════════════════════════════════════
+#
+# Tento soubor nahrazuje .xcodeproj. XcodeGen z něj vygeneruje
+# plnohodnotný Xcode projekt příkazem: xcodegen generate
+#
+# Na Windows stačí editovat tento YAML + Swift soubory.
+# .xcodeproj se vygeneruje automaticky v GitHub Actions na macOS.
+# ═══════════════════════════════════════════════════════════════════════
+
+name: AgileTrainer
+
+options:
+  bundleIdPrefix: com.agilefitness
+  deploymentTarget:
+    iOS: "17.0"
+  xcodeVersion: "15.0"
+  generateEmptyDirectories: true
+  groupSortPosition: top
+  createIntermediateGroups: true
+
+settings:
+  base:
+    SWIFT_VERSION: "5.9"
+    MARKETING_VERSION: "1.0.0"
+    CURRENT_PROJECT_VERSION: "1"
+    CODE_SIGN_STYLE: Manual
+    DEVELOPMENT_TEAM: $(DEVELOPMENT_TEAM_ID)
+
+# ═══════════════════════════════════════════════════════════════════════
+# TARGETS
+# ═══════════════════════════════════════════════════════════════════════
+
+targets:
+
+  # ─── Hlavní aplikace ────────────────────────────────────────────────
+  AgileTrainer:
+    type: application
+    platform: iOS
+    deploymentTarget: "17.0"
+
+    sources:
+      - path: App
+      - path: Core
+      - path: Data
+      - path: Domain
+      - path: Features
+      - path: LiveActivity
+      - path: Services
+
+    resources:
+      - path: Resources
+        buildPhase: resources
+
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.agilefitness.trainer
+        INFOPLIST_FILE: Resources/Info.plist
+        CODE_SIGN_ENTITLEMENTS: Resources/AgileTrainer.entitlements
+        GEMINI_API_KEY: $(GEMINI_API_KEY)
+        SUPABASE_URL: $(SUPABASE_URL)
+        SUPABASE_ANON_KEY: $(SUPABASE_ANON_KEY)
+
+    entitlements:
+      path: Resources/AgileTrainer.entitlements
+      properties:
+        com.apple.security.application-groups:
+          - group.com.agilefitness.shared
+        com.apple.developer.healthkit: true
+        com.apple.developer.healthkit.access:
+          - HKQuantityTypeIdentifierHeartRate
+          - HKQuantityTypeIdentifierRestingHeartRate
+          - HKCategoryTypeIdentifierSleepAnalysis
+
+    preBuildScripts:
+      - name: "SwiftLint (optional)"
+        script: |
+          if which swiftlint > /dev/null; then
+            swiftlint
+          fi
+        basedOnDependencyAnalysis: false
+
+  # ─── Widget Extension ───────────────────────────────────────────────
+  AgileTrainerWidget:
+    type: app-extension
+    platform: iOS
+    deploymentTarget: "17.0"
+
+    sources:
+      - path: Widget
+      # Sdílené soubory potřebné pro widget
+      - path: Core/SharedModelContainer.swift
+      - path: Core/Extensions/Color+App.swift
+      - path: Core/Extensions/Extensions.swift
+      - path: Core/Constants/AppConstants.swift
+      - path: Data/Models
+
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.agilefitness.trainer.widget
+        INFOPLIST_FILE: Widget/Info.plist
+        CODE_SIGN_ENTITLEMENTS: Widget/AgileTrainerWidget.entitlements
+
+    entitlements:
+      path: Widget/AgileTrainerWidget.entitlements
+      properties:
+        com.apple.security.application-groups:
+          - group.com.agilefitness.shared
+
+    dependencies:
+      - target: AgileTrainer
+        embed: false
+        link: false
+
+  # ─── Unit Testy ─────────────────────────────────────────────────────
+  AgileTrainerTests:
+    type: bundle.unit-test
+    platform: iOS
+    deploymentTarget: "17.0"
+
+    sources:
+      - path: UnitTests
+
+    dependencies:
+      - target: AgileTrainer
+
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.agilefitness.trainer.tests
+        TEST_HOST: "$(BUILT_PRODUCTS_DIR)/AgileTrainer.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/AgileTrainer"
+        BUNDLE_LOADER: "$(TEST_HOST)"
+
+# ═══════════════════════════════════════════════════════════════════════
+# SCHEMES
+# ═══════════════════════════════════════════════════════════════════════
+
+schemes:
+  AgileTrainer:
+    build:
+      targets:
+        AgileTrainer: all
+        AgileTrainerWidget: all
+        AgileTrainerTests: [test]
+    run:
+      config: Debug
+    test:
+      config: Debug
+      targets:
+        - AgileTrainerTests
+    archive:
+      config: Release
