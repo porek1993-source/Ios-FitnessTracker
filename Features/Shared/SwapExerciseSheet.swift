@@ -86,7 +86,7 @@ fileprivate struct SwapCandidate: Identifiable {
 struct SmartSwapEngine {
 
     /// Scores + filters alternatives for a given exercise.
-    static func candidates(
+    fileprivate static func candidates(
         for original: Exercise,
         from pool: [Exercise],
         activePresets: Set<QuickFilterPreset>,
@@ -725,9 +725,23 @@ private struct CandidateRow: View {
                 expandedDetail
             }
         }
-        .background(Color.white.opacity(isSelected ? 0.04 : 0))
-        .contentShape(Rectangle())
-        .onTapGesture(perform: onTap)
+        .background(
+            RoundedRectangle(cornerRadius: 16)
+                .fill(isTop
+                    ? Color.white.opacity(isSelected ? 0.1 : 0.07)
+                    : Color.white.opacity(isSelected ? 0.08 : 0.05)
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16)
+                        .stroke(
+                            isTop ? Color.green.opacity(0.3) : Color.clear,
+                            lineWidth: 1
+                        )
+                )
+        )
+        .contentShape(RoundedRectangle(cornerRadius: 16))
+        .onTapGesture { onTap() }
+        .animation(.spring(response: 0.35, dampingFraction: 0.8), value: isSelected)
     }
     
     private var mainRow: some View {
@@ -766,7 +780,7 @@ private struct CandidateRow: View {
 
                 // Equipment icons
                 HStack(spacing: 4) {
-                    ForEach(candidate.exercise.equipment.prefix(3), id: \.rawValue) { equip in
+                    ForEach(Array(candidate.exercise.equipment.prefix(3)), id: \.self) { equip in
                         Text(equip.emoji)
                             .font(.system(size: 12))
                     }
@@ -786,76 +800,57 @@ private struct CandidateRow: View {
     
     private var expandedDetail: some View {
         VStack(alignment: .leading, spacing: 12) {
-                    Divider().background(Color.white.opacity(0.08))
+            Divider().background(Color.white.opacity(0.08))
 
-                    // Muscles
-                    HStack(alignment: .top, spacing: 20) {
-                        MuscleColumn(
-                            title: "Primární",
-                            muscles: candidate.exercise.musclesTarget,
-                            color: .blue
-                        )
-                        MuscleColumn(
-                            title: "Sekundární",
-                            muscles: candidate.exercise.musclesSecondary,
-                            color: Color.white.opacity(0.35)
-                        )
-                        Spacer()
-                    }
-                    .padding(.horizontal, 14)
-
-                    // Instructions preview
-                    if !candidate.exercise.instructions.isEmpty {
-                        Text(candidate.exercise.instructions)
-                            .font(.system(size: 12))
-                            .foregroundStyle(.white.opacity(0.45))
-                            .lineLimit(3)
-                            .padding(.horizontal, 14)
-                    }
-
-                    // Confirm button
-                    Button(action: onConfirm) {
-                        HStack(spacing: 8) {
-                            Image(systemName: "arrow.triangle.2.circlepath")
-                            Text("Nahradit \(candidate.exercise.name)")
-                                .fontWeight(.bold)
-                        }
-                        .font(.system(size: 14))
-                        .foregroundStyle(.white)
-                        .frame(maxWidth: .infinity, minHeight: 44)
-                        .background(
-                            RoundedRectangle(cornerRadius: 12)
-                                .fill(
-                                    LinearGradient(
-                                        colors: [Color.blue, Color.blue.opacity(0.7)],
-                                        startPoint: .leading, endPoint: .trailing
-                                    )
-                                )
-                        )
-                    }
-                    .padding(.horizontal, 14)
-                    .padding(.bottom, 14)
-                }
-                .transition(.opacity.combined(with: .move(edge: .top)))
+            // Muscles
+            HStack(alignment: .top, spacing: 20) {
+                MuscleColumn(
+                    title: "Primární",
+                    muscles: candidate.exercise.musclesTarget,
+                    color: .blue
+                )
+                MuscleColumn(
+                    title: "Sekundární",
+                    muscles: candidate.exercise.musclesSecondary,
+                    color: Color.white.opacity(0.35)
+                )
+                Spacer()
             }
-        }
-        .background(
-            RoundedRectangle(cornerRadius: 16)
-                .fill(isTop
-                    ? Color.white.opacity(isSelected ? 0.1 : 0.07)
-                    : Color.white.opacity(isSelected ? 0.08 : 0.05)
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: 16)
-                        .stroke(
-                            isTop ? Color.green.opacity(0.3) : Color.clear,
-                            lineWidth: 1
+            .padding(.horizontal, 14)
+
+            // Instructions preview
+            if !candidate.exercise.instructions.isEmpty {
+                Text(candidate.exercise.instructions)
+                    .font(.system(size: 12))
+                    .foregroundStyle(.white.opacity(0.45))
+                    .lineLimit(3)
+                    .padding(.horizontal, 14)
+            }
+
+            // Confirm button
+            Button(action: onConfirm) {
+                HStack(spacing: 8) {
+                    Image(systemName: "arrow.triangle.2.circlepath")
+                    Text("Nahradit \(candidate.exercise.name)")
+                        .fontWeight(.bold)
+                }
+                .font(.system(size: 14))
+                .foregroundStyle(.white)
+                .frame(maxWidth: .infinity, minHeight: 44)
+                .background(
+                    RoundedRectangle(cornerRadius: 12)
+                        .fill(
+                            LinearGradient(
+                                colors: [Color.blue, Color.blue.opacity(0.7)],
+                                startPoint: .leading, endPoint: .trailing
+                            )
                         )
                 )
-        )
-        .contentShape(RoundedRectangle(cornerRadius: 16))
-        .onTapGesture { onTap() }
-        .animation(.spring(response: 0.35, dampingFraction: 0.8), value: isSelected)
+            }
+            .padding(.horizontal, 14)
+            .padding(.bottom, 14)
+        }
+        .transition(.opacity.combined(with: .move(edge: .top)))
     }
 }
 

@@ -30,7 +30,10 @@ struct GetTodayWorkoutIntent: AppIntent {
 
         // Najdeme dnešní den
         let today = Date.now
-        guard let todayDay = plan.scheduledDays.first(where: { $0.date.isSameDay(as: today) }) else {
+        let weekday = Calendar.current.component(.weekday, from: today) // 1=Sun, 2=Mon...
+        let projectDayOfWeek = ((weekday - 2) + 7) % 7 + 1 // 1=Po, ..., 7=Ne
+
+        guard let todayDay = plan.scheduledDays.first(where: { $0.dayOfWeek == projectDayOfWeek }) else {
             return .result(dialog: "Na dnešek nemáš naplánovaný žádný trénink. Odpočívej! 💪")
         }
 

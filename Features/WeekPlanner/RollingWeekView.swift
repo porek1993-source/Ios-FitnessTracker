@@ -114,7 +114,6 @@ final class RollingWeekViewModel: ObservableObject {
 
         // Sestavíme kontext pro AI
         let availableDays = days.filter { $0.dayType == .workout && !$0.isToday }
-        let overriddenDays = days.filter { $0.isOverridden }
         let totalWorkoutDays = days.filter { $0.dayType == .workout }.count
 
         do {

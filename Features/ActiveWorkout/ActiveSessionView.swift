@@ -467,23 +467,8 @@ private struct SetLoggerBlock: View {
     var body: some View {
         VStack(spacing: 0) {
             header
-            
-            VStack(spacing: 6) {
-                ForEach(exercise.sets.indices, id: \.self) { i in
-                    ActiveSetRow(
-                        setNumber:  i + 1,
-                        set:        $exercise.sets[i],
-                        isActive:   i == exercise.nextIncompleteSetIndex,
-                        onComplete: { onComplete(i) }
-                    )
-                }
-            }
-
-            if exercise.sets.contains(where: \.isCompleted) {
-                VolumeSummary(sets: exercise.sets)
-                    .padding(.top, 14)
-                    .transition(.move(edge: .bottom).combined(with: .opacity))
-            }
+            setList
+            summary
         }
         .padding(.vertical, 16)
         .background(
@@ -507,6 +492,28 @@ private struct SetLoggerBlock: View {
         .kerning(1.0)
         .padding(.horizontal, 12)
         .padding(.bottom, 10)
+    }
+
+    private var setList: some View {
+        VStack(spacing: 6) {
+            ForEach(exercise.sets.indices, id: \.self) { i in
+                ActiveSetRow(
+                    setNumber:  i + 1,
+                    set:        $exercise.sets[i],
+                    isActive:   i == exercise.nextIncompleteSetIndex,
+                    onComplete: { onComplete(i) }
+                )
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var summary: some View {
+        if exercise.sets.contains(where: \.isCompleted) {
+            VolumeSummary(sets: exercise.sets)
+                .padding(.top, 14)
+                .transition(.move(edge: .bottom).combined(with: .opacity))
+        }
     }
 }
 

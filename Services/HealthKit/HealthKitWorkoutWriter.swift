@@ -92,7 +92,7 @@ final class HealthKitWorkoutWriter {
         calories: Double?
     ) throws -> HKWorkout {
 
-        var metadata: [String: Any] = [
+        let metadata: [String: Any] = [
             HKMetadataKeyWorkoutBrandName: "Agilní Fitness Trenér",
             HKMetadataKeyIndoorWorkout: true
         ]
@@ -127,7 +127,7 @@ final class HealthKitWorkoutWriter {
         calories: HKQuantity?,
         metadata: [String: Any]
     ) -> HKWorkout {
-        var configuration = HKWorkoutConfiguration()
+        let configuration = HKWorkoutConfiguration()
         configuration.activityType = .traditionalStrengthTraining
         configuration.locationType = .indoor
 
