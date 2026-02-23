@@ -744,7 +744,10 @@ private struct CandidateRow: View {
         .animation(.spring(response: 0.35, dampingFraction: 0.8), value: isSelected)
     }
     
+    @ViewBuilder
     private var mainRow: some View {
+        let equipments = Array(candidate.exercise.equipment.prefix(3))
+        
         HStack(spacing: 14) {
             // Score ring
             ScoreRing(score: candidate.score, isTop: isTop)
@@ -780,7 +783,7 @@ private struct CandidateRow: View {
 
                 // Equipment icons
                 HStack(spacing: 4) {
-                    ForEach(candidate.exercise.equipment.prefix(3).map { $0 }, id: \.self) { equip in
+                    ForEach(equipments, id: \.self) { equip in
                         Text(equip.emoji)
                             .font(.system(size: 12))
                     }

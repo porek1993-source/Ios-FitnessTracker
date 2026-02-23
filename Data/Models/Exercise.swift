@@ -75,6 +75,19 @@ enum Equipment: String, Codable, CaseIterable {
     case pullupBar      = "pullupBar"
     case band           = "band"
     case trx            = "trx"
+
+    var emoji: String {
+        switch self {
+        case .barbell:        return "🏋️‍♂️"
+        case .dumbbell:       return "💪"
+        case .cable:          return "⚙️"
+        case .machine:        return "🦾"
+        case .bodyweight:     return "🤸"
+        case .resistanceBand, .band: return "🎗️"
+        case .kettlebell:     return "🔔"
+        case .pullupBar, .trx: return "🧗"
+        }
+    }
 }
 
 enum ExerciseCategory: String, Codable, CaseIterable {
