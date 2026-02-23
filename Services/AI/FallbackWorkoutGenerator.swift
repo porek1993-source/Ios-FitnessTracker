@@ -21,24 +21,25 @@ final class FallbackWorkoutGenerator {
             fallbackExercises = [
                 ResponseExercise(
                     name: "Tlaky s jednoručkami (Fallback)", slug: "db-bench-press",
-                    coachTip: "Soustřeď se na čistou techniku. Trenér Jakub je momentálně offline, ale tohle tě udrží ve hře.",
                     sets: baseSets, repsMin: baseRepsMin, repsMax: baseRepsMax,
-                    weightKg: defaultWeight, rpe: 7, tempo: "2111", restSeconds: 90
+                    weightKg: defaultWeight, rir: nil, rpe: 7, restSeconds: 90,
+                    tempo: "2111", coachTip: "Soustřeď se na čistou techniku. Trenér Jakub je momentálně offline, ale tohle tě udrží ve hře."
                 ),
                 ResponseExercise(
                     name: "Rozpažování s jednoručkami", slug: "db-fly",
                     coachTip: "Kontroluj pohyb směrem dolů.",
                     sets: baseSets, repsMin: 10, repsMax: 15,
-                    weightKg: 15.0, rpe: 8, tempo: "3111", restSeconds: 60
+                    weightKg: 15.0, rir: nil, rpe: 8, restSeconds: 60,
+                    tempo: "3111", coachTip: "Kontroluj pohyb směrem dolů."
                 )
             ]
         case _ where day.label.lowercased().contains("pull"):
             fallbackExercises = [
                 ResponseExercise(
                     name: "Přítahy v předklonu (Fallback)", slug: "db-row",
-                    coachTip: "Táhneš loktem, ne dlaní. Offline záloha.",
                     sets: baseSets, repsMin: baseRepsMin, repsMax: baseRepsMax,
-                    weightKg: defaultWeight, rpe: 7, tempo: "2111", restSeconds: 90
+                    weightKg: defaultWeight, rir: nil, rpe: 7, restSeconds: 90,
+                    tempo: "2111", coachTip: "Táhneš loktem, ne dlaní. Offline záloha."
                 )
             ]
         case _ where day.label.lowercased().contains("leg"):
@@ -47,7 +48,8 @@ final class FallbackWorkoutGenerator {
                     name: "Goblet Dřep (Fallback)", slug: "goblet-squat",
                     coachTip: "Drž váhu blízko těla. Offline záloha.",
                     sets: baseSets, repsMin: 10, repsMax: 15,
-                    weightKg: defaultWeight * 0.5, rpe: 7, tempo: "3111", restSeconds: 90
+                    weightKg: defaultWeight * 0.5, rir: nil, rpe: 7, restSeconds: 90,
+                    tempo: "3111", coachTip: "Drž váhu blízko těla. Offline záloha."
                 )
             ]
         default:
@@ -56,7 +58,8 @@ final class FallbackWorkoutGenerator {
                     name: "Full Body Mix (Fallback)", slug: "full-body",
                     coachTip: "Nouzový režim. Dneska to odjedeme na pocit.",
                     sets: baseSets, repsMin: 10, repsMax: 12,
-                    weightKg: defaultWeight, rpe: 7, tempo: "2020", restSeconds: 60
+                    weightKg: defaultWeight, rir: nil, rpe: 7, restSeconds: 60,
+                    tempo: "2020", coachTip: "Nouzový režim. Dneska to odjedeme na pocit."
                 )
             ]
         }

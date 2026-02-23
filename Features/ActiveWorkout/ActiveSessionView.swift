@@ -466,20 +466,8 @@ private struct SetLoggerBlock: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            // Column headers
-            HStack {
-                Text("#")         .frame(width: 38, alignment: .center)
-                Text("VÁHA")      .frame(maxWidth: .infinity)
-                Text("REPS")      .frame(width: 66)
-                Text("RPE")       .frame(width: 52)
-                Spacer()          .frame(width: 48)
-            }
-            .font(.system(size: 9, weight: .black))
-            .foregroundStyle(.white.opacity(0.26))
-            .kerning(1.0)
-            .padding(.horizontal, 12)
-            .padding(.bottom, 10)
-
+            header
+            
             VStack(spacing: 6) {
                 ForEach(exercise.sets.indices, id: \.self) { i in
                     ActiveSetRow(
@@ -504,6 +492,21 @@ private struct SetLoggerBlock: View {
                 .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous)
                     .stroke(.white.opacity(0.07), lineWidth: 1))
         )
+    }
+    
+    private var header: some View {
+        HStack {
+            Text("#")         .frame(width: 38, alignment: .center)
+            Text("VÁHA")      .frame(maxWidth: .infinity)
+            Text("REPS")      .frame(width: 66)
+            Text("RPE")       .frame(width: 52)
+            Spacer()          .frame(width: 48)
+        }
+        .font(.system(size: 9, weight: .black))
+        .foregroundStyle(.white.opacity(0.26))
+        .kerning(1.0)
+        .padding(.horizontal, 12)
+        .padding(.bottom, 10)
     }
 }
 

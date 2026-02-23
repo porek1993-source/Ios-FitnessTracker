@@ -233,7 +233,7 @@ private struct ExerciseSearchRow: View {
                         .frame(width: 44, height: 44)
                     Image(systemName: isSelected ? "checkmark.circle.fill" : "plus.circle")
                         .font(.system(size: 20, weight: .semibold))
-                        .foregroundStyle(isSelected ? .appPrimaryAccent : .white.opacity(0.3))
+                        .foregroundStyle(isSelected ? Color.appPrimaryAccent : .white.opacity(0.3))
                 }
 
                 VStack(alignment: .leading, spacing: 4) {

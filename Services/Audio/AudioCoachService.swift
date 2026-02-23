@@ -50,7 +50,8 @@ enum CoachSpeech: Equatable {
         case .repComplete:              return 0.52
         case .restStarted, .restEnd,
              .setStarting, .greatSet,
-             .prWarning, .restWarning:  return 0.50
+             .prWarning, .restWarning,
+             .sessionStart:             return 0.50
         }
     }
 

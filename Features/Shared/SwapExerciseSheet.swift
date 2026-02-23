@@ -74,7 +74,7 @@ enum SwapReason: String, Identifiable {
 
 // MARK: - Swap Score (biomechanical match)
 
-private struct SwapCandidate: Identifiable {
+fileprivate struct SwapCandidate: Identifiable {
     let exercise: Exercise
     var score: Int       // 0–100, higher = better match
     var tags: [String]   // "Stejná partie", "Stejný pohyb", "Bez osy", …
@@ -231,7 +231,8 @@ struct TimeOptimizer {
         }
 
         // 4. Recalculate with supersets
-        let savedSeconds = supersets.count * supersetSaving * kept.first?.targetSets ?? 3
+        let targetSets = kept.first?.targetSets ?? 3
+        let savedSeconds = supersets.count * supersetSaving * targetSets
         let finalMinutes = max(20, Int(totalMin * 60 - Double(savedSeconds)) / 60)
 
         return TimeOptimizationPlan(
@@ -717,63 +718,74 @@ private struct CandidateRow: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            // Main row
-            HStack(spacing: 14) {
-                // Score ring
-                ScoreRing(score: candidate.score, isTop: isTop)
-                    .frame(width: 48, height: 48)
+            mainRow
+                .padding(14)
+            
+            if isSelected {
+                expandedDetail
+            }
+        }
+        .background(Color.white.opacity(isSelected ? 0.04 : 0))
+        .contentShape(Rectangle())
+        .onTapGesture(perform: onTap)
+    }
+    
+    private var mainRow: some View {
+        HStack(spacing: 14) {
+            // Score ring
+            ScoreRing(score: candidate.score, isTop: isTop)
+                .frame(width: 48, height: 48)
 
-                // Info
-                VStack(alignment: .leading, spacing: 4) {
-                    HStack(spacing: 6) {
-                        Text(candidate.exercise.name)
-                            .font(.system(size: 15, weight: .bold))
-                            .foregroundStyle(.white)
-                        if isTop {
-                            Text("DOPORUČENO")
-                                .font(.system(size: 9, weight: .black))
-                                .foregroundStyle(.black)
-                                .padding(.horizontal, 6)
-                                .padding(.vertical, 2)
-                                .background(Capsule().fill(Color.green))
-                        }
-                    }
-
-                    // Tags
-                    HStack(spacing: 6) {
-                        ForEach(candidate.tags.prefix(3), id: \.self) { tag in
-                            Text(tag)
-                                .font(.system(size: 10, weight: .medium))
-                                .foregroundStyle(.white.opacity(0.55))
-                                .padding(.horizontal, 7)
-                                .padding(.vertical, 3)
-                                .background(Capsule().fill(Color.white.opacity(0.08)))
-                        }
-                    }
-
-                    // Equipment icons
-                    HStack(spacing: 4) {
-                        ForEach(candidate.exercise.equipment.prefix(3), id: \.rawValue) { equip in
-                            Text(equip.emoji)
-                                .font(.system(size: 12))
-                        }
-                        Text(candidate.exercise.category.displayName)
-                            .font(.system(size: 10))
-                            .foregroundStyle(.white.opacity(0.3))
+            // Info
+            VStack(alignment: .leading, spacing: 4) {
+                HStack(spacing: 6) {
+                    Text(candidate.exercise.name)
+                        .font(.system(size: 15, weight: .bold))
+                        .foregroundStyle(.white)
+                    if isTop {
+                        Text("DOPORUČENO")
+                            .font(.system(size: 9, weight: .black))
+                            .foregroundStyle(.black)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(Capsule().fill(Color.green))
                     }
                 }
 
-                Spacer()
+                // Tags
+                HStack(spacing: 6) {
+                    ForEach(candidate.tags.prefix(3), id: \.self) { tag in
+                        Text(tag)
+                            .font(.system(size: 10, weight: .medium))
+                            .foregroundStyle(.white.opacity(0.55))
+                            .padding(.horizontal, 7)
+                            .padding(.vertical, 3)
+                            .background(Capsule().fill(Color.white.opacity(0.08)))
+                    }
+                }
 
-                Image(systemName: isSelected ? "chevron.up" : "chevron.down")
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundStyle(.white.opacity(0.3))
+                // Equipment icons
+                HStack(spacing: 4) {
+                    ForEach(candidate.exercise.equipment.prefix(3), id: \.rawValue) { equip in
+                        Text(equip.emoji)
+                            .font(.system(size: 12))
+                    }
+                    Text(candidate.exercise.category.displayName)
+                        .font(.system(size: 10))
+                        .foregroundStyle(.white.opacity(0.3))
+                }
             }
-            .padding(14)
 
-            // Expanded detail
-            if isSelected {
-                VStack(alignment: .leading, spacing: 12) {
+            Spacer()
+
+            Image(systemName: isSelected ? "chevron.up" : "chevron.down")
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(.white.opacity(0.3))
+        }
+    }
+    
+    private var expandedDetail: some View {
+        VStack(alignment: .leading, spacing: 12) {
                     Divider().background(Color.white.opacity(0.08))
 
                     // Muscles

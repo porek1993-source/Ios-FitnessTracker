@@ -30,15 +30,15 @@ struct GetTodayWorkoutIntent: AppIntent {
 
         // Najdeme dnešní den
         let today = Date.now
-        guard let todayDay = plan.days.first(where: { $0.date.isSameDay(as: today) }) else {
+        guard let todayDay = plan.scheduledDays.first(where: { $0.date.isSameDay(as: today) }) else {
             return .result(dialog: "Na dnešek nemáš naplánovaný žádný trénink. Odpočívej! 💪")
         }
 
         // Sestavíme textové shrnutí
-        let exerciseNames = todayDay.exercises.prefix(4).map(\.name).joined(separator: ", ")
+        let exerciseNames = todayDay.plannedExercises.prefix(4).compactMap { $0.exercise?.name }.joined(separator: ", ")
         let summary: String
 
-        if todayDay.exercises.isEmpty {
+        if todayDay.plannedExercises.isEmpty {
             summary = "Dnes máš \(todayDay.label), ale zatím nemáš naplánované žádné cviky."
         } else {
             summary = "Dnes máš \(todayDay.label). Začínáš cviky: \(exerciseNames)."

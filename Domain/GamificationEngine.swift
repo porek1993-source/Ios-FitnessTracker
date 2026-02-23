@@ -29,7 +29,10 @@ final class MuscleXPRecord {
 
 // MARK: - Muscle Level
 
-enum MuscleLevel: Int, CaseIterable {
+enum MuscleLevel: Int, CaseIterable, Comparable {
+    static func < (lhs: MuscleLevel, rhs: MuscleLevel) -> Bool {
+        lhs.rawValue < rhs.rawValue
+    }
     case untrained   = 0   // šedá
     case beginner    = 1   // modrá
     case developing  = 2   // zelená
