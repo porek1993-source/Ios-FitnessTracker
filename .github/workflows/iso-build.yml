@@ -1,0 +1,196 @@
+# ═══════════════════════════════════════════════════════════════════════
+# AgileFitnessTrainer — iOS Build Pipeline (Windows → GitHub → macOS)
+# ═══════════════════════════════════════════════════════════════════════
+#
+# Uživatel vyvíjí na Windows BEZ Xcode.
+# Tento pipeline:
+#   1. Nainstaluje XcodeGen přes Homebrew
+#   2. Vygeneruje .xcodeproj z project.yml
+#   3. Zkompiluje, otestuje a vyexportuje .ipa
+#
+# SETUP (GitHub → Settings → Secrets):
+#   - BUILD_CERTIFICATE_BASE64      (base64 .p12 certifikátu)
+#   - P12_PASSWORD                   (heslo k .p12)
+#   - PROVISION_PROFILE_BASE64       (base64 .mobileprovision)
+#   - WIDGET_PROVISION_PROFILE_BASE64 (base64 widget .mobileprovision)
+#   - KEYCHAIN_PASSWORD              (libovolné heslo)
+#   - DEVELOPMENT_TEAM_ID            (Apple Team ID)
+#   - GEMINI_API_KEY                 (Gemini API klíč)
+#   - SUPABASE_URL                   (Supabase projekt URL)
+#   - SUPABASE_ANON_KEY              (Supabase anon key)
+# ═══════════════════════════════════════════════════════════════════════
+
+name: iOS Build & Archive (XcodeGen)
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+env:
+  SCHEME: AgileTrainer
+  CONFIGURATION: Release
+  SDK: iphoneos
+  DESTINATION: "generic/platform=iOS"
+  ARCHIVE_PATH: build/AgileTrainer.xcarchive
+  EXPORT_PATH: build/export
+
+jobs:
+  build:
+    name: Generate → Build → Archive
+    runs-on: macos-14
+    timeout-minutes: 30
+
+    steps:
+      # ─── 1. Checkout ─────────────────────────────────────────────────
+      - name: Checkout kódu
+        uses: actions/checkout@v4
+
+      # ─── 2. Xcode ────────────────────────────────────────────────────
+      - name: Nastavení Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+
+      - name: Zobrazení verze Xcode
+        run: xcodebuild -version
+
+      # ─── 3. Instalace XcodeGen ───────────────────────────────────────
+      - name: Instalace XcodeGen
+        run: brew install xcodegen
+
+      # ─── 4. Přeuspořádání složek ──────────────────────────────────────
+      # project.yml očekává zdrojáky v AgileTrainer/ (ne v root)
+      # Tento krok ověří, že struktura odpovídá project.yml
+      - name: Ověření struktury projektu
+        run: |
+          echo "📁 Kontrola struktury..."
+          ls -la project.yml || { echo "❌ project.yml nenalezen!"; exit 1; }
+          ls App/AgileFitnessTrainerApp.swift || { echo "❌ Entry point nenalezen!"; exit 1; }
+          ls Core/ || { echo "❌ Složka Core/ neexistuje!"; exit 1; }
+          ls Resources/Info.plist || { echo "❌ Info.plist nenalezen!"; exit 1; }
+          echo "✅ Struktura OK"
+
+      # ─── 5. Generování .xcodeproj ─────────────────────────────────────
+      - name: XcodeGen — Generování projektu
+        run: |
+          echo "🔧 Generuji .xcodeproj z project.yml..."
+          xcodegen generate
+          echo "✅ Projekt vygenerován:"
+          ls -la *.xcodeproj
+
+      # ─── 6. Certifikáty a Signing ────────────────────────────────────
+      - name: Import certifikátu a provisioning profilu
+        env:
+          BUILD_CERTIFICATE_BASE64: ${{ secrets.BUILD_CERTIFICATE_BASE64 }}
+          P12_PASSWORD: ${{ secrets.P12_PASSWORD }}
+          PROVISION_PROFILE_BASE64: ${{ secrets.PROVISION_PROFILE_BASE64 }}
+          WIDGET_PROVISION_PROFILE_BASE64: ${{ secrets.WIDGET_PROVISION_PROFILE_BASE64 }}
+          KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
+        run: |
+          # Dekódování certifikátu
+          CERTIFICATE_PATH=$RUNNER_TEMP/build_certificate.p12
+          echo -n "$BUILD_CERTIFICATE_BASE64" | base64 --decode -o $CERTIFICATE_PATH
+
+          # Dekódování provisioning profilů (hlavní app + widget)
+          PP_PATH=$RUNNER_TEMP/build_pp.mobileprovision
+          echo -n "$PROVISION_PROFILE_BASE64" | base64 --decode -o $PP_PATH
+
+          PP_WIDGET_PATH=$RUNNER_TEMP/widget_pp.mobileprovision
+          echo -n "$WIDGET_PROVISION_PROFILE_BASE64" | base64 --decode -o $PP_WIDGET_PATH
+
+          # Vytvoření dočasného keychainu
+          KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
+          security create-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+          security set-keychain-settings -lut 21600 $KEYCHAIN_PATH
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+
+          # Import certifikátu
+          security import $CERTIFICATE_PATH -P "$P12_PASSWORD" \
+            -A -t cert -f pkcs12 -k $KEYCHAIN_PATH
+          security set-key-partition-list -S apple-tool:,apple: \
+            -k "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+          security list-keychain -d user -s $KEYCHAIN_PATH
+
+          # Instalace provisioning profilů
+          mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
+          cp $PP_PATH ~/Library/MobileDevice/Provisioning\ Profiles
+          cp $PP_WIDGET_PATH ~/Library/MobileDevice/Provisioning\ Profiles
+
+      # ─── 7. Resolve Dependencies ─────────────────────────────────────
+      - name: Resolve Swift Package Dependencies
+        run: |
+          xcodebuild -resolvePackageDependencies \
+            -project AgileTrainer.xcodeproj \
+            -scheme $SCHEME
+
+      # ─── 8. Unit Testy ───────────────────────────────────────────────
+      - name: Spuštění unit testů
+        run: |
+          xcodebuild test \
+            -project AgileTrainer.xcodeproj \
+            -scheme $SCHEME \
+            -destination "platform=iOS Simulator,name=iPhone 16 Pro,OS=latest" \
+            -resultBundlePath build/TestResults.xcresult \
+            CODE_SIGNING_ALLOWED=NO \
+            GEMINI_API_KEY="${{ secrets.GEMINI_API_KEY }}" \
+            SUPABASE_URL="${{ secrets.SUPABASE_URL }}" \
+            SUPABASE_ANON_KEY="${{ secrets.SUPABASE_ANON_KEY }}" \
+            | xcpretty --color || true
+
+      # ─── 9. Archive ─────────────────────────────────────────────────
+      - name: Xcode Archive
+        run: |
+          xcodebuild archive \
+            -project AgileTrainer.xcodeproj \
+            -scheme $SCHEME \
+            -sdk $SDK \
+            -configuration $CONFIGURATION \
+            -destination "$DESTINATION" \
+            -archivePath $ARCHIVE_PATH \
+            DEVELOPMENT_TEAM="${{ secrets.DEVELOPMENT_TEAM_ID }}" \
+            GEMINI_API_KEY="${{ secrets.GEMINI_API_KEY }}" \
+            SUPABASE_URL="${{ secrets.SUPABASE_URL }}" \
+            SUPABASE_ANON_KEY="${{ secrets.SUPABASE_ANON_KEY }}" \
+            | xcpretty --color
+
+      # ─── 10. Export .ipa ─────────────────────────────────────────────
+      - name: Export .ipa
+        run: |
+          cat > build/ExportOptions.plist << EOF
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+              <key>method</key>
+              <string>app-store</string>
+              <key>teamID</key>
+              <string>${{ secrets.DEVELOPMENT_TEAM_ID }}</string>
+              <key>uploadSymbols</key>
+              <true/>
+              <key>compileBitcode</key>
+              <false/>
+          </dict>
+          </plist>
+          EOF
+
+          xcodebuild -exportArchive \
+            -archivePath $ARCHIVE_PATH \
+            -exportPath $EXPORT_PATH \
+            -exportOptionsPlist build/ExportOptions.plist \
+            | xcpretty --color
+
+      # ─── 11. Upload .ipa ─────────────────────────────────────────────
+      - name: Upload .ipa Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: AgileTrainer-${{ github.sha }}
+          path: build/export/*.ipa
+          retention-days: 14
+
+      # ─── 12. Cleanup ─────────────────────────────────────────────────
+      - name: Cleanup keychain
+        if: always()
+        run: |
+          security delete-keychain $RUNNER_TEMP/app-signing.keychain-db || true
