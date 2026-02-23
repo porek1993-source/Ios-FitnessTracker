@@ -89,16 +89,22 @@ jobs:
           WIDGET_PROVISION_PROFILE_BASE64: ${{ secrets.WIDGET_PROVISION_PROFILE_BASE64 }}
           KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
         run: |
+          # Kontrola, zda jsou seacrety nastaveny
+          if [ -z "$BUILD_CERTIFICATE_BASE64" ]; then echo "❌ BUILD_CERTIFICATE_BASE64 is empty!"; exit 1; fi
+          if [ -z "$P12_PASSWORD" ]; then echo "❌ P12_PASSWORD is empty!"; exit 1; fi
+
           # Dekódování certifikátu
           CERTIFICATE_PATH=$RUNNER_TEMP/build_certificate.p12
-          echo -n "$BUILD_CERTIFICATE_BASE64" | base64 --decode -o $CERTIFICATE_PATH
+          echo "$BUILD_CERTIFICATE_BASE64" | base64 --decode > $CERTIFICATE_PATH
 
-          # Dekódování provisioning profilů (hlavní app + widget)
-          PP_PATH=$RUNNER_TEMP/build_pp.mobileprovision
-          echo -n "$PROVISION_PROFILE_BASE64" | base64 --decode -o $PP_PATH
+          # Ověření, že soubor existuje a není prázdný
+          if [ ! -s $CERTIFICATE_PATH ]; then echo "❌ Certificate file is empty or decoding failed!"; exit 1; fi
 
-          PP_WIDGET_PATH=$RUNNER_TEMP/widget_pp.mobileprovision
-          echo -n "$WIDGET_PROVISION_PROFILE_BASE64" | base64 --decode -o $PP_WIDGET_PATH
+          # Dekódování provisioning profilů
+          mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
+          
+          echo "$PROVISION_PROFILE_BASE64" | base64 --decode > ~/Library/MobileDevice/Provisioning\ Profiles/main.mobileprovision
+          echo "$WIDGET_PROVISION_PROFILE_BASE64" | base64 --decode > ~/Library/MobileDevice/Provisioning\ Profiles/widget.mobileprovision
 
           # Vytvoření dočasného keychainu
           KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
@@ -107,16 +113,11 @@ jobs:
           security unlock-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
 
           # Import certifikátu
-          security import $CERTIFICATE_PATH -P "$P12_PASSWORD" \
-            -A -t cert -f pkcs12 -k $KEYCHAIN_PATH
-          security set-key-partition-list -S apple-tool:,apple: \
-            -k "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+          # Používáme -f pkcs12 pro explicitní formát
+          security import $CERTIFICATE_PATH -P "$P12_PASSWORD" -A -t cert -f pkcs12 -k $KEYCHAIN_PATH
+          
+          security set-key-partition-list -S apple-tool:,apple: -k "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
           security list-keychain -d user -s $KEYCHAIN_PATH
-
-          # Instalace provisioning profilů
-          mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
-          cp $PP_PATH ~/Library/MobileDevice/Provisioning\ Profiles
-          cp $PP_WIDGET_PATH ~/Library/MobileDevice/Provisioning\ Profiles
 
       # ─── 7. Resolve Dependencies ─────────────────────────────────────
       - name: Resolve Swift Package Dependencies
