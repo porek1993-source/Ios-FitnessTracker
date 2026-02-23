@@ -65,7 +65,7 @@ final class AITrainerService: ObservableObject {
             HapticManager.shared.playWarning()
 
             let userContext = UserContextProfile(
-                fitnessLevel: profile.fitnessLevel ?? "Středně pokročilý"
+                fitnessLevel: profile.fitnessLevel.rawValue
             )
             let fallbackPlan = FallbackWorkoutGenerator.generateFallbackPlan(
                 for: userContext,

@@ -499,7 +499,7 @@ private struct SetLoggerBlock: View {
             ForEach(exercise.sets.indices, id: \.self) { i in
                 ActiveSetRow(
                     setNumber:  i + 1,
-                    set:        $exercise.sets[i],
+                    currentSet: $exercise.sets[i],
                     isActive:   i == exercise.nextIncompleteSetIndex,
                     onComplete: { onComplete(i) }
                 )

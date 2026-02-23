@@ -197,7 +197,7 @@ struct TimeOptimizer {
         }
 
         // 1. Sort by compound-first (more sets = more important)
-        var sorted = exercises.sorted { $0.targetSets > $1.targetSets }
+        let sorted = exercises.sorted { $0.targetSets > $1.targetSets }
 
         // 2. Remove exercises until we fit, keeping compound first
         var kept: [PlannedExercise] = []
@@ -214,7 +214,7 @@ struct TimeOptimizer {
         // Pair antagonist movements (push+pull, bi+tri)
         var supersets: [(PlannedExercise, PlannedExercise)] = []
         if kept.count >= 2 {
-            var unpaired = kept
+            let unpaired = kept
             var paired: [(PlannedExercise, PlannedExercise)] = []
             var i = 0
             while i < unpaired.count - 1 {
@@ -780,7 +780,7 @@ private struct CandidateRow: View {
 
                 // Equipment icons
                 HStack(spacing: 4) {
-                    ForEach(Array(candidate.exercise.equipment.prefix(3)), id: \.self) { equip in
+                    ForEach(candidate.exercise.equipment.prefix(3).map { $0 }, id: \.self) { equip in
                         Text(equip.emoji)
                             .font(.system(size: 12))
                     }

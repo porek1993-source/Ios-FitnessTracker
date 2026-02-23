@@ -27,7 +27,6 @@ final class FallbackWorkoutGenerator {
                 ),
                 ResponseExercise(
                     name: "Rozpažování s jednoručkami", slug: "db-fly",
-                    coachTip: "Kontroluj pohyb směrem dolů.",
                     sets: baseSets, repsMin: 10, repsMax: 15,
                     weightKg: 15.0, rir: nil, rpe: 8, restSeconds: 60,
                     tempo: "3111", coachTip: "Kontroluj pohyb směrem dolů."
@@ -46,7 +45,6 @@ final class FallbackWorkoutGenerator {
             fallbackExercises = [
                 ResponseExercise(
                     name: "Goblet Dřep (Fallback)", slug: "goblet-squat",
-                    coachTip: "Drž váhu blízko těla. Offline záloha.",
                     sets: baseSets, repsMin: 10, repsMax: 15,
                     weightKg: defaultWeight * 0.5, rir: nil, rpe: 7, restSeconds: 90,
                     tempo: "3111", coachTip: "Drž váhu blízko těla. Offline záloha."
@@ -56,7 +54,6 @@ final class FallbackWorkoutGenerator {
             fallbackExercises = [
                 ResponseExercise(
                     name: "Full Body Mix (Fallback)", slug: "full-body",
-                    coachTip: "Nouzový režim. Dneska to odjedeme na pocit.",
                     sets: baseSets, repsMin: 10, repsMax: 12,
                     weightKg: defaultWeight, rir: nil, rpe: 7, restSeconds: 60,
                     tempo: "2020", coachTip: "Nouzový režim. Dneska to odjedeme na pocit."
