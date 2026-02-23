@@ -146,8 +146,8 @@ jobs:
             SUPABASE_ANON_KEY="${{ secrets.SUPABASE_ANON_KEY }}" \
             | xcpretty --color || true
 
-      # ─── 9. Archive ─────────────────────────────────────────────────
-      - name: Xcode Archive
+      # ─── 9. Archive & Signed Export ──────────────────────────────────
+      - name: Xcode Archive (Signed)
         if: steps.signing_setup.outputs.signed == 'true'
         run: |
           xcodebuild archive \
@@ -163,8 +163,35 @@ jobs:
             SUPABASE_ANON_KEY="${{ secrets.SUPABASE_ANON_KEY }}" \
             | xcpretty --color
 
-      # ─── 10. Export .ipa ─────────────────────────────────────────────
-      - name: Export .ipa
+      # ─── 9b. Unsigned Build (pro Sideloadly) ─────────────────────────
+      - name: Build Unsigned (.app for Sideloadly)
+        if: steps.signing_setup.outputs.signed == 'false'
+        run: |
+          echo "🔨 Stavím nepodepsanou verzi pro Sideloadly..."
+          xcodebuild build \
+            -project AgileTrainer.xcodeproj \
+            -scheme $SCHEME \
+            -sdk $SDK \
+            -configuration $CONFIGURATION \
+            -destination "$DESTINATION" \
+            -derivedDataPath build/DerivedData \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            GEMINI_API_KEY="${{ secrets.GEMINI_API_KEY }}" \
+            SUPABASE_URL="${{ secrets.SUPABASE_URL }}" \
+            SUPABASE_ANON_KEY="${{ secrets.SUPABASE_ANON_KEY }}" \
+            | xcpretty --color
+          
+          # Vytvoření pseudo-IPA (Sideloadly to takhle bere nejlépe)
+          mkdir -p build/export/Payload
+          cp -R build/DerivedData/Build/Products/Release-iphoneos/AgileTrainer.app build/export/Payload/
+          cd build/export
+          zip -r ../../AgileTrainer-Unsigned.ipa Payload
+          echo "✅ Nepodepsaná IPA vytvořena."
+
+      # ─── 10. Export .ipa (Signed) ────────────────────────────────────
+      - name: Export .ipa (Signed)
         if: steps.signing_setup.outputs.signed == 'true'
         run: |
           cat > build/ExportOptions.plist << EOF
@@ -190,13 +217,15 @@ jobs:
             -exportOptionsPlist build/ExportOptions.plist \
             | xcpretty --color
 
-      # ─── 11. Upload .ipa ─────────────────────────────────────────────
-      - name: Upload .ipa Artifact
-        if: steps.signing_setup.outputs.signed == 'true'
+      # ─── 11. Upload Artifacts ────────────────────────────────────────
+      - name: Upload Build Artifacts
         uses: actions/upload-artifact@v4
         with:
           name: AgileTrainer-${{ github.sha }}
-          path: build/export/*.ipa
+          path: |
+            build/export/*.ipa
+            AgileTrainer-Unsigned.ipa
+          if-no-files-found: warn
           retention-days: 14
 
       # ─── 12. Cleanup ─────────────────────────────────────────────────
