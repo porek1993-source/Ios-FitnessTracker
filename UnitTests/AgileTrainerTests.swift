@@ -2,7 +2,7 @@
 // Klíčové unit testy pro AgileFitnessTrainer.
 
 import XCTest
-@testable import AgileFitnessTrainer
+@testable import AgileTrainer
 
 // MARK: ═══════════════════════════════════════════════════════════════════════
 // MARK: AI Response Parsing Tests
@@ -84,11 +84,9 @@ final class ProgressiveOverloadTests: XCTestCase {
     func testFallbackGeneratorPushDay() {
         let profile = UserContextProfile(fitnessLevel: "Pokročilý")
         let day = PlannedWorkoutDay(
-            id: UUID(),
-            date: Date(),
-            dayType: .workout,
+            dayOfWeek: 1,
             label: "Push Day",
-            plannedExercises: []
+            isRestDay: false
         )
 
         // FallbackWorkoutGenerator nemá závislost na ModelContext pro základní test
@@ -108,8 +106,7 @@ final class ProgressiveOverloadTests: XCTestCase {
     func testFallbackGeneratorBeginnerSets() {
         let profile = UserContextProfile(fitnessLevel: "Začátečník")
         let day = PlannedWorkoutDay(
-            id: UUID(), date: Date(), dayType: .workout,
-            label: "Leg Day", plannedExercises: []
+            dayOfWeek: 4, label: "Leg Day", isRestDay: false
         )
 
         let plan = FallbackWorkoutGenerator.generateFallbackPlan(

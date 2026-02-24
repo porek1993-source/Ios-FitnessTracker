@@ -1,24 +1,20 @@
 // WorkoutViewModelTests.swift
 import XCTest
-@testable import AgileFitnessTrainer
+@testable import AgileTrainer
 
 @MainActor
 final class WorkoutViewModelTests: XCTestCase {
 
     func testViewModelInitialization() {
         let planDay = PlannedWorkoutDay(
-            id: UUID(),
-            date: Date(),
-            dayType: .workout,
+            dayOfWeek: 1,
             label: "Test Workout",
-            plannedExercises: []
+            isRestDay: false
         )
         
         let session = WorkoutSession(
-            id: UUID(),
-            date: Date(),
-            durationSeconds: 0,
-            log: []
+            plan: nil,
+            plannedDay: planDay
         )
         
         let vm = WorkoutViewModel(session: session, plan: planDay, planLabel: "Day 1")

@@ -87,6 +87,35 @@ struct ResponsePlan: Codable {
     let motivationalMessage: String
     let warmupUrl: String?
     let exercises: [ResponseExercise]
+
+    static var jsonSchema: [String: Any] {
+        return [
+            "type": "object",
+            "properties": [
+                "motivationalMessage": ["type": "string"],
+                "warmupUrl": ["type": "string"],
+                "exercises": [
+                    "type": "array",
+                    "items": [
+                        "type": "object",
+                        "properties": [
+                            "name": ["type": "string"],
+                            "slug": ["type": "string"],
+                            "coachTip": ["type": "string"],
+                            "sets": ["type": "integer"],
+                            "repsMin": ["type": "integer"],
+                            "repsMax": ["type": "integer"],
+                            "weightKg": ["type": "number"],
+                            "rpe": ["type": "integer"],
+                            "tempo": ["type": "string"],
+                            "restSeconds": ["type": "integer"]
+                        ]
+                    ]
+                ]
+            ],
+            "required": ["motivationalMessage", "exercises"]
+        ]
+    }
 }
 
 struct TrainerResponse: Codable {

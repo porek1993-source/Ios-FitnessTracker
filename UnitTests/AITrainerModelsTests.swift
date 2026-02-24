@@ -1,6 +1,6 @@
 // AITrainerModelsTests.swift
 import XCTest
-@testable import AgileFitnessTrainer
+@testable import AgileTrainer
 
 final class AITrainerModelsTests: XCTestCase {
 
