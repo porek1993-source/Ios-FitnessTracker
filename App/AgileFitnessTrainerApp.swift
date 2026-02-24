@@ -27,9 +27,11 @@ struct RootView: View {
 
     var body: some View {
         if profiles.isEmpty {
-            OnboardingView()
+            OnboardingChatView()
+                .transition(.opacity)
         } else {
             TrainerDashboardView()
+                .transition(.opacity)
         }
     }
 }
