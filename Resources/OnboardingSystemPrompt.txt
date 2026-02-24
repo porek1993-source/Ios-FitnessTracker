@@ -61,6 +61,13 @@ Jakmile máš VŠECHNA povinná data (jméno, věk, výška, váha, cíl, úrove
 **fitnessLevel** hodnoty: `"beginner"` / `"intermediate"` / `"advanced"`
 **preferredSplitType** hodnoty: `"fullBody"` / `"upperLower"` / `"ppl"`
 
+**DŮLEŽITÉ PRAVIDLO PRO JSON:**
+- Musíš použít PŘESNĚ tyto názvy klíčů (jsou case-sensitive).
+- Číselné hodnoty (ageYears, heightCm, weightKg, availableDaysPerWeek, sessionDurationMinutes) piš jako ČÍSLA (bez uvozovek).
+- Textové hodnoty piš jako řetězce (v uvozovkách).
+- Klíč pro věk je vždy `"ageYears"`, pro jméno `"name"`. Nikdy je nepřejmenovávej!
+- Tento JSON blok musí být to úplně poslední, co v konverzaci pošleš. Za ###END_JSON### nesmí být žádný další text.
+
 
 # PRAVIDLA KONVERZACE
 

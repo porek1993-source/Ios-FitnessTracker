@@ -325,10 +325,10 @@ final class OnboardingAIManager: ObservableObject {
         guard parts.count > 1 else { return (displayText, nil) }
 
         let jsonPart = parts[1]
+        // CRITICAL FIX: Only return the jsonString if we have BOTH tags.
+        // During streaming, we don't want to try parsing partial JSON.
         guard let endRange = jsonPart.range(of: jsonEndTag) else {
-            // No end tag — try to parse everything after start tag
-            let candidate = jsonPart.trimmingCharacters(in: .whitespacesAndNewlines)
-            return (displayText, candidate.isEmpty ? nil : candidate)
+            return (displayText, nil)
         }
 
         let jsonString = String(jsonPart[jsonPart.startIndex..<endRange.lowerBound])
@@ -340,11 +340,17 @@ final class OnboardingAIManager: ObservableObject {
     // MARK: - Profile Extraction
 
     private func handleExtractedJSON(_ jsonString: String) async {
-        // Clean JSON string (remove potential code fences)
-        let cleaned = jsonString
+        // Use regex for a more robust extraction if there's trailing junk or nested markers
+        // We look for everything between the first '{' and the last '}'
+        var cleaned = jsonString
             .replacingOccurrences(of: "```json", with: "")
             .replacingOccurrences(of: "```", with: "")
             .trimmingCharacters(in: .whitespacesAndNewlines)
+        
+        if let firstBrace = cleaned.firstIndex(of: "{"),
+           let lastBrace = cleaned.lastIndex(of: "}") {
+            cleaned = String(cleaned[firstBrace...lastBrace])
+        }
 
         guard let data = cleaned.data(using: .utf8) else {
             AppLogger.shared.log("OnboardingAIManager: Nelze převést vyčištěný JSON string na data.", type: .error)
@@ -361,6 +367,7 @@ final class OnboardingAIManager: ObservableObject {
             AppLogger.shared.log("OnboardingAIManager: Profil úspěšně dekódován a připraven k uložení!", type: .success)
         } catch {
             AppLogger.shared.log("OnboardingAIManager: Chyba dekódování JSONu - \(error)", type: .error)
+            AppLogger.shared.log("OnboardingAIManager: Selhaný JSON: \(cleaned)", type: .info)
             // Ořezání chyby na uživatelsky přívětivější text
             errorMessage = "Chyba struktury profilu. Thor zřejmě nevygeneroval přesná data."
         }
