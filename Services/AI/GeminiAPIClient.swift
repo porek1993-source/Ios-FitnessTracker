@@ -5,7 +5,7 @@ import Foundation
 actor GeminiAPIClient {
 
     private let apiKey: String
-    private let model   = "gemini-2.5-flash-lite"
+    private let model   = "gemini-1.5-flash"
     private let session: URLSession
 
     private var endpoint: URL {
