@@ -41,9 +41,8 @@ struct ReadinessTimelineProvider: TimelineProvider {
         completion(Self.sample)
     }
 
-    @MainActor
     func getTimeline(in context: Context, completion: @escaping (Timeline<ReadinessEntry>) -> Void) {
-        let modelContext = SharedModelContainer.container.mainContext
+        let modelContext = ModelContext(SharedModelContainer.container)
         
         // Přečteme data ze SwiftData (sdílená App Group databáze)
         let entry = buildEntry(from: modelContext)
@@ -54,7 +53,6 @@ struct ReadinessTimelineProvider: TimelineProvider {
         completion(timeline)
     }
 
-    @MainActor
     private func buildEntry(from context: ModelContext) -> ReadinessEntry {
         // Pokusíme se načíst profil
         let descriptor = FetchDescriptor<UserProfile>()
@@ -71,7 +69,9 @@ struct ReadinessTimelineProvider: TimelineProvider {
         }
 
         let today = Date.now
-        let todayDay = activePlan.days.first { $0.date.isSameDay(as: today) }
+        let weekday = Calendar.current.component(.weekday, from: today)
+        let dayIndex = weekday == 1 ? 7 : weekday - 1 // 1=Po ... 7=Ne
+        let todayDay = activePlan.scheduledDays.first { $0.dayOfWeek == dayIndex }
         let label = todayDay?.label ?? "Odpočinkový den"
 
         // Readiness z posledního záznamu
@@ -89,7 +89,7 @@ struct ReadinessTimelineProvider: TimelineProvider {
         let recentSessions = activePlan.sessions.filter { $0.startedAt > cutoff }
         for session in recentSessions {
             for exercise in session.exercises {
-                let group = exercise.exercise?.category ?? "other"
+                let group = exercise.exercise?.category.rawValue ?? "other"
                 muscleLoad[group, default: 0] += 0.3
             }
         }
