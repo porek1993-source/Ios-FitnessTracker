@@ -306,16 +306,24 @@ struct OnboardingChatView: View {
     }
 
     private func triggerTransition() {
-        // Persist profile
+        // Persist profile — explicit save so @Query in RootView picks it up
         if let profile = manager.extractedProfile {
             modelContext.insert(profile)
+            try? modelContext.save()
         }
 
-        // Show success animation, then pop to root (RootView re-renders)
+        // Show success animation
         withAnimation(.easeInOut(duration: 0.4)) {
             showTransition = true
         }
         UINotificationFeedbackGenerator().notificationOccurred(.success)
+
+        // After a short delay, RootView's @Query will see the profile
+        // and automatically switch to MainTabView
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) {
+            // Force SwiftData to persist (belt and suspenders)
+            try? modelContext.save()
+        }
     }
 
     // MARK: - Helpers

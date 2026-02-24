@@ -201,6 +201,17 @@ final class OnboardingAIManager: ObservableObject {
                     await handleExtractedJSON(jsonString)
                 }
             }
+
+            // Post-stream fallback: JSON tags may have been split across chunks
+            if !profileReady {
+                let (displayText, jsonBlock) = parseResponse(fullText)
+                if streamIndex < messages.count {
+                    messages[streamIndex].text = displayText
+                }
+                if let jsonString = jsonBlock {
+                    await handleExtractedJSON(jsonString)
+                }
+            }
         } catch {
             let errorDetail = errorMessage ?? error.localizedDescription
             if streamIndex < messages.count {
