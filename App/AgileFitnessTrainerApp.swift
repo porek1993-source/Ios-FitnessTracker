@@ -40,7 +40,7 @@ struct RootView: View {
                 .transition(.opacity)
             }
         } else {
-            TrainerDashboardView()
+            MainTabView()
                 .transition(.opacity)
         }
     }
