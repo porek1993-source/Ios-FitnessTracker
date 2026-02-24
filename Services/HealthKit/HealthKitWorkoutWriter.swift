@@ -64,109 +64,53 @@ final class HealthKitWorkoutWriter {
         let end      = session.finishedAt ?? .now
         let duration = end.timeIntervalSince(start)
 
-        // Spočítej kalorie z odjetých sérií (hrubý odhad: MET × váha × čas)
+        // Spočítej kalorie z odjetých sérií
         let estimatedCalories = estimateCalories(
             session: session,
             durationSeconds: duration
         )
 
+        let configuration = HKWorkoutConfiguration()
+        configuration.activityType = .traditionalStrengthTraining
+        configuration.locationType = .indoor
+
+        let builder = HKWorkoutBuilder(healthStore: store, configuration: configuration, device: .local())
+
         do {
-            let workout = try buildWorkout(start: start, end: end, calories: estimatedCalories)
-            try await saveWorkout(workout, calories: estimatedCalories, start: start, end: end)
+            try await builder.beginCollection(at: start)
+            
+            // Přidáme kalorie jako vzorky ( samples)
+            if let kcal = estimatedCalories, canWrite(HKQuantityType(.activeEnergyBurned)) {
+                let calType   = HKQuantityType(.activeEnergyBurned)
+                let calQty    = HKQuantity(unit: .kilocalorie(), doubleValue: kcal)
+                let calSample = HKQuantitySample(
+                    type:     calType,
+                    quantity: calQty,
+                    start:    start,
+                    end:      end,
+                    metadata: [HKMetadataKeyWasUserEntered: false]
+                )
+                try await builder.addSamples([calSample])
+            }
+            
+            try await builder.endCollection(at: end)
+            
+            let metadata: [String: Any] = [
+                HKMetadataKeyWorkoutBrandName: "Agilní Fitness Trenér",
+                HKMetadataKeyIndoorWorkout: true
+            ]
+            try await builder.addMetadata(metadata)
+            
+            let workout = try await builder.finishWorkout()
+            
             return WorkoutWriteResult(
                 success: true,
-                hkWorkoutID: workout.uuid,
+                hkWorkoutID: workout?.uuid,
                 caloriesWritten: estimatedCalories,
                 error: nil
             )
         } catch {
             return WorkoutWriteResult.failure(error)
-        }
-    }
-
-    // MARK: - Build
-
-    private func buildWorkout(
-        start: Date,
-        end: Date,
-        calories: Double?
-    ) throws -> HKWorkout {
-
-        let metadata: [String: Any] = [
-            HKMetadataKeyWorkoutBrandName: "Agilní Fitness Trenér",
-            HKMetadataKeyIndoorWorkout: true
-        ]
-
-        // Kalorie do HKWorkout (deprecated v iOS 18 ale stále funkční pro starší iOS)
-        var totalEnergy: HKQuantity?
-        if let kcal = calories {
-            totalEnergy = HKQuantity(unit: .kilocalorie(), doubleValue: kcal)
-        }
-
-        // iOS 17+ builder
-        if #available(iOS 17.0, *) {
-            return buildWithBuilder(start: start, end: end, calories: totalEnergy, metadata: metadata)
-        } else {
-            // Fallback pro iOS 16
-            return HKWorkout(
-                activityType: .traditionalStrengthTraining,
-                start: start,
-                end: end,
-                duration: end.timeIntervalSince(start),
-                totalEnergyBurned: totalEnergy,
-                totalDistance: nil,
-                metadata: metadata
-            )
-        }
-    }
-
-    @available(iOS 17.0, *)
-    private func buildWithBuilder(
-        start: Date,
-        end: Date,
-        calories: HKQuantity?,
-        metadata: [String: Any]
-    ) -> HKWorkout {
-        let configuration = HKWorkoutConfiguration()
-        configuration.activityType = .traditionalStrengthTraining
-        configuration.locationType = .indoor
-
-        // Pro iOS 17+ použijeme HKWorkoutBuilder async API
-        // Ale pro jednoduchost a kompatibilitu vracíme starý inicializátor
-        // (builder vyžaduje live session nebo HKWorkoutBuilder, což je mimo scope)
-        return HKWorkout(
-            activityType: .traditionalStrengthTraining,
-            start: start,
-            end: end,
-            workoutEvents: nil,
-            totalEnergyBurned: calories,
-            totalDistance: nil,
-            metadata: metadata
-        )
-    }
-
-    // MARK: - Save
-
-    private func saveWorkout(
-        _ workout: HKWorkout,
-        calories: Double?,
-        start: Date,
-        end: Date
-    ) async throws {
-        try await store.save(workout)
-
-        // Zapiš kalorie jako asociovaný sample (přesnější než totalEnergyBurned)
-        if let kcal = calories, canWrite(HKQuantityType(.activeEnergyBurned)) {
-            let calType   = HKQuantityType(.activeEnergyBurned)
-            let calQty    = HKQuantity(unit: .kilocalorie(), doubleValue: kcal)
-            let calSample = HKQuantitySample(
-                type:     calType,
-                quantity: calQty,
-                start:    start,
-                end:      end,
-                metadata: [HKMetadataKeyWasUserEntered: false]
-            )
-            try await store.addSamples([calSample], to: workout)
         }
     }
 
