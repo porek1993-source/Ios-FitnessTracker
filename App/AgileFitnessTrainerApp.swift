@@ -24,11 +24,21 @@ struct AgileFitnessTrainerApp: App {
 
 struct RootView: View {
     @Query private var profiles: [UserProfile]
+    @State private var showChat = false
 
     var body: some View {
         if profiles.isEmpty {
-            OnboardingChatView()
+            if showChat {
+                OnboardingChatView()
+                    .transition(.asymmetric(insertion: .move(edge: .trailing), removal: .opacity))
+            } else {
+                WelcomeView(onStart: {
+                    withAnimation(.spring(response: 0.45, dampingFraction: 0.8)) {
+                        showChat = true
+                    }
+                })
                 .transition(.opacity)
+            }
         } else {
             TrainerDashboardView()
                 .transition(.opacity)
