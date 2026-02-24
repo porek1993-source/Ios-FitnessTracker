@@ -44,8 +44,14 @@ struct DebugOverlayView: View {
                         Text("Thor Debug Console")
                             .font(.system(size: 14, weight: .bold, design: .monospaced))
                         Spacer()
+                        Button("Kopírovat") {
+                            let logsText = logger.logs.map { "\($0.timestamp) [\($0.type)]: \($0.message)" }.joined(separator: "\n")
+                            UIPasteboard.general.string = logsText
+                        }
+                        .font(.system(size: 12))
                         Button("Smazat") { logger.logs.removeAll() }
                             .font(.system(size: 12))
+                            .padding(.leading, 10)
                         Button("Zavřít") { withAnimation { isVisible = false } }
                             .font(.system(size: 12))
                             .padding(.leading, 10)

@@ -38,6 +38,71 @@ struct OnboardingProfileDTO: Decodable {
     let preferredSplitType:    String
     let sessionDurationMinutes: Int
 
+    enum CodingKeys: String, CodingKey {
+        case name, jmeno
+        case ageYears, age, vek
+        case gender, pohlavi
+        case heightCm = "heightCm"
+        case height_cm, vyska
+        case weightKg = "weightKg"
+        case weight_kg, vaha
+        case primaryGoal, goal, cil
+        case fitnessLevel = "fitnessLevel"
+        case experience_level, uroven_zkusenosti
+        case availableDaysPerWeek = "availableDaysPerWeek"
+        case training_days_per_week, pocet_treninkovych_dnu
+        case preferredSplitType = "preferredSplitType"
+        case preferred_split
+        case sessionDurationMinutes = "sessionDurationMinutes"
+        case session_duration, delka_treninku
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        
+        name = try container.decodeIfPresent(String.self, forKey: .name) ??
+               container.decodeIfPresent(String.self, forKey: .jmeno) ?? "Neznámý"
+               
+        ageYears = try container.decodeIfPresent(Int.self, forKey: .ageYears) ??
+                   container.decodeIfPresent(Int.self, forKey: .age) ??
+                   container.decodeIfPresent(Int.self, forKey: .vek) ?? 30
+                   
+        gender = try container.decodeIfPresent(String.self, forKey: .gender) ??
+                 container.decodeIfPresent(String.self, forKey: .pohlavi) ?? "other"
+                 
+        // DVOJÍ PARSOVÁNÍ čísel (AI občas pošle "175" jako string místo 175 číslo)
+        if let hDouble = try? container.decodeIfPresent(Double.self, forKey: .heightCm) { heightCm = hDouble }
+        else if let hString = try? container.decodeIfPresent(String.self, forKey: .heightCm), let h = Double(hString) { heightCm = h }
+        else if let hDouble2 = try? container.decodeIfPresent(Double.self, forKey: .height_cm) { heightCm = hDouble2 }
+        else if let hDouble3 = try? container.decodeIfPresent(Double.self, forKey: .vyska) { heightCm = hDouble3 }
+        else { heightCm = 175.0 }
+        
+        if let wDouble = try? container.decodeIfPresent(Double.self, forKey: .weightKg) { weightKg = wDouble }
+        else if let wString = try? container.decodeIfPresent(String.self, forKey: .weightKg), let w = Double(wString) { weightKg = w }
+        else if let wDouble2 = try? container.decodeIfPresent(Double.self, forKey: .weight_kg) { weightKg = wDouble2 }
+        else if let wDouble3 = try? container.decodeIfPresent(Double.self, forKey: .vaha) { weightKg = wDouble3 }
+        else { weightKg = 75.0 }
+                   
+        primaryGoal = try container.decodeIfPresent(String.self, forKey: .primaryGoal) ??
+                      container.decodeIfPresent(String.self, forKey: .goal) ??
+                      container.decodeIfPresent(String.self, forKey: .cil) ?? "hypertrophy"
+                      
+        fitnessLevel = try container.decodeIfPresent(String.self, forKey: .fitnessLevel) ??
+                       container.decodeIfPresent(String.self, forKey: .experience_level) ??
+                       container.decodeIfPresent(String.self, forKey: .uroven_zkusenosti) ?? "intermediate"
+                       
+        availableDaysPerWeek = try container.decodeIfPresent(Int.self, forKey: .availableDaysPerWeek) ??
+                               container.decodeIfPresent(Int.self, forKey: .training_days_per_week) ??
+                               container.decodeIfPresent(Int.self, forKey: .pocet_treninkovych_dnu) ?? 3
+                               
+        preferredSplitType = try container.decodeIfPresent(String.self, forKey: .preferredSplitType) ??
+                             container.decodeIfPresent(String.self, forKey: .preferred_split) ?? "ppl"
+                             
+        sessionDurationMinutes = try container.decodeIfPresent(Int.self, forKey: .sessionDurationMinutes) ??
+                                 container.decodeIfPresent(Int.self, forKey: .session_duration) ??
+                                 container.decodeIfPresent(Int.self, forKey: .delka_treninku) ?? 60
+    }
+
     /// Converts DTO → SwiftData UserProfile
     func toUserProfile() -> UserProfile {
         let calendar = Calendar.current
