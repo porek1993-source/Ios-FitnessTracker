@@ -49,7 +49,7 @@ struct OnboardingChatView: View {
         .task { await manager.startConversation() }
         .onChange(of: manager.profileReady) { _, ready in
             if ready { 
-                print("✨ OnboardingChatView: manager.profileReady detekováno jako TRUE -> triggerTransition()")
+                AppLogger.shared.log("OnboardingChatView: manager.profileReady detekováno jako TRUE -> triggerTransition()", type: .success)
                 triggerTransition() 
             }
         }
@@ -309,19 +309,19 @@ struct OnboardingChatView: View {
     }
 
     private func triggerTransition() {
-        print("✅ OnboardingChatView: Spouštím `triggerTransition`")
+        AppLogger.shared.log("OnboardingChatView: Spouštím `triggerTransition`", type: .info)
         // Persist profile — explicit save so @Query in RootView picks it up
         if let profile = manager.extractedProfile {
-            print("💾 OnboardingChatView: Ukládám profil do modelContext pro \(profile.name)")
+            AppLogger.shared.log("OnboardingChatView: Ukládám profil do modelContext pro \(profile.name)", type: .info)
             modelContext.insert(profile)
             do {
                 try modelContext.save()
-                print("💾 OnboardingChatView: Profil úspěšně uložen do SwiftData")
+                AppLogger.shared.log("OnboardingChatView: Profil úspěšně uložen do SwiftData", type: .success)
             } catch {
-                print("❌ OnboardingChatView: Chyba při ukládání do SwiftData - \(error)")
+                AppLogger.shared.log("OnboardingChatView: Chyba při ukládání do SwiftData - \(error)", type: .error)
             }
         } else {
-            print("❌ OnboardingChatView: Žádný `extractedProfile` při volání triggerTransition!")
+            AppLogger.shared.log("OnboardingChatView: Žádný `extractedProfile` při volání triggerTransition!", type: .error)
         }
 
         // Show success animation
@@ -333,12 +333,12 @@ struct OnboardingChatView: View {
         // After a short delay, RootView's @Query will see the profile
         // and automatically switch to MainTabView
         DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) {
-            print("⏱️ OnboardingChatView: Timeout 2.5s vypršel, druhý pokus o save()")
+            AppLogger.shared.log("OnboardingChatView: Timeout 2.5s vypršel, druhý pokus o save()", type: .info)
             // Force SwiftData to persist (belt and suspenders)
             do {
                try modelContext.save()
             } catch {
-               print("❌ OnboardingChatView: Druhý save() selhal - \(error)")
+               AppLogger.shared.log("OnboardingChatView: Druhý save() selhal - \(error)", type: .error)
             }
         }
     }

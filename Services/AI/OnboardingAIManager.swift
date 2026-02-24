@@ -209,7 +209,7 @@ final class OnboardingAIManager: ObservableObject {
                     messages[streamIndex].text = displayText
                 }
                 if let jsonString = jsonBlock {
-                    print("⚠️ OnboardingAIManager: Post-stream fallback našel JSON blok, pokouším se ho zpracovat.")
+                    AppLogger.shared.log("OnboardingAIManager: Post-stream fallback našel JSON blok, pokouším se ho zpracovat.", type: .warning)
                     await handleExtractedJSON(jsonString)
                 }
             }
@@ -344,7 +344,7 @@ final class OnboardingAIManager: ObservableObject {
             .trimmingCharacters(in: .whitespacesAndNewlines)
 
         guard let data = cleaned.data(using: .utf8) else {
-            print("❌ OnboardingAIManager: Nelze převést vyčištěný JSON string na data.")
+            AppLogger.shared.log("OnboardingAIManager: Nelze převést vyčištěný JSON string na data.", type: .error)
             errorMessage = "Nepodařilo se přečíst profil."
             return
         }
@@ -355,9 +355,9 @@ final class OnboardingAIManager: ObservableObject {
             extractedProfile = profile
             profileReady = true
             inputDisabled = true  // Freeze chat — we're done
-            print("✅ OnboardingAIManager: Profil úspěšně dekódován a připraven k uložení!")
+            AppLogger.shared.log("OnboardingAIManager: Profil úspěšně dekódován a připraven k uložení!", type: .success)
         } catch {
-            print("❌ OnboardingAIManager: Chyba dekódování JSONu - \(error)")
+            AppLogger.shared.log("OnboardingAIManager: Chyba dekódování JSONu - \(error)", type: .error)
             // Ořezání chyby na uživatelsky přívětivější text
             errorMessage = "Chyba struktury profilu. Thor zřejmě nevygeneroval přesná data."
         }

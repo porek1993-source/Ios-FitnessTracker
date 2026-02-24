@@ -27,21 +27,26 @@ struct RootView: View {
     @State private var showChat = false
 
     var body: some View {
-        if profiles.isEmpty {
-            if showChat {
-                OnboardingChatView()
-                    .transition(.asymmetric(insertion: .move(edge: .trailing), removal: .opacity))
+        ZStack {
+            if profiles.isEmpty {
+                if showChat {
+                    OnboardingChatView()
+                        .transition(.asymmetric(insertion: .move(edge: .trailing), removal: .opacity))
+                } else {
+                    WelcomeView(onStart: {
+                        withAnimation(.spring(response: 0.45, dampingFraction: 0.8)) {
+                            showChat = true
+                        }
+                    })
+                    .transition(.opacity)
+                }
             } else {
-                WelcomeView(onStart: {
-                    withAnimation(.spring(response: 0.45, dampingFraction: 0.8)) {
-                        showChat = true
-                    }
-                })
-                .transition(.opacity)
+                MainTabView()
+                    .transition(.opacity)
             }
-        } else {
-            MainTabView()
-                .transition(.opacity)
+            
+            // Floating Debug Console (Triple tap top-left corner to toggle)
+            DebugOverlayView()
         }
     }
 }
