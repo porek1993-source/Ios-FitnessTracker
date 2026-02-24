@@ -2,6 +2,7 @@
 // Klíčové unit testy pro AgileFitnessTrainer.
 
 import XCTest
+import SwiftUI
 @testable import AgileTrainer
 
 // MARK: ═══════════════════════════════════════════════════════════════════════
@@ -78,6 +79,7 @@ final class AIResponseParsingTests: XCTestCase {
 // MARK: Progressive Overload Logic Tests
 // MARK: ═══════════════════════════════════════════════════════════════════════
 
+@MainActor
 final class ProgressiveOverloadTests: XCTestCase {
 
     /// Testuje, že FallbackWorkoutGenerator generuje validní plán pro Push den.
@@ -122,6 +124,7 @@ final class ProgressiveOverloadTests: XCTestCase {
 // MARK: Utility Tests
 // MARK: ═══════════════════════════════════════════════════════════════════════
 
+@MainActor
 final class UtilityTests: XCTestCase {
 
     /// Test YouTubeLinkGenerator — anglický název.
