@@ -204,13 +204,16 @@ final class OnboardingAIManager: ObservableObject {
 
             // Post-stream fallback: JSON tags may have been split across chunks
             if !profileReady {
+                AppLogger.shared.log("OnboardingAIManager: Stream skončil, profil zatím nenalezen. Délka textu: \(fullText.count) znaků. Zkouším post-stream fallback...", type: .info)
                 let (displayText, jsonBlock) = parseResponse(fullText)
                 if streamIndex < messages.count {
                     messages[streamIndex].text = displayText
                 }
                 if let jsonString = jsonBlock {
-                    AppLogger.shared.log("OnboardingAIManager: Post-stream fallback našel JSON blok, pokouším se ho zpracovat.", type: .warning)
+                    AppLogger.shared.log("OnboardingAIManager: Post-stream fallback našel JSON blok!", type: .success)
                     await handleExtractedJSON(jsonString)
+                } else {
+                    AppLogger.shared.log("OnboardingAIManager: Ani post-stream fallback nenašel JSON tagy.", type: .warning)
                 }
             }
         } catch {

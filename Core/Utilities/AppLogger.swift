@@ -38,6 +38,7 @@ struct DebugOverlayView: View {
     var body: some View {
         ZStack(alignment: .topLeading) {
             if isVisible {
+                // Console UI
                 VStack(spacing: 0) {
                     HStack {
                         Text("Thor Debug Console")
@@ -45,7 +46,7 @@ struct DebugOverlayView: View {
                         Spacer()
                         Button("Smazat") { logger.logs.removeAll() }
                             .font(.system(size: 12))
-                        Button("Zavřít") { isVisible = false }
+                        Button("Zavřít") { withAnimation { isVisible = false } }
                             .font(.system(size: 12))
                             .padding(.leading, 10)
                     }
@@ -86,17 +87,22 @@ struct DebugOverlayView: View {
                 .cornerRadius(12)
                 .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.gray.opacity(0.5), lineWidth: 1))
                 .padding()
+                .padding(.top, 40) // Don't cover status bar area
                 .transition(.move(edge: .top).combined(with: .opacity))
                 .zIndex(999)
             }
             
-            // Neviditelné tlačítko pro vyvolání (trojí klepnutí vlevo nahoře)
-            Color.clear
-                .frame(width: 60, height: 60)
-                .contentShape(Rectangle())
+            // Invisible trigger area (Trojí klepnutí vlevo nahoře)
+            // Fix: Added frame(maxWidth: infinity) to ensure ZStack fills the screen
+            // so topLeading is truly top-left.
+            Rectangle()
+                .fill(Color.black.opacity(0.001)) // Almost transparent but clickable
+                .frame(width: 80, height: 80)
                 .onTapGesture(count: 3) {
                     withAnimation(.spring()) { isVisible.toggle() }
                 }
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .allowsHitTesting(true) // Ensure it captures taps
     }
 }
