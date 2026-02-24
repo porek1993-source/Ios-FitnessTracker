@@ -202,10 +202,11 @@ final class OnboardingAIManager: ObservableObject {
                 }
             }
         } catch {
+            let errorDetail = errorMessage ?? error.localizedDescription
             if streamIndex < messages.count {
-                messages[streamIndex].text = "Jejda, něco se pokazilo. Zkus to znovu."
+                messages[streamIndex].text = "Jejda, něco se pokazilo.\n\nChyba: \(errorDetail)\n\nZkus to prosím znovu nebo prověř API klíč."
             }
-            errorMessage = error.localizedDescription
+            errorMessage = errorDetail
         }
     }
 
@@ -258,7 +259,8 @@ final class OnboardingAIManager: ObservableObject {
 
         guard let http = response as? HTTPURLResponse,
               (200..<300).contains(http.statusCode) else {
-            throw GeminiError.httpError(statusCode: (response as? HTTPURLResponse)?.statusCode ?? 0, body: "Stream failed")
+            let statusCode = (response as? HTTPURLResponse)?.statusCode ?? 0
+            throw GeminiError.httpError(statusCode: statusCode, body: "Stream failed: \(statusCode)")
         }
 
         struct GeminiStreamChunk: Decodable {
