@@ -28,11 +28,12 @@ enum SharedModelContainer {
     /// Sdílený `ModelContainer` — uložiště dat v App Group kontejneru.
     /// Hlavní app i widget volají tuto property, takže obě čtou ze stejné SQLite DB.
     static let container: ModelContainer = {
-        guard let storeURL = FileManager.default
-            .containerURL(forSecurityApplicationGroupIdentifier: appGroupID)?
-            .appending(path: "AgileFitness.store")
-        else {
-            fatalError("App Group \(appGroupID) není nakonfigurována. Přidej ji do Signing & Capabilities.")
+        let storeURL: URL
+        if let groupURL = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupID) {
+            storeURL = groupURL.appending(path: "AgileFitness.store")
+        } else {
+            // Fallback pro simulátor/testy, kde App Group není dostupná
+            storeURL = URL.documentsDirectory.appending(path: "AgileFitness.store")
         }
 
         let config = ModelConfiguration(
