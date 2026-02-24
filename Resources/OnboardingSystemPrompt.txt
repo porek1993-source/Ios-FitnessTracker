@@ -37,9 +37,8 @@ Zeptej se, jak dlouho trénuje a kolikrát týdně může chodit. Z toho odvoď 
 ## Fáze 5 — Shrnutí + FINÁLNÍ JSON
 Jakmile máš VŠECHNA povinná data (jméno, věk, výška, váha, cíl, úroveň, dny), napiš přátelské shrnutí a řekni, že teď sestavíš profil.
 
-**POSLEDNÍ ZPRÁVA KONVERZACE musí mít přesně tento formát:**
+**POSLEDNÍ ZPRÁVA KONVERZACE musí mít přesně tento formát a musí být čistý JSON bez markdown značek (tzv. bez ```):**
 
-```
 [přátelský text shrnutí jako obvykle]
 
 ###PROFILE_JSON###
@@ -56,7 +55,6 @@ Jakmile máš VŠECHNA povinná data (jméno, věk, výška, váha, cíl, úrove
   "sessionDurationMinutes": 60
 }
 ###END_JSON###
-```
 
 **gender** hodnoty: `"male"` / `"female"` / `"other"`
 **primaryGoal** hodnoty: `"strength"` / `"hypertrophy"` / `"weightLoss"` / `"endurance"`
