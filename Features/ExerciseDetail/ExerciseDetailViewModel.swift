@@ -32,15 +32,26 @@ final class ExerciseDetailViewModel: ObservableObject {
         enrichedData?.primaryMuscles ?? exercise?.primaryMuscles ?? []
     }
 
+    /// Přesný anglický název z AI nebo DB.
+    var nameEn: String? {
+        enrichedData?.nameEn ?? exercise?.nameEn
+    }
+
     /// Instrukce — AI data mají prioritu, pak DB.
     var instructions: String? {
         enrichedData?.instructions ?? exercise?.instructions
     }
 
+    /// Sekundární svaly — AI data mají prioritu, pak DB.
+    var secondaryMuscles: [String] {
+        enrichedData?.secondaryMuscles ?? exercise?.secondaryMuscles ?? []
+    }
+
     /// YouTube URL pro tutoriál.
     var youtubeURL: URL? {
         guard let ex = exercise else { return nil }
-        return YouTubeLinkGenerator.searchURL(nameEn: ex.nameEn, nameCz: ex.nameCz)
+        let resolvedNameEn = enrichedData?.nameEn ?? ex.nameEn
+        return YouTubeLinkGenerator.searchURL(nameEn: resolvedNameEn, nameCz: ex.nameCz)
     }
 
     /// Má cvik kompletní data?
@@ -67,7 +78,7 @@ final class ExerciseDetailViewModel: ObservableObject {
 
             // Pokud instrukce chybí, spustíme AI enrichment
             if let dto, dto.instructionsMissing {
-                await enrichWithAI(nameCz: dto.nameCz)
+                await enrichWithAI(slug: dto.slug, nameCz: dto.nameCz)
             }
         } catch {
             isLoadingExercise = false
@@ -84,7 +95,7 @@ final class ExerciseDetailViewModel: ObservableObject {
 
     // MARK: - AI Enrichment
 
-    private func enrichWithAI(nameCz: String) async {
+    private func enrichWithAI(slug: String, nameCz: String) async {
         isEnriching = true
         defer { isEnriching = false }
 
@@ -94,6 +105,17 @@ final class ExerciseDetailViewModel: ObservableObject {
                 enrichedData = data
             }
             HapticManager.shared.playSuccess()
+
+            // Fire and forget zápis do Supabase
+            Task {
+                do {
+                    try await repository.updateExercise(slug: slug, with: data)
+                    print("[ExerciseDetail] Obohacená data úspěšně uložena do Supabase pro cvik: \(slug)")
+                } catch {
+                    print("[ExerciseDetail] Chyba při asynchronním ukládání do Supabase: \(error.localizedDescription)")
+                }
+            }
+
         } catch {
             // Enrichment selhal — zobrazíme co máme, nepřerušujeme UX
             print("[ExerciseDetail] AI enrichment selhal: \(error.localizedDescription)")

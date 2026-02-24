@@ -87,6 +87,74 @@ actor SupabaseExerciseRepository {
         return try await performRequest(url: url)
     }
 
+    // MARK: - Update Exercise (Write-back)
+
+    /// Aktualizuje data cviku v Supabase po dogenerování AI.
+    func updateExercise(slug: String, with aiData: AIEnrichedExerciseData) async throws {
+        let url = try buildURL(path: "/rest/v1/exercises", query: [
+            ("slug", "eq.\(slug)")
+        ])
+
+        struct ExerciseUpdatePayload: Encodable {
+            let nameEn: String
+            let equipment: String
+            let primaryMuscles: [String]
+            let secondaryMuscles: [String]
+            let instructions: String
+            let instructionsMissing: Bool
+            let instructionsSource: String
+            let instructionsUpdatedAt: String
+
+            enum CodingKeys: String, CodingKey {
+                case nameEn = "name_en"
+                case equipment
+                case primaryMuscles = "primary_muscles"
+                case secondaryMuscles = "secondary_muscles"
+                case instructions
+                case instructionsMissing = "instructions_missing"
+                case instructionsSource = "instructions_source"
+                case instructionsUpdatedAt = "instructions_updated_at"
+            }
+        }
+
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        let timestamp = formatter.string(from: Date())
+
+        let payload = ExerciseUpdatePayload(
+            nameEn: aiData.nameEn,
+            equipment: aiData.equipment,
+            primaryMuscles: aiData.primaryMuscles,
+            secondaryMuscles: aiData.secondaryMuscles,
+            instructions: aiData.instructions,
+            instructionsMissing: false,
+            instructionsSource: "ai_gemini_flash",
+            instructionsUpdatedAt: timestamp
+        )
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "PATCH"
+        request.timeoutInterval = 15
+        
+        // Setup headers manually since defaultHeaders has Prefer: return=representation. We may not need it here, or we can use it.
+        for (key, value) in defaultHeaders {
+            request.setValue(value, forHTTPHeaderField: key)
+        }
+        
+        request.httpBody = try JSONEncoder().encode(payload)
+
+        let (_, response) = try await URLSession.shared.data(for: request)
+
+        guard let http = response as? HTTPURLResponse else {
+            throw SupabaseError.httpError(statusCode: 0)
+        }
+
+        // 200...299 indicates successful patch
+        guard (200...299).contains(http.statusCode) else {
+            throw SupabaseError.httpError(statusCode: http.statusCode)
+        }
+    }
+
     // MARK: - Helpers
 
     private func buildURL(path: String, query: [(String, String)]) throws -> URL {

@@ -25,8 +25,10 @@ actor ExerciseAIEnrichmentService {
 
         Vrať JSON v tomto přesném formátu:
         {
+            "nameEn": "přesný anglický fitness název (např. Bench Press, Squat, Pull Up)",
             "equipment": "název vybavení česky (např. Velká činka, Jednoručky, Vlastní váha, Kabelový stroj, Posilovací stroj)",
             "primaryMuscles": ["Hlavní sval česky", "Sekundární sval česky"],
+            "secondaryMuscles": ["Případný sekundární sval česky", "Další sval"],
             "instructions": "1. 💡 Správná technika: [popis]\\n2. 🫁 Dýchání: [popis]\\n3. ⚠️ Časté chyby: [popis]\\n4. 🎯 Na co se soustředit: [popis]"
         }
 
@@ -37,11 +39,13 @@ actor ExerciseAIEnrichmentService {
         let schema: [String: Any] = [
             "type": "OBJECT",
             "properties": [
-                "equipment":      ["type": "STRING"],
-                "primaryMuscles": ["type": "ARRAY", "items": ["type": "STRING"]],
-                "instructions":   ["type": "STRING"]
+                "nameEn":           ["type": "STRING"],
+                "equipment":        ["type": "STRING"],
+                "primaryMuscles":   ["type": "ARRAY", "items": ["type": "STRING"]],
+                "secondaryMuscles": ["type": "ARRAY", "items": ["type": "STRING"]],
+                "instructions":     ["type": "STRING"]
             ],
-            "required": ["equipment", "primaryMuscles", "instructions"]
+            "required": ["nameEn", "equipment", "primaryMuscles", "secondaryMuscles", "instructions"]
         ]
 
         let rawJSON = try await apiClient.generate(
