@@ -80,7 +80,7 @@ struct WelcomeView: View {
                 VStack(spacing: 20) {
                     Button(action: onStart) {
                         HStack(spacing: 12) {
-                            Text("Začít s Jakubem")
+                            Text("Začít s Thorem")
                                 .font(.system(size: 18, weight: .bold, design: .rounded))
                             Image(systemName: "arrow.right")
                                 .font(.system(size: 16, weight: .heavy))
@@ -101,7 +101,7 @@ struct WelcomeView: View {
                     }
                     .padding(.horizontal, 30)
 
-                    Text("Jakub je tvůj osobní AI průvodce")
+                    Text("Thor je tvůj osobní AI průvodce")
                         .font(.system(size: 13, weight: .medium))
                         .foregroundStyle(.white.opacity(0.3))
                 }

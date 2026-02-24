@@ -11,7 +11,7 @@ enum AppConstants {
         return key
     }()
 
-    static let fallbackSystemPrompt = "Jsi fitness trenér Jakub. Odpovídej vždy validním JSON."
+    static let fallbackSystemPrompt = "Jsi fitness trenér Thor. Odpovídej vždy validním JSON."
 
     // MARK: - Supabase
     // TODO: Replace with your actual Supabase project URL and anon key

@@ -1,5 +1,5 @@
 // OnboardingChatView.swift
-// Agilní Fitness Trenér — Konverzační onboarding s AI trenérem Jakubem
+// Agilní Fitness Trenér — Konverzační onboarding s AI trenérem Thorem
 //
 // Nahraď stávající OnboardingView v StubViews.swift za tuto implementaci.
 // Přidej OnboardingSystemPrompt.txt do Resources group v Xcode.
@@ -77,7 +77,7 @@ struct OnboardingChatView: View {
 
     private var headerBar: some View {
         HStack(spacing: 14) {
-            // Jakub avatar
+            // Thor avatar
             ZStack {
                 Circle()
                     .fill(
@@ -90,7 +90,7 @@ struct OnboardingChatView: View {
                     )
                     .frame(width: 42, height: 42)
 
-                Text("J")
+                Text("T")
                     .font(.system(size: 19, weight: .black, design: .rounded))
                     .foregroundStyle(.white)
 
@@ -103,7 +103,7 @@ struct OnboardingChatView: View {
             }
 
             VStack(alignment: .leading, spacing: 2) {
-                Text("Jakub")
+                Text("Thor")
                     .font(.system(size: 16, weight: .bold, design: .rounded))
                     .foregroundStyle(.white)
 
@@ -188,7 +188,7 @@ struct OnboardingChatView: View {
                 // Text field
                 ZStack(alignment: .leading) {
                     if inputText.isEmpty {
-                        Text("Napiš Jakubovi…")
+                        Text("Napiš Thorovi…")
                             .font(.system(size: 16))
                             .foregroundStyle(.white.opacity(0.25))
                             .padding(.horizontal, 16)
@@ -276,7 +276,7 @@ struct OnboardingChatView: View {
                         .font(.system(size: 26, weight: .bold, design: .rounded))
                         .foregroundStyle(.white)
 
-                    Text("Jakub má vše co potřebuje.\nJdeme na to!")
+                    Text("Thor má vše co potřebuje.\nJdeme na to!")
                         .font(.system(size: 16))
                         .foregroundStyle(.white.opacity(0.55))
                         .multilineTextAlignment(.center)
@@ -320,7 +320,7 @@ struct OnboardingChatView: View {
 
     // MARK: - Helpers
 
-    /// Rough estimate of how many data fields Jakub has collected
+    /// Rough estimate of how many data fields Thor has collected
     private var collectedFieldsCount: Int {
         let texts = manager.messages.map(\.text).joined()
         var count = 0
@@ -354,7 +354,7 @@ private struct MessageBubble: View {
             if isUser { Spacer(minLength: 60) }
 
             if !isUser {
-                // Jakub avatar (small)
+                // Thor avatar (small)
                 Circle()
                     .fill(
                         LinearGradient(
@@ -365,7 +365,7 @@ private struct MessageBubble: View {
                     )
                     .frame(width: 28, height: 28)
                     .overlay(
-                        Text("J")
+                        Text("T")
                             .font(.system(size: 12, weight: .black, design: .rounded))
                             .foregroundStyle(.white)
                     )

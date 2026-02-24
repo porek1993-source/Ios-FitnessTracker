@@ -146,7 +146,7 @@ final class OnboardingAIManager: ObservableObject {
         else {
             // Inline fallback — pokud soubor chybí
             return """
-            Jsi Jakub, osobní fitness trenér. Zjisti od uživatele jméno, věk, výšku, váhu, cíl, úroveň zkušeností a počet tréninkových dní. Mluv přátelsky, tykej. Až budeš mít vše, ukonči odpověď blokem ###PROFILE_JSON### { ... } ###END_JSON###.
+            Jsi Thor, osobní fitness trenér. Zjisti od uživatele jméno, věk, výšku, váhu, cíl, úroveň zkušeností a počet tréninkových dní. Mluv přátelsky, tykej. Až budeš mít vše, ukonči odpověď blokem ###PROFILE_JSON### { ... } ###END_JSON###.
             """
         }
         return text
@@ -154,7 +154,7 @@ final class OnboardingAIManager: ObservableObject {
 
     // MARK: - Public API
 
-    /// Spustí konverzaci — Jakub pošle úvodní zprávu automaticky
+    /// Spustí konverzaci — Thor pošle úvodní zprávu automaticky
     func startConversation() async {
         guard messages.isEmpty else { return }
         await fetchResponse(userMessage: "__START__")
@@ -204,7 +204,7 @@ final class OnboardingAIManager: ObservableObject {
         } catch {
             let errorDetail = errorMessage ?? error.localizedDescription
             if streamIndex < messages.count {
-                messages[streamIndex].text = "Jejda, něco se pokazilo.\n\nChyba: \(errorDetail)\n\nZkus to prosím znovu nebo prověř API klíč."
+                messages[streamIndex].text = "Jejda, něco se pokazilo.\n\nDetail chyby: \(errorDetail)\n\nZkontroluj v nastavení/prostředí, zda je správně nastaven GEMINI_API_KEY a zkus to prosím znovu."
             }
             errorMessage = errorDetail
         }
