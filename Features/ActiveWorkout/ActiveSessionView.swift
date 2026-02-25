@@ -72,6 +72,7 @@ struct ActiveSessionView: View {
             let idx = vm.currentExerciseIndex
             if vm.exercises.indices.contains(idx) {
                 SmartSwapSheet(exercise: vm.exercises[idx]) { newName, newSlug in
+                    vm.swapExercise(at: idx, newName: newName, newSlug: newSlug)
                     showSwap = false
                 }
                 .presentationDetents([.medium, .large])
@@ -199,7 +200,7 @@ struct ExercisePageView: View {
                             .transition(.move(edge: .top).combined(with: .opacity))
                     }
 
-                    TechniquePillRow(exercise: exercise)
+                    TechniquePillRow(exercise: exercise, vm: vm)
 
                     SetLoggerBlock(exercise: $exercise, onComplete: onComplete)
 
@@ -409,22 +410,27 @@ private struct CoachTipCard: View {
 
 private struct TechniquePillRow: View {
     let exercise: SessionExerciseState
+    @ObservedObject var vm: WorkoutViewModel
 
     var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 8) {
                 if let t = exercise.tempo {
                     TechPill(icon: "metronome.fill", label: "Tempo",    value: t,
-                             color: Color(red:0.28, green:0.55, blue:1.0))
+                             color: Color(red:0.28, green:0.55, blue:1.0),
+                             vm: vm)
                 }
                 TechPill(icon: "wind",              label: "Dýchání",  value: "Výdech při zdvihu",
-                         color: Color(red:0.12, green:0.72, blue:0.62))
+                         color: Color(red:0.12, green:0.72, blue:0.62),
+                         vm: vm)
                 if exercise.restSeconds > 0 {
                     TechPill(icon: "timer",          label: "Pauza",    value: "\(exercise.restSeconds)s",
-                             color: .orange)
+                             color: .orange,
+                             vm: vm)
                 }
                 TechPill(icon: "repeat",            label: "Série",    value: "\(exercise.sets.count)×",
-                         color: Color(red:0.65, green:0.35, blue:1.0))
+                         color: Color(red:0.65, green:0.35, blue:1.0),
+                         vm: vm)
             }
             .padding(.horizontal, 1)
         }
@@ -433,6 +439,7 @@ private struct TechniquePillRow: View {
 
 private struct TechPill: View {
     let icon: String; let label: String; let value: String; let color: Color
+    @ObservedObject var vm: WorkoutViewModel
 
     var body: some View {
         HStack(spacing: 7) {
@@ -445,6 +452,18 @@ private struct TechPill: View {
                 Text(value)
                     .font(.system(size: 12, weight: .semibold))
                     .foregroundStyle(.white.opacity(0.88))
+            }
+            
+            // Metronome button for Tempo
+            if label == "Tempo" {
+                Button {
+                    vm.startTempoForCurrentExercise()
+                } label: {
+                    Image(systemName: "play.circle.fill")
+                        .font(.system(size: 16))
+                        .foregroundStyle(color)
+                }
+                .buttonStyle(.plain)
             }
         }
         .padding(.horizontal, 11).padding(.vertical, 9)

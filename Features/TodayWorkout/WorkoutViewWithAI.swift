@@ -94,7 +94,9 @@ struct WorkoutViewWithAI: View {
             let response = try await aiService.generateTodayWorkout(
                 for: .now,
                 profile: profile,
-                plannedDay: plannedDay
+                plannedDay: plannedDay,
+                equipmentOverride: selectedEquipment.isEmpty ? nil : selectedEquipment,
+                timeLimitMinutes: timeLimit
             )
             trainerResponse = response
             offlineMessage = aiService.offlineMessage

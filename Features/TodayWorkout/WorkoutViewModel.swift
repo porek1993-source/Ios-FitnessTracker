@@ -42,10 +42,12 @@ final class WorkoutViewModel: ObservableObject {
                     var state = SessionExerciseState(from: ex)
 
                     // Progressive overload: načti historii z PlannedExercises
+                    var exerciseRef: Exercise? = nil
                     if let plannedEx = plan.plannedExercises.first(where: {
                         $0.exercise?.slug == ex.slug || $0.exercise?.nameEN.lowercased() == ex.slug.lowercased()
                     }) {
-                        if let exercise = plannedEx.exercise {
+                        exerciseRef = plannedEx.exercise
+                        if let exercise = exerciseRef {
                             // Použij ProgressionEngine pro výpočet cíle
                             let history = exercise.weightHistory
                                 .sorted { $0.loggedAt > $1.loggedAt }
@@ -71,6 +73,8 @@ final class WorkoutViewModel: ObservableObject {
                             }
                         }
                     }
+
+                    state.exercise = exerciseRef
 
                     // Warmup pouze pro první cvik v celém tréninku
                     if states.isEmpty && index == 0, let targetWeight = state.sets.first?.previousWeightKg ?? ex.weightKg {
@@ -167,6 +171,8 @@ final class WorkoutViewModel: ObservableObject {
         withAnimation(.spring(response: 0.3)) {
             exercises[exerciseIndex].sets[setIndex].isCompleted = true
         }
+        
+        stopTempo()
 
         let exercise    = exercises[exerciseIndex]
         let restSeconds = exercise.restSeconds
@@ -196,6 +202,19 @@ final class WorkoutViewModel: ObservableObject {
                 self?.advanceToNextExercise()
             }
         }
+    }
+    
+    // MARK: - Tempo Controls
+    
+    func startTempoForCurrentExercise() {
+        guard audioEnabled else { return }
+        let ex = exercises[currentExerciseIndex]
+        let reps = ex.sets.first?.targetRepsMax ?? 10
+        audioCoach?.startTempo(tempoString: ex.tempo, reps: reps)
+    }
+    
+    func stopTempo() {
+        audioCoach?.stopTempo()
     }
 
     private func startRestTimer(seconds: Int) {
@@ -257,6 +276,37 @@ final class WorkoutViewModel: ObservableObject {
         }
     }
 
+    // MARK: - Smart Swap Logic
+
+    func swapExercise(at index: Int, newName: String, newSlug: String) {
+        guard exercises.indices.contains(index) else { return }
+        
+        let old = exercises[index]
+        
+        // Vytvoříme nový stav pro náhradní cvik
+        // Ponecháme počet sérií a rep range (pokud je to biomechanická alternativa, bývá to podobné)
+        var newState = SessionExerciseState(
+            name: newName,
+            slug: newSlug,
+            coachTip: "Sestaveno jako náhrada za \(old.name)",
+            tempo: old.tempo,
+            restSeconds: old.restSeconds,
+            sets: old.sets.map { s in
+                var newSet = s
+                newSet.isCompleted = false // Resetujeme progres na novém cviku
+                return newSet
+            }
+        )
+        
+        // Zkusíme najít Exercise objekt pro nový slug v databázi, abychom měli data pro gamifikaci
+        // (Tento VM nemá přímý přístup k celému ModelContextu v initu, ale můžeme se pokusit 
+        //  vytáhnout ho z PlannedExercises pokud tam náhodou je, nebo ho nechat nil.)
+        
+        withAnimation(.spring(response: 0.4)) {
+            exercises[index] = newState
+        }
+    }
+
     // MARK: - Audio
 
     func toggleAudio() {
@@ -315,9 +365,19 @@ final class WorkoutViewModel: ObservableObject {
             let completed = state.sets.filter { $0.isCompleted }
             guard !completed.isEmpty else { return nil }
 
-            // Odvoď svalové skupiny ze slugu/názvu
-            let primary = muscleGroupsFromSlug(state.slug, primary: true)
-            let secondary = muscleGroupsFromSlug(state.slug, primary: false)
+            // Odvoď svalové skupiny
+            let primary: [MuscleGroup]
+            let secondary: [MuscleGroup]
+            
+            if let exercise = state.exercise {
+                // Přesná data z databáze
+                primary = exercise.musclesTarget
+                secondary = exercise.musclesSecondary
+            } else {
+                // Heuristika jako fallback
+                primary = muscleGroupsFromSlug(state.slug, primary: true)
+                secondary = muscleGroupsFromSlug(state.slug, primary: false)
+            }
 
             let setResults: [SessionGamificationInput.SetResult] = completed.map {
                 .init(weightKg: $0.weightKg ?? 0, reps: $0.reps ?? 0, isWarmup: $0.isWarmup)
@@ -400,8 +460,9 @@ struct SessionExerciseState: Identifiable {
     let restSeconds: Int
     var sets: [SetState]
     var isWarmupOnly: Bool
+    var exercise: Exercise? // Reference na DB model (pokud existuje)
 
-    init(id: UUID = UUID(), name: String, slug: String, coachTip: String? = nil, tempo: String? = nil, restSeconds: Int = 60, sets: [SetState] = [], isWarmupOnly: Bool = false) {
+    init(id: UUID = UUID(), name: String, slug: String, coachTip: String? = nil, tempo: String? = nil, restSeconds: Int = 60, sets: [SetState] = [], isWarmupOnly: Bool = false, exercise: Exercise? = nil) {
         self.id = id
         self.name = name
         self.slug = slug
@@ -410,6 +471,7 @@ struct SessionExerciseState: Identifiable {
         self.restSeconds = restSeconds
         self.sets = sets
         self.isWarmupOnly = isWarmupOnly
+        self.exercise = exercise
     }
 
     var nextIncompleteSetIndex: Int? {
@@ -431,6 +493,7 @@ struct SessionExerciseState: Identifiable {
             )
         }
         self.isWarmupOnly = false
+        self.exercise = planned.exercise
     }
 
     init(from response: ResponseExercise) {

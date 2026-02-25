@@ -72,24 +72,41 @@ final class RollingWeekViewModel: ObservableObject {
         buildWeek()
     }
 
-    /// Sestaví 7 dnů od dneška.
+    /// Sestaví 7 dnů od dneška na základě aktivního plánu.
     func buildWeek() {
         let calendar = Calendar.current
         let today = Date.now
+        
+        // Načteme aktivní plán z databáze
+        let context = SharedModelContainer.container.mainContext
+        let profile = (try? context.fetch(FetchDescriptor<UserProfile>()))?.first
+        let plan = profile?.workoutPlans.first(where: { $0.isActive })
+        
         days = (0..<7).map { offset in
             let date = calendar.date(byAdding: .day, value: offset, to: today)!
             let isToday = offset == 0
-            // Výchozí rozložení: Trénink / Volno / Trénink / Trénink / Volno / Trénink / Volno
-            let pattern: [DayType] = [.workout, .rest, .workout, .workout, .rest, .workout, .rest]
-            let labels = ["Push", "Volno", "Pull", "Nohy", "Volno", "Upper", "Volno"]
+            
+            // Zjistíme den v týdnu (1-7, 1=Po)
+            let weekday = calendar.component(.weekday, from: date)
+            let ourIdx = (weekday == 1 ? 7 : weekday - 1)
+            
+            // Najdeme v plánu
+            let plannedDay = plan?.scheduledDays.first { $0.dayOfWeek == ourIdx }
+            
+            let type: DayType = (plannedDay == nil || plannedDay?.isRestDay == true) ? .rest : .workout
+            let label = plannedDay?.label ?? (type == .rest ? "Volno" : "Trénink")
+            
             return WeekDay(
                 date: date,
-                dayType: pattern[offset],
-                label: labels[offset],
+                dayType: type,
+                label: label,
                 isToday: isToday,
                 isOverridden: false
             )
         }
+        
+        // Po inicializaci automaticky spustíme AI, aby zvážila sytém "rolling" plánu podle historie
+        Task { await triggerRecalculation() }
     }
 
     /// Uživatel přepne den na jiný typ.
@@ -108,7 +125,7 @@ final class RollingWeekViewModel: ObservableObject {
         Task { await triggerRecalculation() }
     }
 
-    /// AI přepočet zbylých tréninků na základě nového rozložení.
+    /// AI přepočet zbylých tréninků na základě nového rozložení a historie.
     func triggerRecalculation() async {
         isRecalculating = true
         recalculationMessage = nil
@@ -117,11 +134,21 @@ final class RollingWeekViewModel: ObservableObject {
         let availableDays = days.filter { $0.dayType == .workout && !$0.isToday }
         let totalWorkoutDays = days.filter { $0.dayType == .workout }.count
 
+        // Načteme historii posledních 5 tréninků pro kontext
+        let context = SharedModelContainer.container.mainContext
+        let descriptor = FetchDescriptor<WorkoutSession>(
+            predicate: #Predicate { $0.status == "completed" },
+            sortBy: [SortDescriptor(\.startedAt, order: .reverse)]
+        )
+        let recentSessions = (try? context.fetch(descriptor)) ?? []
+        let historyLabels = recentSessions.prefix(5).map { $0.plannedDay?.label ?? $0.exercises.first?.exerciseName ?? "Trénink" }
+
         do {
             let newSchedule = try await AIReschedulingEngine.recalculateWeek(
                 currentDays: days,
                 availableWorkoutDays: availableDays.count,
-                totalDays: 7
+                totalDays: 7,
+                historyDescriptions: Array(historyLabels)
             )
 
             // Animovaně aktualizujeme labels
