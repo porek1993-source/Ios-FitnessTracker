@@ -18,56 +18,42 @@ enum WeightRounder {
 
 // MARK: - Warmup Calculator
 
-enum WarmupCalculator {
-    /// Generuje 3 zahřívací série vypočítané na základě cílové pracovní váhy.
-    /// Pokud je váha příliš nízká (pod 30 kg), vrací méně sérií nebo upravená procenta.
+struct WarmupCalculator {
+    /// Generuje přesně 3 zahřívací série vypočítané na základě cílové pracovní váhy.
+    /// Pravidla: 1. série 20kg (osa), 2. série 50%, 3. série 75%.
     static func generateWarmups(targetWeight: Double, targetRepsMin: Int) -> [SetState] {
         var warmups: [SetState] = []
         
-        // 1. Série (Prázdná osa nebo lehká váha pro prokrvení)
-        // Osa má obvykle 20kg, u jednoruček/strojů můžeme volit minimální.
-        let firstSetWeight = targetWeight <= 30 ? targetWeight * 0.3 : 20.0
-        let firstSet = SetState(
-            targetRepsMin: max(8, targetRepsMin + 4),
-            targetRepsMax: max(12, targetRepsMin + 6),
-            weightKg: WeightRounder.roundToNearestPlates(weight: firstSetWeight),
-            reps: max(8, targetRepsMin + 4), // Vyšší opakování na zahřátí
-            rpe: nil,
+        // 1. Série (Vždy 20 kg - standardní osa, nebo pracovní váha pokud je pod 20kg)
+        let firstWeight = min(20.0, targetWeight)
+        warmups.append(SetState(
+            targetRepsMin: 10,
+            targetRepsMax: 12,
+            weightKg: WeightRounder.roundToNearestPlates(weight: firstWeight),
+            reps: 10,
             isCompleted: false,
-            isWarmup: true,
-            previousWeightKg: nil
-        )
-        warmups.append(firstSet)
+            isWarmup: true
+        ))
         
-        if targetWeight > 30 {
-            // 2. Série (Zhruba 50 % pracovní váhy)
-            let secondSet = SetState(
-                targetRepsMin: max(5, targetRepsMin),
-                targetRepsMax: max(8, targetRepsMin + 2),
-                weightKg: WeightRounder.roundToNearestPlates(weight: targetWeight * 0.5),
-                reps: max(5, targetRepsMin),
-                rpe: nil,
-                isCompleted: false,
-                isWarmup: true,
-                previousWeightKg: nil
-            )
-            warmups.append(secondSet)
-        }
+        // 2. Série (50 % pracovní váhy)
+        warmups.append(SetState(
+            targetRepsMin: 5,
+            targetRepsMax: 5,
+            weightKg: WeightRounder.roundToNearestPlates(weight: targetWeight * 0.5),
+            reps: 5,
+            isCompleted: false,
+            isWarmup: true
+        ))
         
-        if targetWeight > 50 {
-            // 3. Série (Zhruba 75 % pracovní váhy, méně opakování - adaptace CNS)
-            let thirdSet = SetState(
-                targetRepsMin: max(2, targetRepsMin - 2),
-                targetRepsMax: max(4, targetRepsMin),
-                weightKg: WeightRounder.roundToNearestPlates(weight: targetWeight * 0.75),
-                reps: max(2, targetRepsMin - 2),
-                rpe: nil,
-                isCompleted: false,
-                isWarmup: true,
-                previousWeightKg: nil
-            )
-            warmups.append(thirdSet)
-        }
+        // 3. Série (75 % pracovní váhy)
+        warmups.append(SetState(
+            targetRepsMin: 3,
+            targetRepsMax: 3,
+            weightKg: WeightRounder.roundToNearestPlates(weight: targetWeight * 0.75),
+            reps: 3,
+            isCompleted: false,
+            isWarmup: true
+        ))
         
         return warmups
     }
@@ -84,34 +70,26 @@ enum ProgressionEngine {
     }
     
     /// Spočítá doporučenou pracovní váhu a opakování pro dnešní trénink metodou Dvojité Progrese.
-    /// - Parameters:
-    ///   - previousSets: Dokončené série stejného cviku z minulého tréninku.
-    ///   - programRepsMin: Dolní hranice opakování stanovená tréninkovým plánem.
-    ///   - programRepsMax: Horní hranice opakování stanovená tréninkovým plánem.
-    /// - Returns: Doporučené hodnoty. Pokud není historie, vrací `nil`.
     static func calculateNextTarget(previousSets: [CompletedSet], programRepsMin: Int, programRepsMax: Int) -> Target? {
         guard !previousSets.isEmpty else { return nil }
         
-        // Zajímají nás jen skutečné pracovní série
         let workingSets = previousSets.filter { !$0.isWarmup }
         guard !workingSets.isEmpty else { return nil }
         
-        // Zkontrolujeme, zda uživatel splnil ve všech pracovních sériích horní hranici (repsMax)
-        let didCompleteAllMaxReps = workingSets.allSatisfy { set in
-            set.reps >= programRepsMax
-        }
+        // Zkontrolujeme, zda uživatel splnil ve všech sériích horní hranici
+        let didCompleteAllMaxReps = workingSets.allSatisfy { $0.reps >= programRepsMax }
         
-        // Zjistíme na jaké váze pracoval
-        // Vezmeme nejčastější nebo maximální váhu z minulého tréninku
+        // Zjistíme poslední použitou váhu
         let lastWeight = workingSets.max(by: { $0.weightKg < $1.weightKg })?.weightKg ?? 0
         
         if didCompleteAllMaxReps {
-            // SPLNĚNO: Zvýšit váhu, spadnout na spodní hranici opakování
-            let newWeight = WeightRounder.roundToNearestPlates(weight: lastWeight + 2.5) // Zvýší o "standardní" krok
+            // SPLNĚNO: Zvýšit váhu o 2.5kg, spadnout na spodní hranici opakování
+            let newWeight = WeightRounder.roundToNearestPlates(weight: lastWeight + 2.5)
             return Target(weight: newWeight, repsMin: programRepsMin, repsMax: programRepsMax)
         } else {
-            // NESPLNĚNO: Nechat váhu, cílem pro dnešek je přidat opakování směrem k repsMax
-            // Uživatel zůstává na stejné váze, ale budeme chtít, aby naplnil rozsah.
+            // NESPLNĚNO: Váha zůstává, cílem je přidat opakování
+            // Pokud posledně dal např. 6, dnes by měl dát aspoň 7.
+            // Ale programový rozsah vracíme jako referenci.
             return Target(weight: lastWeight, repsMin: programRepsMin, repsMax: programRepsMax)
         }
     }

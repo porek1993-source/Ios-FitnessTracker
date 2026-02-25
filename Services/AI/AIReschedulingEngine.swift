@@ -21,11 +21,12 @@ struct RescheduleResponse: Codable {
 
 enum AIReschedulingEngine {
 
-    /// Přepočítá rozložení tréninků v 7denním okně na základě nového stavu dnů.
+    /// Přepočítá rozložení tréninků v 7denním okně na základě nového stavu dnů a historie.
     static func recalculateWeek(
         currentDays: [WeekDay],
         availableWorkoutDays: Int,
-        totalDays: Int
+        totalDays: Int,
+        historyDescriptions: [String] = []
     ) async throws -> [RescheduledDay] {
 
         let apiClient = GeminiAPIClient(apiKey: AppConstants.geminiAPIKey)
@@ -61,15 +62,21 @@ enum AIReschedulingEngine {
             return "Den \(idx) (\(day.czechDayName) \(day.dayNumber).): \(status)"
         }.joined(separator: "\n")
 
+        let historyText = historyDescriptions.isEmpty ? "Žádná nedávná historie." : historyDescriptions.joined(separator: ", ")
+
         let userMessage = """
         Uživatel má tento týden následující rozložení:
 
         \(dayDescriptions)
 
+        Historie posledních tréninků (nejnovější první): \(historyText)
+
         K dispozici pro silový trénink: \(availableWorkoutDays) dnů ze \(totalDays).
 
-        Přeskládej POUZE tréninkové dny. Dny označené jako VOLNO, JINÝ SPORT nebo KARDIO NEMĚŇ.
-        Vrať nový plán pro tréninkové dny s optimálním rozložením svalových skupin.
+        Pravidlo pro přeskládání: Pokud uživatel vynechal trénink, prioritizuj procvičení svalů, které v historii chybí nebo byly nejdéle. Pokud má např. split Push/Pull/Legs a poslední byl Legs, první budoucí by měl být Push.
+
+        Přeskládej POUZE budoucí tréninkové dny (ne ty, které už proběhly dnes nebo dříve). 
+        Vrať nový plán pro zbývající tréninkové dny s optimálním rozložením.
         """
 
         let schema: [String: Any] = [
