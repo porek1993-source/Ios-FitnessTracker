@@ -50,8 +50,8 @@ final class ExerciseDetailViewModel: ObservableObject {
     /// YouTube URL pro tutoriál.
     var youtubeURL: URL? {
         guard let ex = exercise else { return nil }
-        let resolvedNameEn = enrichedData?.nameEn ?? ex.nameEn
-        return YouTubeLinkGenerator.searchURL(nameEn: resolvedNameEn, nameCz: ex.nameCz)
+        let resolvedNameEn = nameEn ?? "" // nameEn is computed and already handles nested optionals
+        return YouTubeLinkGenerator.searchURL(nameEn: resolvedNameEn, nameCz: ex.safeNameCz)
     }
 
     /// Má cvik kompletní data?
@@ -77,8 +77,8 @@ final class ExerciseDetailViewModel: ObservableObject {
             isLoadingExercise = false
 
             // Pokud instrukce chybí, spustíme AI enrichment
-            if let dto, dto.instructionsMissing {
-                await enrichWithAI(slug: dto.slug, nameCz: dto.nameCz)
+            if let dto, dto.isMissing {
+                await enrichWithAI(slug: dto.safeSlug, nameCz: dto.safeNameCz)
             }
         } catch {
             isLoadingExercise = false

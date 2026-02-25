@@ -37,7 +37,7 @@ final class ExerciseSearchViewModel: ObservableObject {
                 let all = try await repository.fetchAll()
                 let q = query.lowercased()
                 results = all.filter {
-                    $0.nameCz.localizedCaseInsensitiveContains(q) ||
+                    $0.safeNameCz.localizedCaseInsensitiveContains(q) ||
                     ($0.nameEn?.localizedCaseInsensitiveContains(q) ?? false) ||
                     ($0.category?.localizedCaseInsensitiveContains(q) ?? false)
                 }
@@ -48,7 +48,7 @@ final class ExerciseSearchViewModel: ObservableObject {
     }
 
     func toggleSelection(_ exercise: ExerciseDTO) {
-        if let idx = selectedExercises.firstIndex(where: { $0.slug == exercise.slug }) {
+        if let idx = selectedExercises.firstIndex(where: { $0.safeSlug == exercise.safeSlug }) {
             selectedExercises.remove(at: idx)
         } else {
             selectedExercises.append(exercise)
@@ -57,7 +57,7 @@ final class ExerciseSearchViewModel: ObservableObject {
     }
 
     func isSelected(_ exercise: ExerciseDTO) -> Bool {
-        selectedExercises.contains(where: { $0.slug == exercise.slug })
+        selectedExercises.contains(where: { $0.safeSlug == exercise.safeSlug })
     }
 }
 
@@ -237,7 +237,7 @@ private struct ExerciseSearchRow: View {
                 }
 
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(exercise.nameCz)
+                    Text(exercise.safeNameCz)
                         .font(.system(size: 15, weight: .bold))
                         .foregroundStyle(.white)
                         .lineLimit(1)
