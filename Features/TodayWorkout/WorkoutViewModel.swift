@@ -46,10 +46,28 @@ final class WorkoutViewModel: ObservableObject {
                         $0.exercise?.slug == ex.slug || $0.exercise?.nameEN.lowercased() == ex.slug.lowercased()
                     }) {
                         if let exercise = plannedEx.exercise {
-                            // Použij RPE z minulé session pro rozhodnutí o váze
-                            let suggestion = rpeAwareProgression(exercise: exercise, targetWeight: ex.weightKg)
-                            for j in 0..<state.sets.count {
-                                state.sets[j].previousWeightKg = suggestion
+                            // Použij ProgressionEngine pro výpočet cíle
+                            let history = exercise.weightHistory
+                                .sorted { $0.loggedAt > $1.loggedAt }
+                                .prefix(6)
+                                .map { entry in
+                                    CompletedSet(
+                                        setNumber: entry.setNumber,
+                                        weightKg: entry.weightKg,
+                                        reps: entry.reps,
+                                        rpe: entry.rpe,
+                                        isWarmupSet: false
+                                    )
+                                }
+                            
+                            if let suggestion = ProgressionEngine.calculateNextTarget(
+                                previousSets: history,
+                                programRepsMin: ex.repsMin,
+                                programRepsMax: ex.repsMax
+                            ) {
+                                for j in 0..<state.sets.count {
+                                    state.sets[j].previousWeightKg = suggestion.weight
+                                }
                             }
                         }
                     }
@@ -76,15 +94,35 @@ final class WorkoutViewModel: ObservableObject {
             for (index, planned) in sortedPlanned.enumerated() {
                 var state = SessionExerciseState(from: planned)
 
-                // Progressive overload s RPE
+                // Progressive overload s ProgressionEngine
                 if let exercise = planned.exercise {
-                    let suggestion = rpeAwareProgression(exercise: exercise, targetWeight: exercise.lastUsedWeight)
-                    for j in 0..<state.sets.count {
-                        state.sets[j].previousWeightKg = suggestion
+                    let history = exercise.weightHistory
+                        .sorted { $0.loggedAt > $1.loggedAt }
+                        .prefix(6)
+                        .map { entry in
+                            CompletedSet(
+                                setNumber: entry.setNumber,
+                                weightKg: entry.weightKg,
+                                reps: entry.reps,
+                                rpe: entry.rpe,
+                                isWarmupSet: false
+                            )
+                        }
+                    
+                    let suggestion = ProgressionEngine.calculateNextTarget(
+                        previousSets: history,
+                        programRepsMin: planned.targetRepsMin,
+                        programRepsMax: planned.targetRepsMax
+                    )
+                    
+                    if let weight = suggestion?.weight {
+                        for j in 0..<state.sets.count {
+                            state.sets[j].previousWeightKg = weight
+                        }
                     }
 
                     // Warmup pro první cvik
-                    if index == 0, let targetWeight = suggestion ?? exercise.lastUsedWeight {
+                    if index == 0, let targetWeight = suggestion?.weight ?? exercise.lastUsedWeight {
                         let warmups = WarmupCalculator.generateWarmups(
                             targetWeight: targetWeight,
                             targetRepsMin: planned.targetRepsMin
@@ -105,35 +143,9 @@ final class WorkoutViewModel: ObservableObject {
         audioCoach = AudioCoachService()
     }
 
-    // MARK: - RPE-aware progression
-    // Pokud poslední série měla RPE >= 9, nedáme více váhy
+    // MARK: - RPE-aware progression (DEPRECATED - Moved to ProgressionEngine)
     private func rpeAwareProgression(exercise: Exercise, targetWeight: Double?) -> Double? {
-        let recentEntries = exercise.weightHistory
-            .sorted { $0.loggedAt > $1.loggedAt }
-            .prefix(6)
-
-        // Zkontroluj poslední RPE
-        let lastHighRPE = recentEntries.contains { ($0.rpe ?? 0) >= 9.0 }
-        let lastFailure = recentEntries.contains { !$0.wasSuccessful }
-
-        guard let lastWeight = recentEntries.first?.weightKg else {
-            return targetWeight
-        }
-
-        if lastHighRPE || lastFailure {
-            // Drž stejnou váhu nebo mírný deload
-            return lastFailure ? (lastWeight * 0.95).rounded(toNearest: 2.5) : lastWeight
-        }
-
-        // Normální progression (+2.5 nebo +5 kg)
-        let isLower = exercise.category == .legs
-        let increment: Double = isLower ? 5.0 : 2.5
-        let allSuccessful = recentEntries.prefix(3).allSatisfy { $0.wasSuccessful }
-
-        if allSuccessful && recentEntries.count >= 3 {
-            return (lastWeight + increment).rounded(toNearest: 2.5)
-        }
-        return lastWeight
+        return targetWeight // placeholder
     }
 
     // MARK: - Timer

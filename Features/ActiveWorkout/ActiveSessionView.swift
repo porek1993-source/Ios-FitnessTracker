@@ -496,14 +496,44 @@ private struct SetLoggerBlock: View {
     }
 
     private var setList: some View {
-        VStack(spacing: 6) {
-            ForEach(exercise.sets.indices, id: \.self) { i in
-                ActiveSetRow(
-                    setNumber:  calculateWorkingSetNumber(for: i),
-                    currentSet: $exercise.sets[i],
-                    isActive:   i == exercise.nextIncompleteSetIndex,
-                    onComplete: { onComplete(i) }
-                )
+        VStack(spacing: 12) {
+            let warmupSets = exercise.sets.enumerated().filter { $0.element.isWarmup }
+            let workingSets = exercise.sets.enumerated().filter { !$0.element.isWarmup }
+            
+            if !warmupSets.isEmpty {
+                VStack(alignment: .leading, spacing: 8) {
+                    Label("Zahřívací série", systemImage: "flame.fill")
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundStyle(.orange.opacity(0.8))
+                        .padding(.horizontal, 12)
+                    
+                    ForEach(warmupSets, id: \.offset) { i, _ in
+                        ActiveSetRow(
+                            setNumber: 0,
+                            currentSet: $exercise.sets[i],
+                            isActive: i == exercise.nextIncompleteSetIndex,
+                            onComplete: { onComplete(i) }
+                        )
+                    }
+                }
+            }
+            
+            if !workingSets.isEmpty {
+                VStack(alignment: .leading, spacing: 8) {
+                    Label("Pracovní série", systemImage: "target")
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundStyle(.blue.opacity(0.8))
+                        .padding(.horizontal, 12)
+                    
+                    ForEach(workingSets, id: \.offset) { i, _ in
+                        ActiveSetRow(
+                            setNumber: calculateWorkingSetNumber(for: i),
+                            currentSet: $exercise.sets[i],
+                            isActive: i == exercise.nextIncompleteSetIndex,
+                            onComplete: { onComplete(i) }
+                        )
+                    }
+                }
             }
         }
     }

@@ -11,7 +11,6 @@ enum WorkoutPlanGenerator {
 
     @discardableResult
     static func generate(for profile: UserProfile, in context: ModelContext) -> WorkoutPlan {
-        // Pokud profil má aktivní plán, jen ho vrátíme
         if let existing = profile.workoutPlans.first(where: { $0.isActive }) {
             return existing
         }
@@ -28,6 +27,9 @@ enum WorkoutPlanGenerator {
         context.insert(plan)
 
         let schedule = buildSchedule(split: split, daysPerWeek: min(days, 6))
+        
+        // Načteme všechny dostupné cviky pro přiřazení do šablon
+        let allExercises = (try? context.fetch(FetchDescriptor<Exercise>())) ?? []
 
         for entry in schedule {
             let day = PlannedWorkoutDay(
@@ -37,6 +39,22 @@ enum WorkoutPlanGenerator {
             )
             day.plan = plan
             context.insert(day)
+            
+            // Přiřadíme cviky podle labelu (naše šablony)
+            let templates = getTemplateExercises(for: entry.label, allExercises: allExercises)
+            for (idx, ex) in templates.enumerated() {
+                let plannedEx = PlannedExercise(
+                    order: idx,
+                    exercise: ex,
+                    targetSets: 3,
+                    targetRepsMin: 8,
+                    targetRepsMax: 12
+                )
+                plannedEx.plannedDay = day
+                context.insert(plannedEx)
+                day.plannedExercises.append(plannedEx)
+            }
+            
             plan.scheduledDays.append(day)
         }
 
@@ -45,7 +63,28 @@ enum WorkoutPlanGenerator {
         return plan
     }
 
+    // MARK: - Template Exercises
+
+    private static func getTemplateExercises(for label: String, allExercises: [Exercise]) -> [Exercise] {
+        let slugMap: [String: [String]] = [
+            "Push": ["barbell-bench-press", "overhead-press", "lateral-raise", "tricep-pushdown"],
+            "Pull": ["pull-up", "barbell-row", "face-pull", "barbell-curl"],
+            "Legs": ["barbell-squat", "romanian-deadlift", "leg-extension", "calf-raise"],
+            "Upper": ["dumbbell-bench-press", "cable-row", "dumbbell-shoulder-press", "tricep-dip"],
+            "Lower": ["leg-press", "lying-leg-curl", "goblet-squat", "hip-thrust"],
+            "Fullbody": ["barbell-squat", "barbell-bench-press", "barbell-row", "plank"]
+        ]
+        
+        let normalizedLabel = label.components(separatedBy: " ").first ?? label
+        guard let slugs = slugMap[normalizedLabel] else { return [] }
+        
+        return slugs.compactMap { slug in
+            allExercises.first(where: { $0.slug == slug })
+        }
+    }
+
     // MARK: - Schedule Builder
+    // ... rest of the builder code stays same ...
 
     private struct DayEntry {
         let dayOfWeek: Int  // 1=Po, 2=Út, 3=St, 4=Čt, 5=Pá, 6=So, 7=Ne

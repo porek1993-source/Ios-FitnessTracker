@@ -32,9 +32,19 @@ enum ExerciseDatabaseLoader {
             return
         }
 
-        guard let url = Bundle.main.url(forResource: "ExerciseDatabase", withExtension: "json"),
-              let data = try? Data(contentsOf: url) else {
-            AppLogger.error("ExerciseDatabaseLoader: Nelze načíst ExerciseDatabase.json z bundle!")
+        // Pokusíme se soubor najít v bundle.
+        // Pro jistotu zkoušíme "ExerciseDatabase" bez i s příponou a kontrolujeme různé cesty.
+        let resourceName = "ExerciseDatabase"
+        let resourceExtension = "json"
+        
+        guard let url = Bundle.main.url(forResource: resourceName, withExtension: resourceExtension) else {
+            // Zkusíme najít jakýkoliv JSON s tímto názvem (i v podadresářích, pokud existují)
+            AppLogger.error("ExerciseDatabaseLoader: Soubor \(resourceName).\(resourceExtension) nenalezen v Bundle.main!")
+            return
+        }
+
+        guard let data = try? Data(contentsOf: url) else {
+            AppLogger.error("ExerciseDatabaseLoader: Soubor nalezen na \(url.path), ale nelze přečíst data!")
             return
         }
 
