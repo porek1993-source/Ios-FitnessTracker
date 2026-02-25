@@ -28,13 +28,13 @@ enum WarmupCalculator {
         // Osa má obvykle 20kg, u jednoruček/strojů můžeme volit minimální.
         let firstSetWeight = targetWeight <= 30 ? targetWeight * 0.3 : 20.0
         let firstSet = SetState(
+            targetRepsMin: max(8, targetRepsMin + 4),
+            targetRepsMax: max(12, targetRepsMin + 6),
             weightKg: WeightRounder.roundToNearestPlates(weight: firstSetWeight),
             reps: max(8, targetRepsMin + 4), // Vyšší opakování na zahřátí
             rpe: nil,
             isCompleted: false,
             isWarmup: true,
-            targetRepsMin: max(8, targetRepsMin + 4),
-            targetRepsMax: max(12, targetRepsMin + 6),
             previousWeightKg: nil
         )
         warmups.append(firstSet)
@@ -42,13 +42,13 @@ enum WarmupCalculator {
         if targetWeight > 30 {
             // 2. Série (Zhruba 50 % pracovní váhy)
             let secondSet = SetState(
+                targetRepsMin: max(5, targetRepsMin),
+                targetRepsMax: max(8, targetRepsMin + 2),
                 weightKg: WeightRounder.roundToNearestPlates(weight: targetWeight * 0.5),
                 reps: max(5, targetRepsMin),
                 rpe: nil,
                 isCompleted: false,
                 isWarmup: true,
-                targetRepsMin: max(5, targetRepsMin),
-                targetRepsMax: max(8, targetRepsMin + 2),
                 previousWeightKg: nil
             )
             warmups.append(secondSet)
@@ -57,13 +57,13 @@ enum WarmupCalculator {
         if targetWeight > 50 {
             // 3. Série (Zhruba 75 % pracovní váhy, méně opakování - adaptace CNS)
             let thirdSet = SetState(
+                targetRepsMin: max(2, targetRepsMin - 2),
+                targetRepsMax: max(4, targetRepsMin),
                 weightKg: WeightRounder.roundToNearestPlates(weight: targetWeight * 0.75),
                 reps: max(2, targetRepsMin - 2),
                 rpe: nil,
                 isCompleted: false,
                 isWarmup: true,
-                targetRepsMin: max(2, targetRepsMin - 2),
-                targetRepsMax: max(4, targetRepsMin),
                 previousWeightKg: nil
             )
             warmups.append(thirdSet)

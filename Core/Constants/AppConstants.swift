@@ -41,6 +41,7 @@ enum AppError: Error, LocalizedError {
     case encodingFailed
     case healthKitUnavailable
     case noActiveProfile
+    case unknown
 
     var errorDescription: String? {
         switch self {
@@ -48,6 +49,7 @@ enum AppError: Error, LocalizedError {
         case .encodingFailed:       return "Chyba při přípravě dat pro AI."
         case .healthKitUnavailable: return "HealthKit není dostupný na tomto zařízení."
         case .noActiveProfile:      return "Nenalezen aktivní uživatelský profil."
+        case .unknown:              return "Neznámá chyba."
         }
     }
 }
