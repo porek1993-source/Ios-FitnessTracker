@@ -137,11 +137,15 @@ final class RollingWeekViewModel: ObservableObject {
         // Načteme historii posledních 5 tréninků pro kontext
         let context = SharedModelContainer.container.mainContext
         let descriptor = FetchDescriptor<WorkoutSession>(
-            predicate: #Predicate { $0.status == "completed" },
+            predicate: #Predicate<WorkoutSession> { $0.status == SessionStatus.completed },
             sortBy: [SortDescriptor(\.startedAt, order: .reverse)]
         )
-        let recentSessions = (try? context.fetch(descriptor)) ?? []
-        let historyLabels = recentSessions.prefix(5).map { $0.plannedDay?.label ?? $0.exercises.first?.exerciseName ?? "Trénink" }
+        let recentSessions: [WorkoutSession] = (try? context.fetch(descriptor)) ?? []
+        let historyLabels = recentSessions.prefix(5).map { session -> String in
+            if let label = session.plannedDay?.label { return label }
+            if let firstEx = session.exercises.first { return firstEx.exerciseName }
+            return "Trénink"
+        }
 
         do {
             let newSchedule = try await AIReschedulingEngine.recalculateWeek(

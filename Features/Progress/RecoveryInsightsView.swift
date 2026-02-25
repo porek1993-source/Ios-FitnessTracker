@@ -7,7 +7,9 @@ import Charts
 
 struct RecoveryInsightsView: View {
     @Environment(\.modelContext) private var modelContext
+    @EnvironmentObject private var healthKit: HealthKitService
     @Query(sort: \HealthMetricsSnapshot.date, order: .reverse) private var allSnapshots: [HealthMetricsSnapshot]
+    @State private var isSyncing = false
     
     // Načteme jen 7 posledních dnů pro grafy
     private var last7Days: [HealthMetricsSnapshot] {
@@ -38,7 +40,10 @@ struct RecoveryInsightsView: View {
                         // 3. Graf HRV
                         HRVChartCard(data: last7Days)
                         
-                        // 4. Týdenní hodnocení (Placeholder nebo na vyžádání)
+                        // 4. Graf klidového tepu
+                        RestingHRChartCard(data: last7Days)
+                        
+                        // 5. Týdenní hodnocení
                         WeeklyReportCard(
                             report: weeklyReport,
                             isLoading: isGeneratingReport,
@@ -50,10 +55,37 @@ struct RecoveryInsightsView: View {
                     .padding(.horizontal)
                     .padding(.top, 10)
                 }
+                
+                // Loading overlay při syncu
+                if isSyncing {
+                    VStack {
+                        Spacer()
+                        HStack(spacing: 10) {
+                            ProgressView().tint(.blue)
+                            Text("Synchronizuji Health data...")
+                                .font(.system(size: 13, weight: .medium))
+                                .foregroundStyle(.white.opacity(0.6))
+                        }
+                        .padding(.horizontal, 20)
+                        .padding(.vertical, 12)
+                        .background(
+                            Capsule().fill(Color(red: 0.12, green: 0.12, blue: 0.18))
+                                .shadow(color: .black.opacity(0.3), radius: 10)
+                        )
+                        .padding(.bottom, 30)
+                    }
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+                }
             }
             .navigationTitle("Zotavení & Zdraví")
             .toolbarColorScheme(.dark, for: .navigationBar)
             .toolbarBackground(.visible, for: .navigationBar)
+            .task {
+                // Okamžitý sync při otevření, aby byly grafy aktuální
+                withAnimation { isSyncing = true }
+                await HealthBackgroundManager.shared.performForegroundSync(healthKit: healthKit)
+                withAnimation { isSyncing = false }
+            }
         }
     }
     
@@ -223,6 +255,66 @@ struct HRVChartCard: View {
                         startPoint: .top,
                         endPoint: .bottom
                     ))
+                }
+                .frame(height: 180)
+                .chartXAxis {
+                    AxisMarks(values: .stride(by: .day)) { _ in
+                        AxisGridLine().foregroundStyle(.white.opacity(0.1))
+                        AxisValueLabel(format: .dateTime.weekday(.abbreviated), centered: true)
+                            .foregroundStyle(.white.opacity(0.6))
+                    }
+                }
+                .chartYAxis {
+                    AxisMarks(position: .leading) { _ in
+                        AxisGridLine().foregroundStyle(.white.opacity(0.1))
+                        AxisValueLabel().foregroundStyle(.white.opacity(0.6))
+                    }
+                }
+            }
+        }
+        .padding()
+        .background(Color.white.opacity(0.05))
+        .cornerRadius(16)
+    }
+}
+
+// MARK: - Resting HR Chart
+
+struct RestingHRChartCard: View {
+    let data: [HealthMetricsSnapshot]
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text("Klidový tep (Posledních 7 dní)")
+                .font(.headline)
+                .foregroundColor(.white)
+            
+            if data.isEmpty || data.allSatisfy({ $0.restingHeartRate == nil }) {
+                Text("Žádná data")
+                    .foregroundColor(.gray)
+                    .frame(height: 150)
+            } else {
+                Chart(data) { item in
+                    if let rhr = item.restingHeartRate {
+                        LineMark(
+                            x: .value("Den", item.date, unit: .day),
+                            y: .value("BPM", rhr)
+                        )
+                        .interpolationMethod(.catmullRom)
+                        .foregroundStyle(Color.pink.gradient)
+                        .symbol(Circle())
+                        
+                        PointMark(
+                            x: .value("Den", item.date, unit: .day),
+                            y: .value("BPM", rhr)
+                        )
+                        .foregroundStyle(.pink)
+                        .annotation(position: .top, spacing: 4) {
+                            Text("\(Int(rhr))")
+                                .font(.system(size: 9, weight: .semibold))
+                                .foregroundStyle(.white.opacity(0.6))
+                        }
+                    }
                 }
                 .frame(height: 180)
                 .chartXAxis {

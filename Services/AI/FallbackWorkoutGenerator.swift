@@ -8,11 +8,18 @@ final class FallbackWorkoutGenerator {
     /// V produkční verzi by zde byl komplexnější algoritmus pro progresivní přetížení.
     static func generateFallbackPlan(for profile: UserContextProfile, day: PlannedWorkoutDay, context: ModelContext) -> ResponsePlan {
         
-        // Simulujeme jednoduchá pravidla na základě profilu
+        // Škálování vah podle fitness levelu
         let baseSets = profile.fitnessLevel == "Pokročilý" ? 4 : 3
         let baseRepsMin = 8
         let baseRepsMax = 12
-        let defaultWeight = 50.0 // Záložní váha
+        
+        // Základní váha škálovaná podle úrovně (místo hardcoded 50 kg)
+        let defaultWeight: Double
+        switch profile.fitnessLevel.lowercased() {
+        case "expert", "pokročilý": defaultWeight = 60.0
+        case "intermediate", "středně pokročilý": defaultWeight = 40.0
+        default: defaultWeight = 25.0  // začátečník
+        }
         
         var fallbackExercises = [ResponseExercise]()
         

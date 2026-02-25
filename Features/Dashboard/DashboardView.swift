@@ -37,11 +37,15 @@ final class DashboardViewModel: ObservableObject {
     @Published var completedThisWeek: Int     = 0
     @Published var plannedThisWeek: Int       = 0
 
-    private let healthKit: HealthKitService
+    private var healthKit: HealthKitService?
 
-    init(healthKit: HealthKitService) {
-        self.healthKit = healthKit
+    init() {
         self.greeting  = makeGreeting()
+    }
+
+    /// Injektuj sdílený HealthKitService (EnvironmentObject nelze předat v init @StateObject)
+    func inject(healthKit: HealthKitService) {
+        self.healthKit = healthKit
     }
 
     func load(profile: UserProfile) async {
@@ -57,7 +61,8 @@ final class DashboardViewModel: ObservableObject {
         isLoadingReadiness = true
         defer { isLoadingReadiness = false }
 
-        guard let summary = try? await healthKit.fetchDailySummary(for: .now) else {
+        guard let healthKit = healthKit,
+              let summary = try? await healthKit.fetchDailySummary(for: .now) else {
             // Fallback — no HealthKit data
             readinessScore   = 65
             readinessLevel   = "orange"
@@ -201,17 +206,12 @@ struct TrainerDashboardView: View {
     @Environment(\.modelContext) private var modelContext
     @EnvironmentObject private var healthKit: HealthKitService
 
-    @StateObject private var vm: DashboardViewModel
+    @StateObject private var vm = DashboardViewModel()
     @StateObject private var heatmapVM = HeatmapViewModel()
 
     @State private var showHeatmap  = false
     @State private var showWorkout  = false
     @State private var appearedOnce = false
-
-    init() {
-        // StateObject initialized without HealthKit — injected via onAppear
-        _vm = StateObject(wrappedValue: DashboardViewModel(healthKit: HealthKitService()))
-    }
 
     var profile: UserProfile? { profiles.first }
 
@@ -294,6 +294,16 @@ struct TrainerDashboardView: View {
         .task {
             guard !appearedOnce, let p = profile else { return }
             appearedOnce = true
+            
+            // Injektuj sdílený HealthKitService do VM
+            vm.inject(healthKit: healthKit)
+            
+            // Spusť HealthKit autorizaci + foreground sync
+            Task {
+                try? await healthKit.requestAuthorization()
+                await HealthBackgroundManager.shared.performForegroundSync(healthKit: healthKit)
+            }
+            
             await vm.load(profile: p)
         }
         .onChange(of: profiles.count) {

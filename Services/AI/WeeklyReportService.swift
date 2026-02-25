@@ -10,7 +10,28 @@ struct WeeklyReportResult: Codable, Hashable {
     let praise: String
     let mistakes: String
     let motivation: String
-    let createdAt: Date
+    var createdAt: Date
+    
+    enum CodingKeys: String, CodingKey {
+        case summary, praise, mistakes, motivation, createdAt
+    }
+    
+    init(summary: String, praise: String, mistakes: String, motivation: String, createdAt: Date = .now) {
+        self.summary = summary
+        self.praise = praise
+        self.mistakes = mistakes
+        self.motivation = motivation
+        self.createdAt = createdAt
+    }
+    
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        summary = try container.decode(String.self, forKey: .summary)
+        praise = try container.decode(String.self, forKey: .praise)
+        mistakes = try container.decode(String.self, forKey: .mistakes)
+        motivation = try container.decode(String.self, forKey: .motivation)
+        createdAt = (try? container.decode(Date.self, forKey: .createdAt)) ?? .now
+    }
 }
 
 @MainActor
@@ -91,19 +112,10 @@ final class WeeklyReportService {
         
         // 6. Parsování výsledku
         guard let data = responseString.data(using: .utf8) else {
-            throw AppError.unknown // nebo vlastní error
+            throw AppError.unknown
         }
         
-        let decoder = JSONDecoder()
-        var report = try decoder.decode(WeeklyReportResult.self, from: data)
-        report = WeeklyReportResult(
-            summary: report.summary,
-            praise: report.praise,
-            mistakes: report.mistakes,
-            motivation: report.motivation,
-            createdAt: Date()
-        )
-        
+        let report = try JSONDecoder().decode(WeeklyReportResult.self, from: data)
         return report
     }
     
@@ -127,14 +139,28 @@ final class WeeklyReportService {
             return "Zdraví: Nebyla synchronizována žádná HealthKit data."
         }
         
-        let sleepAvg = snapshots.compactMap { $0.sleepDurationHours }.reduce(0, +) / Double(snapshots.count)
-        let hrvAvg = snapshots.compactMap { $0.heartRateVariabilityMs }.reduce(0, +) / Double(snapshots.count)
-        let readinessAvg = snapshots.compactMap { $0.readinessScore }.reduce(0, +) / Double(snapshots.count)
+        let sleepValues = snapshots.compactMap { $0.sleepDurationHours }
+        let hrvValues = snapshots.compactMap { $0.heartRateVariabilityMs }
+        let readinessValues = snapshots.compactMap { $0.readinessScore }
+        
+        let sleepAvg = sleepValues.isEmpty ? 0 : sleepValues.reduce(0, +) / Double(sleepValues.count)
+        let hrvAvg = hrvValues.isEmpty ? 0 : hrvValues.reduce(0, +) / Double(hrvValues.count)
+        let readinessAvg = readinessValues.isEmpty ? 0 : readinessValues.reduce(0, +) / Double(readinessValues.count)
         
         var text = "Průměrné zdravotní metriky za týden:\n"
-        text += String(format: "- Průměrný spánek: %.1f hodin\n", sleepAvg)
-        text += String(format: "- Průměrné HRV: %.0f ms\n", hrvAvg)
-        text += String(format: "- Průměrné skóre připravenosti (Readiness): %.0f/100\n", readinessAvg)
+        if !sleepValues.isEmpty {
+            text += String(format: "- Průměrný spánek: %.1f hodin (%d dní dat)\n", sleepAvg, sleepValues.count)
+        } else {
+            text += "- Spánek: žádná data\n"
+        }
+        if !hrvValues.isEmpty {
+            text += String(format: "- Průměrné HRV: %.0f ms (%d dní dat)\n", hrvAvg, hrvValues.count)
+        } else {
+            text += "- HRV: žádná data\n"
+        }
+        if !readinessValues.isEmpty {
+            text += String(format: "- Průměrné skóre připravenosti: %.0f/100\n", readinessAvg)
+        }
         
         text += "\nAktivity mimo fitko (Kardio/Sport):\n"
         let acts = snapshots.flatMap { $0.externalActivities }

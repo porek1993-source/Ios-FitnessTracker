@@ -13,7 +13,36 @@ final class HealthBackgroundManager {
     
     private let healthKitService = HealthKitService()
     
+    /// Zamezuje spuštění více sync operací současně.
+    private var isSyncing = false
+    
     private init() {}
+    
+    // MARK: - Foreground Sync (volej při otevření aplikace)
+    
+    /// Stáhne aktuální HealthKit data a uloží je do SwiftData.
+    /// Bezpečné pro opakované volání — chrání proti race conditions.
+    func performForegroundSync(healthKit: HealthKitService) async {
+        guard !isSyncing else { return }
+        isSyncing = true
+        defer { isSyncing = false }
+        
+        do {
+            // HealthKit autorizace (pokud ještě nebyla udělena)
+            if !healthKit.isAuthorized {
+                try await healthKit.requestAuthorization()
+            }
+            
+            let today = Date()
+            let summary = try await healthKit.fetchDailySummary(for: today)
+            let externalActivities = try await healthKit.fetchExternalActivities(since: today.startOfDay)
+            
+            await saveToSwiftData(summary: summary, externalActivities: externalActivities, date: today)
+            print("[HealthSync] Foreground sync úspěšný.")
+        } catch {
+            print("[HealthSync] Foreground sync selhal: \(error.localizedDescription)")
+        }
+    }
     
     /// Zaregistruje background task. Musí být zavoláno hned po spuštění aplikace.
     func registerBackgroundTasks() {
@@ -98,7 +127,8 @@ final class HealthBackgroundManager {
         
         snapshot.sleepDurationHours = summary.sleepDurationHours
         snapshot.sleepEfficiencyPct = summary.sleepEfficiencyPct
-        snapshot.sleepDeepHours = summary.sleepDeepHours // HealthKitService jej momentálně nevrací, počítá jen core/deep/rem dohromady pro duration
+        snapshot.sleepDeepHours = summary.sleepDeepHours
+        snapshot.sleepREMHours = summary.sleepREMHours
         
         snapshot.heartRateVariabilityMs = summary.hrv
         snapshot.restingHeartRate = summary.restingHeartRate
@@ -152,8 +182,50 @@ final class HealthBackgroundManager {
         do {
             try context.save()
             print("Uloženo: \(summary.sleepDurationHours ?? 0) h spánku, HRV: \(summary.hrv ?? 0)")
+            
+            // Kontrola trendu přetrénování (deload detekce)
+            checkDeloadTrend(profile: profile)
         } catch {
             print("Chyba při ukládání do SwiftData: \(error)")
+        }
+    }
+    
+    // MARK: - Deload Detection
+    
+    /// Analyzuje posledních 7 dnů HRV a RHR. Pokud HRV klesá 5+ dní nebo RHR roste,
+    /// navrhneme uživateli deload týden přes notifikaci.
+    private func checkDeloadTrend(profile: UserProfile) {
+        let recent = profile.healthMetricsHistory
+            .sorted { $0.date > $1.date }
+            .prefix(7)
+        
+        guard recent.count >= 5 else { return }
+        
+        let hrvValues = recent.compactMap { $0.heartRateVariabilityMs }
+        let rhrValues = recent.compactMap { $0.restingHeartRate }
+        
+        guard hrvValues.count >= 4, rhrValues.count >= 4 else { return }
+        
+        // Kontroluj klesající HRV trend (každý den nižší než předchozí)
+        var hrvDeclining = true
+        for i in 0..<(hrvValues.count - 1) {
+            if hrvValues[i] >= hrvValues[i + 1] {
+                hrvDeclining = false; break
+            }
+        }
+        
+        // Kontroluj rostoucí RHR trend
+        var rhrRising = true
+        for i in 0..<(rhrValues.count - 1) {
+            if rhrValues[i] <= rhrValues[i + 1] {
+                rhrRising = false; break
+            }
+        }
+        
+        if hrvDeclining || rhrRising {
+            Task { @MainActor in
+                NotificationService.shared.scheduleDeloadReminder()
+            }
         }
     }
 }

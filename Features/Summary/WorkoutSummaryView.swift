@@ -179,19 +179,26 @@ struct WorkoutSummaryView: View {
     /// Spočítá počet po sobě jdoucích dnů s tréninkem (streak)
     private func calculateCurrentStreak() -> Int {
         guard let plan = session.plan else { return 1 }
-        let completedSessions = plan.sessions
-            .filter { $0.status == .completed && $0.finishedAt != nil }
-            .sorted { $0.startedAt > $1.startedAt }
+        let calendar = Calendar.current
+        
+        // Deduplikuj na unikátní kalendářní dny (sestupně)
+        let uniqueDays = Set(
+            plan.sessions
+                .filter { $0.status == .completed && $0.finishedAt != nil }
+                .map { calendar.startOfDay(for: $0.startedAt) }
+        ).sorted(by: >)
+        
+        guard !uniqueDays.isEmpty else { return 1 }
 
         var streak = 0
-        var checkDate = Calendar.current.startOfDay(for: .now)
+        var expectedDay = calendar.startOfDay(for: .now)
 
-        for sess in completedSessions {
-            let sessDay = Calendar.current.startOfDay(for: sess.startedAt)
-            if sessDay == checkDate || sessDay == Calendar.current.date(byAdding: .day, value: -1, to: checkDate)! {
+        for day in uniqueDays {
+            if day == expectedDay {
                 streak += 1
-                checkDate = sessDay
-            } else {
+                expectedDay = calendar.date(byAdding: .day, value: -1, to: expectedDay)!
+            } else if day < expectedDay {
+                // Mezera v sérii — konec
                 break
             }
         }

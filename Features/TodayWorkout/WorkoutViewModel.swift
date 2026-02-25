@@ -13,6 +13,7 @@ final class WorkoutViewModel: ObservableObject {
     @Published var totalRestSeconds = 90
     @Published var elapsedSeconds = 0
     @Published var audioEnabled = false
+    @Published var hkWriteResult: WorkoutWriteResult?
 
     private var restTimer: Timer?
     private var elapsedTimer: Timer?
@@ -285,7 +286,7 @@ final class WorkoutViewModel: ObservableObject {
         
         // Vytvoříme nový stav pro náhradní cvik
         // Ponecháme počet sérií a rep range (pokud je to biomechanická alternativa, bývá to podobné)
-        var newState = SessionExerciseState(
+        let newState = SessionExerciseState(
             name: newName,
             slug: newSlug,
             coachTip: "Sestaveno jako náhrada za \(old.name)",
@@ -318,7 +319,7 @@ final class WorkoutViewModel: ObservableObject {
 
     // MARK: - Finish — ukládá WeightEntry do SwiftData pro progressive overload
 
-    func finishWorkout(modelContext: ModelContext) {
+    func finishWorkout(modelContext: ModelContext, bodyWeightKg: Double = 75.0) {
         restTimer?.invalidate()
         elapsedTimer?.invalidate()
         session.durationMinutes = elapsedSeconds / 60
@@ -348,6 +349,18 @@ final class WorkoutViewModel: ObservableObject {
 
         try? modelContext.save()
         Task { await LiveActivityManager.shared.endCurrentActivity() }
+
+        // ── Zápis do Apple Health ──
+        Task {
+            let writer = HealthKitWorkoutWriter()
+            let result = await writer.write(session: session, bodyWeightKg: bodyWeightKg)
+            self.hkWriteResult = result
+            if result.success {
+                print("[HealthKit] Trénink zapsán do Apple Health. Kalorie: \(result.caloriesWritten ?? 0) kcal")
+            } else {
+                print("[HealthKit] Zápis selhal: \(result.error?.localizedDescription ?? "neznámá chyba")")
+            }
+        }
 
         // ── Gamifikace: přepočítej XP po dokončení tréninku ──
         let gamificationInput = buildGamificationInput(from: exercises)

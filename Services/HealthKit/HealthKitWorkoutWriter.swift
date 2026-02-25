@@ -50,7 +50,8 @@ final class HealthKitWorkoutWriter {
     // MARK: - Public API
 
     /// Hlavní metoda — zavolej po dokončení tréninku.
-    func write(session: WorkoutSession) async -> WorkoutWriteResult {
+    /// `bodyWeightKg` — reálná váha uživatele z `UserProfile.weightKg` pro přesný odhad kalorií.
+    func write(session: WorkoutSession, bodyWeightKg: Double = 75.0) async -> WorkoutWriteResult {
         guard HKHealthStore.isHealthDataAvailable() else {
             return WorkoutWriteResult.failure(WriterError.healthKitUnavailable)
         }
@@ -67,7 +68,8 @@ final class HealthKitWorkoutWriter {
         // Spočítej kalorie z odjetých sérií
         let estimatedCalories = estimateCalories(
             session: session,
-            durationSeconds: duration
+            durationSeconds: duration,
+            bodyWeightKg: bodyWeightKg
         )
 
         let configuration = HKWorkoutConfiguration()
@@ -117,16 +119,14 @@ final class HealthKitWorkoutWriter {
     // MARK: - Calorie Estimation
 
     /// MET-based odhad kalorií pro silový trénink.
-    /// MET ~5.0 pro střední intenzitu, váha odhadnuta z objemu.
-    private func estimateCalories(session: WorkoutSession, durationSeconds: TimeInterval) -> Double? {
+    /// MET ~5.0 pro střední intenzitu, ~6.0 pro vysokou.
+    private func estimateCalories(session: WorkoutSession, durationSeconds: TimeInterval, bodyWeightKg: Double) -> Double? {
         // Pokud nemáme žádné sety, nezapisujeme kalorie
         let totalSets = session.exercises.reduce(0) { $0 + $1.completedSets.count }
         guard totalSets > 0 else { return nil }
 
-        // Průměrné MET pro silový trénink (ACSM standard)
-        let met: Double = 5.0
-        // Odhadneme váhu uživatele — ideálně z UserProfile, zde default 80 kg
-        let bodyWeightKg: Double = 80.0
+        // MET závisí na intenzitě — více setů = vyšší intenzita
+        let met: Double = totalSets > 15 ? 6.0 : 5.0
         let durationHours = durationSeconds / 3600.0
 
         let calories = met * bodyWeightKg * durationHours
