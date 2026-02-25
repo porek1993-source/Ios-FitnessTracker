@@ -376,7 +376,7 @@ struct OnboardingChatView: View {
 // MARK: - Message Bubble
 
 private struct MessageBubble: View {
-    let message: ChatMessage
+    let message: OnboardingChatMessage
 
     private var isUser: Bool { message.role == .user }
 

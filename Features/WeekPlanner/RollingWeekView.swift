@@ -2,6 +2,7 @@
 // Klouzavý 7denní kalendář s možností overridu dnů. Vše česky.
 
 import SwiftUI
+import SwiftData
 
 // MARK: ═══════════════════════════════════════════════════════════════════════
 // MARK: Day Model

@@ -99,49 +99,4 @@ struct WorkoutView: View {
 
 */
 
-// MARK: - ExerciseDatabase (seed data helper)
-// Přidej do Resources/ExerciseDatabase.json a načítej přes:
 
-struct ExerciseDatabaseLoader {
-
-    static func load(into context: ModelContext) {
-        guard
-            let url  = Bundle.main.url(forResource: "ExerciseDatabase", withExtension: "json"),
-            let data = try? Data(contentsOf: url)
-        else {
-            assertionFailure("ExerciseDatabase.json nenalezena v bundle!")
-            return
-        }
-
-        struct ExerciseSeed: Decodable {
-            let slug: String
-            let name: String
-            let nameEN: String
-            let category: ExerciseCategory
-            let movementPattern: MovementPattern
-            let equipment: [Equipment]
-            let musclesTarget: [MuscleGroup]
-            let musclesSecondary: [MuscleGroup]
-            let isUnilateral: Bool
-            let instructions: String
-        }
-
-        let seeds = (try? JSONDecoder().decode([ExerciseSeed].self, from: data)) ?? []
-
-        for seed in seeds {
-            let ex = Exercise(
-                slug:            seed.slug,
-                name:            seed.name,
-                nameEN:          seed.nameEN,
-                category:        seed.category,
-                movementPattern: seed.movementPattern,
-                equipment:       seed.equipment,
-                musclesTarget:   seed.musclesTarget,
-                musclesSecondary: seed.musclesSecondary,
-                isUnilateral:    seed.isUnilateral,
-                instructions:    seed.instructions
-            )
-            context.insert(ex)
-        }
-    }
-}

@@ -23,9 +23,7 @@ extension Date {
 // Double+Formatting.swift
 
 extension Double {
-    func rounded(toNearest step: Double) -> Double {
-        (self / step).rounded() * step
-    }
+
 
     var kgFormatted: String {
         self.truncatingRemainder(dividingBy: 1) == 0

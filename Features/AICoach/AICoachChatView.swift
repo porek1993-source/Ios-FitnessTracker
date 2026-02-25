@@ -4,7 +4,7 @@
 import SwiftUI
 import SwiftData
 
-struct ChatMessage: Identifiable {
+struct AICoachChatMessage: Identifiable {
     let id = UUID()
     var text: String
     var isUser: Bool
@@ -19,7 +19,7 @@ struct AICoachChatView: View {
     let plannedDay: PlannedWorkoutDay?
     let onWorkoutAdjusted: ((String) -> Void)?
 
-    @State private var messages: [ChatMessage] = []
+    @State private var messages: [AICoachChatMessage] = []
     @State private var inputText = ""
     @State private var isLoading = false
     @FocusState private var inputFocused: Bool
@@ -74,7 +74,7 @@ struct AICoachChatView: View {
         }
     }
 
-    private func messageBubble(_ message: ChatMessage) -> some View {
+    private func messageBubble(_ message: AICoachChatMessage) -> some View {
         HStack(alignment: .bottom, spacing: 8) {
             if !message.isUser {
                 // Avatar
@@ -176,19 +176,19 @@ struct AICoachChatView: View {
 
     private func sendWelcome() {
         let greeting = "Čau! Jsem Jakub, tvůj osobní trenér. 💪\n\nMůžeš mi říct, co tě trápí nebo co potřebuješ upravit v dnešním tréninku. Třeba: *\"Tahá mě pravé koleno\"* nebo *\"Mám jen 30 minut\"*."
-        messages.append(ChatMessage(text: greeting, isUser: false))
+        messages.append(AICoachChatMessage(text: greeting, isUser: false))
     }
 
     private func sendMessage() {
         let text = inputText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty else { return }
 
-        messages.append(ChatMessage(text: text, isUser: true))
+        messages.append(AICoachChatMessage(text: text, isUser: true))
         inputText = ""
         isLoading = true
 
         let loadingId = UUID()
-        messages.append(ChatMessage(text: "", isUser: false, isLoading: true))
+        messages.append(AICoachChatMessage(text: "", isUser: false, isLoading: true))
 
         Task {
             let response = await callAICoach(userMessage: text)
@@ -196,7 +196,7 @@ struct AICoachChatView: View {
             await MainActor.run {
                 // Odeber loading bubble
                 messages.removeAll { $0.isLoading }
-                messages.append(ChatMessage(text: response, isUser: false))
+                messages.append(AICoachChatMessage(text: response, isUser: false))
                 isLoading = false
 
                 // Pokud AI navrhla úpravu, notifikuj caller

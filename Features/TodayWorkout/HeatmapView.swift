@@ -186,8 +186,7 @@ struct BodySilhouette: Shape {
     }
 }
 
-// MARK: - Muscle Zone Tap Area
-
+extension BodyFigureView {
     // MARK: - Hit-test logic
 
     private func handleCanvasTap(at point: CGPoint, canvasSize: CGSize, areas: [MuscleArea]) {

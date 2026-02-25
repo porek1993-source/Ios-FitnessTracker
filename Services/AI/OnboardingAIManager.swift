@@ -6,7 +6,7 @@ import SwiftData
 
 // MARK: - Chat Message Model
 
-struct ChatMessage: Identifiable, Equatable {
+struct OnboardingChatMessage: Identifiable, Equatable {
     let id: UUID
     let role: MessageRole
     var text: String
@@ -171,7 +171,7 @@ struct OnboardingProfileDTO: Decodable {
 final class OnboardingAIManager: ObservableObject {
 
     // MARK: - Published State
-    @Published var messages: [ChatMessage] = []
+    @Published var messages: [OnboardingChatMessage] = []
     @Published var isLoading: Bool = false
     @Published var inputDisabled: Bool = false
     @Published var extractedProfile: UserProfile? = nil
@@ -230,7 +230,7 @@ final class OnboardingAIManager: ObservableObject {
         let trimmed = message.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty, !isLoading else { return }
 
-        messages.append(ChatMessage(role: .user, text: trimmed))
+        messages.append(OnboardingChatMessage(role: .user, text: trimmed))
         await fetchResponse(userMessage: trimmed)
     }
 
@@ -240,7 +240,7 @@ final class OnboardingAIManager: ObservableObject {
         isLoading     = true
         errorMessage  = nil
 
-        messages.append(ChatMessage(role: .assistant, text: "", isStreaming: true))
+        messages.append(OnboardingChatMessage(role: .assistant, text: "", isStreaming: true))
         let streamIndex = messages.count - 1
 
         defer {
@@ -440,7 +440,7 @@ final class OnboardingAIManager: ObservableObject {
 
     // MARK: - Convenience
 
-    var lastAssistantMessage: ChatMessage? {
+    var lastAssistantMessage: OnboardingChatMessage? {
         messages.last { $0.role == .assistant }
     }
 }
