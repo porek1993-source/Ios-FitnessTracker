@@ -378,15 +378,19 @@ final class WorkoutViewModel: ObservableObject {
 
 // MARK: - State Models
 
-struct SessionExerciseState: Identifiable {
-    let id: UUID
-    let name: String
-    let slug: String
-    let coachTip: String?
-    let tempo: String?
-    let restSeconds: Int
     var sets: [SetState]
-    var isWarmupOnly: Bool = false
+    var isWarmupOnly: Bool
+
+    init(id: UUID = UUID(), name: String, slug: String, coachTip: String? = nil, tempo: String? = nil, restSeconds: Int = 60, sets: [SetState] = [], isWarmupOnly: Bool = false) {
+        self.id = id
+        self.name = name
+        self.slug = slug
+        self.coachTip = coachTip
+        self.tempo = tempo
+        self.restSeconds = restSeconds
+        self.sets = sets
+        self.isWarmupOnly = isWarmupOnly
+    }
 
     var nextIncompleteSetIndex: Int? {
         sets.indices.first { !sets[$0].isCompleted }
@@ -426,19 +430,17 @@ struct SessionExerciseState: Identifiable {
 
     static func warmupExercise(_ wu: WarmUpExercise) -> SessionExerciseState {
         let reps = Int(wu.reps.components(separatedBy: CharacterSet.decimalDigits.inverted).first ?? "10") ?? 10
-        let state = SessionExerciseState(
-            id: UUID(),
+        let sets = (0..<wu.sets).map { _ in
+            SetState(targetRepsMin: reps, targetRepsMax: reps, isWarmup: true)
+        }
+        return SessionExerciseState(
             name: wu.name,
             slug: "warmup-\(wu.name.lowercased())",
             coachTip: wu.notes,
-            tempo: nil,
             restSeconds: 60,
-            sets: (0..<wu.sets).map { _ in
-                SetState(targetRepsMin: reps, targetRepsMax: reps, previousWeightKg: nil, isWarmup: true)
-            },
+            sets: sets,
             isWarmupOnly: true
         )
-        return state
     }
 
     static func warmupExercise(_ ex: ResponseExercise) -> SessionExerciseState {
@@ -455,11 +457,22 @@ struct SetState {
     var weightKg: Double?
     var reps: Int?
     var rpe: Int?
-    var isCompleted = false
-    var isWarmup: Bool = false
+    var isCompleted: Bool
+    var isWarmup: Bool
     let targetRepsMin: Int
     let targetRepsMax: Int
     var previousWeightKg: Double?
+
+    init(weightKg: Double? = nil, reps: Int? = nil, rpe: Int? = nil, isCompleted: Bool = false, isWarmup: Bool = false, targetRepsMin: Int, targetRepsMax: Int, previousWeightKg: Double? = nil) {
+        self.weightKg = weightKg
+        self.reps = reps
+        self.rpe = rpe
+        self.isCompleted = isCompleted
+        self.isWarmup = isWarmup
+        self.targetRepsMin = targetRepsMin
+        self.targetRepsMax = targetRepsMax
+        self.previousWeightKg = previousWeightKg
+    }
 }
 
 // MARK: - Helpers

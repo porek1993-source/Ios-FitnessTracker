@@ -3,6 +3,7 @@ import SwiftUI
 
 struct WorkoutHeaderView: View {
     @Environment(\.modelContext) private var modelContext
+    @ObservedObject var vm: WorkoutViewModel
 
     var body: some View {
         HStack(alignment: .center) {

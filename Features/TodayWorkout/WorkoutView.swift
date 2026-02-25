@@ -178,6 +178,7 @@ struct WorkoutView: View {
             }
             let sessionEx = vm.session.exercises.first { $0.exercise?.slug == ex.slug }
             return SessionGamificationInput.ExerciseResult(
+                exerciseName: ex.name,
                 musclesTarget: sessionEx?.exercise?.musclesTarget ?? [],
                 musclesSecondary: sessionEx?.exercise?.musclesSecondary ?? [],
                 completedSets: sets

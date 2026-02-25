@@ -135,6 +135,7 @@ struct WorkoutViewWithAI: View {
             let muscles = ex.exercise?.musclesTarget ?? []
             let secondary = ex.exercise?.musclesSecondary ?? []
             return SessionGamificationInput.ExerciseResult(
+                exerciseName: ex.exerciseName,
                 musclesTarget: muscles,
                 musclesSecondary: secondary,
                 completedSets: sets

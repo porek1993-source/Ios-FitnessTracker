@@ -2,6 +2,7 @@
 
 import Foundation
 import SwiftData
+import UserNotifications
 
 /// Výsledek týdenní analýzy od AI
 struct WeeklyReportResult: Codable, Hashable {
@@ -190,14 +191,14 @@ final class WeeklyReportService {
     }
 
     /// Odesílá notifikaci o dokončení tréninku (voláno z WorkoutSummaryView)
-    static func sendWorkoutCompletionNotification(session: WorkoutSession) {
+    static func sendWorkoutCompletionNotification(streakDays: Int, sessionLabel: String) {
         let content = UNMutableNotificationContent()
         content.title = "Trénink dokončen! 🎉"
-        content.body = "Skvělá práce! Odcvičeno \(session.exercises.count) cviků. Jakub je na tebe hrdý."
+        content.body = "Skvělá práce na \(sessionLabel)! Tvůj streak je \(streakDays) dní. Jakub je na tebe hrdý."
         content.sound = .default
 
         let request = UNNotificationRequest(
-            identifier: "workout_complete_\(session.id.uuidString)",
+            identifier: "workout_complete_\(UUID().uuidString)",
             content: content,
             trigger: nil
         )
