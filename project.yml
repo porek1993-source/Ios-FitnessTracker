@@ -53,8 +53,9 @@ targets:
       - path: Services
 
     resources:
-      - path: Resources
-        buildPhase: resources
+      - Resources/ExerciseDatabase.json
+      - Resources/SystemPrompt.txt
+      - Resources/OnboardingSystemPrompt.txt
 
     settings:
       base:

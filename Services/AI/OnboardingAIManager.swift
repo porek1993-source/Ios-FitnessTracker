@@ -250,38 +250,61 @@ final class OnboardingAIManager: ObservableObject {
             }
         }
 
-        do {
-            var fullText = ""
-            for try await chunk in try await streamGemini(userMessage: userMessage) {
-                fullText += chunk
-                let (displayText, jsonBlock) = parseResponse(fullText)
+        var attempts = 0
+        let maxAttempts = 3
+        
+        while attempts < maxAttempts {
+            do {
+                var fullText = ""
+                for try await chunk in try await streamGemini(userMessage: userMessage) {
+                    fullText += chunk
+                    let (displayText, jsonBlock) = parseResponse(fullText)
 
-                // Update bubble with display text (without JSON markers)
-                if streamIndex < messages.count {
-                    messages[streamIndex].text = displayText
+                    // Update bubble with display text (without JSON markers)
+                    if streamIndex < messages.count {
+                        messages[streamIndex].text = displayText
+                    }
+
+                    // If JSON is completely found, handle it and we are done
+                    if let jsonString = jsonBlock, profileReady == false {
+                        await handleExtractedJSON(jsonString)
+                    }
                 }
 
-                // If JSON is completely found, handle it and we are done
-                if let jsonString = jsonBlock, profileReady == false {
-                    await handleExtractedJSON(jsonString)
+                // Post-stream fallback: JSON tags may have been split across chunks
+                if !profileReady {
+                    AppLogger.shared.log("OnboardingAIManager: Stream skončil, profil zatím nenalezen. Délka textu: \(fullText.count) znaků. Zkouším post-stream fallback...", type: .info)
+                    let (displayText, jsonBlock) = parseResponse(fullText)
+                    if streamIndex < messages.count {
+                        messages[streamIndex].text = displayText
+                    }
+                    if let jsonString = jsonBlock {
+                        AppLogger.shared.log("OnboardingAIManager: Post-stream fallback našel JSON blok!", type: .success)
+                        await handleExtractedJSON(jsonString)
+                    } else {
+                        AppLogger.shared.log("OnboardingAIManager: Ani post-stream fallback nenašel JSON tagy.", type: .warning)
+                    }
                 }
-            }
+                return // Success!
 
-            // Post-stream fallback: JSON tags may have been split across chunks
-            if !profileReady {
-                AppLogger.shared.log("OnboardingAIManager: Stream skončil, profil zatím nenalezen. Délka textu: \(fullText.count) znaků. Zkouším post-stream fallback...", type: .info)
-                let (displayText, jsonBlock) = parseResponse(fullText)
-                if streamIndex < messages.count {
-                    messages[streamIndex].text = displayText
+            } catch let error as GeminiError {
+                if case .httpError(let statusCode, _) = error, statusCode == 429 {
+                    attempts += 1
+                    if attempts >= maxAttempts { throw error }
+                    
+                    let delay = pow(2.0, Double(attempts)) + Double.random(in: 0...1)
+                    AppLogger.shared.log("OnboardingAIManager: Rate limit (429). Retry \(attempts)/\(maxAttempts) za \(String(format: "%.1f", delay))s...", type: .warning)
+                    if streamIndex < messages.count {
+                        messages[streamIndex].text = "Šetřím energii (API rate limit)... zkouším znovu za chvíli. 💪"
+                    }
+                    try? await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
+                    continue
                 }
-                if let jsonString = jsonBlock {
-                    AppLogger.shared.log("OnboardingAIManager: Post-stream fallback našel JSON blok!", type: .success)
-                    await handleExtractedJSON(jsonString)
-                } else {
-                    AppLogger.shared.log("OnboardingAIManager: Ani post-stream fallback nenašel JSON tagy.", type: .warning)
-                }
-            }
-        } catch {
+                throw error
+            } catch {
+                throw error
+        }
+        catch {
             let errorDetail = errorMessage ?? error.localizedDescription
             if streamIndex < messages.count {
                 messages[streamIndex].text = "Jejda, něco se pokazilo.\n\nDetail chyby: \(errorDetail)\n\nZkontroluj v nastavení/prostředí, zda je správně nastaven GEMINI_API_KEY a zkus to prosím znovu."
