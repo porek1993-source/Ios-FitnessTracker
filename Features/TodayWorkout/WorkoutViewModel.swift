@@ -378,6 +378,13 @@ final class WorkoutViewModel: ObservableObject {
 
 // MARK: - State Models
 
+struct SessionExerciseState: Identifiable {
+    let id: UUID
+    let name: String
+    let slug: String
+    let coachTip: String?
+    let tempo: String?
+    let restSeconds: Int
     var sets: [SetState]
     var isWarmupOnly: Bool
 
