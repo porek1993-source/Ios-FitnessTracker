@@ -37,7 +37,9 @@ final class AITrainerService: ObservableObject {
     func generateTodayWorkout(
         for date: Date = .now,
         profile: UserProfile,
-        plannedDay: PlannedWorkoutDay
+        plannedDay: PlannedWorkoutDay,
+        equipmentOverride: Set<Equipment>? = nil,
+        timeLimitMinutes: Int? = nil
     ) async throws -> TrainerResponse {
         isLoading = true
         offlineMessage = nil
@@ -46,7 +48,12 @@ final class AITrainerService: ObservableObject {
         do {
             // Pokusíme se o standardní API volání s timeoutem
             let response = try await withTimeout(seconds: apiTimeoutSeconds) {
-                let context     = try await self.contextBuilder.buildContext(for: date, profile: profile)
+                let context     = try await self.contextBuilder.buildContext(
+                    for: date, 
+                    profile: profile,
+                    equipmentOverride: equipmentOverride,
+                    timeLimitMinutes: timeLimitMinutes
+                )
                 let userMessage = try await self.buildUserMessage(context: context)
                 let rawJSON     = try await self.apiClient.generate(
                     systemPrompt:   self.systemPrompt,

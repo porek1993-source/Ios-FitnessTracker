@@ -11,6 +11,7 @@ struct TrainerRequestContext: Codable {
     let fatigue: FatigueContext
     let equipment: EquipmentContext
     let progressiveOverload: [OverloadEntry]
+    let sessionTimeOverride: Int?    // v minutách
 }
 
 struct UserContextProfile: Codable {
@@ -176,6 +177,7 @@ struct FatigueArea: Codable {
 struct EquipmentContext: Codable {
     let location: String
     let availableEquipment: [String]
+    let filterOverride: [String]? // Přidáno: specifický filtr vybraný uživatelem v UI
 }
 
 struct OverloadEntry: Codable {

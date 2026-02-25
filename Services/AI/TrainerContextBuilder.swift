@@ -14,7 +14,12 @@ final class TrainerContextBuilder {
         self.healthKitService = healthKitService
     }
 
-    func buildContext(for date: Date, profile: UserProfile) async throws -> TrainerRequestContext {
+    func buildContext(
+        for date: Date, 
+        profile: UserProfile,
+        equipmentOverride: Set<Equipment>? = nil,
+        timeLimitMinutes: Int? = nil
+    ) async throws -> TrainerRequestContext {
         async let hkSummary  = healthKitService.fetchDailySummary(for: date)
         async let activities = healthKitService.fetchExternalActivities(
             since: date.addingTimeInterval(-36 * 3600)
@@ -34,8 +39,9 @@ final class TrainerContextBuilder {
             todayPlan:           buildPlannedDay(day: plannedDay, plan: activePlan),
             healthMetrics:       buildHealthContext(hk: health, snapshot: snap, activities: acts),
             fatigue:             buildFatigueContext(),
-            equipment:           buildEquipmentContext(profile: profile),
-            progressiveOverload: buildOverloadEntries(day: plannedDay)
+            equipment:           buildEquipmentContext(profile: profile, override: equipmentOverride),
+            progressiveOverload: buildOverloadEntries(day: plannedDay),
+            sessionTimeOverride: timeLimitMinutes
         )
     }
 
@@ -103,10 +109,11 @@ final class TrainerContextBuilder {
         FatigueContext(areas: FatigueStore.loadTodayFatigue())
     }
 
-    private func buildEquipmentContext(profile: UserProfile) -> EquipmentContext {
+    private func buildEquipmentContext(profile: UserProfile, override: Set<Equipment>?) -> EquipmentContext {
         EquipmentContext(
             location: profile.currentLocation ?? "gym",
-            availableEquipment: profile.availableEquipment.map(\.rawValue)
+            availableEquipment: profile.availableEquipment.map(\.rawValue),
+            filterOverride: override?.map(\.rawValue)
         )
     }
 
