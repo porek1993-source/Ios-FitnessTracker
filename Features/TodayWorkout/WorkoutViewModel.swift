@@ -22,6 +22,7 @@ final class WorkoutViewModel: ObservableObject {
     let planLabel: String
 
     init(session: WorkoutSession, plan: PlannedWorkoutDay, planLabel: String, aiResponse: TrainerResponse? = nil) {
+        self.exercises = []
         self.session   = session
         self.planLabel = planLabel
 
@@ -417,6 +418,7 @@ struct SessionExerciseState: Identifiable {
                 previousWeightKg: planned.exercise?.lastUsedWeight
             )
         }
+        self.isWarmupOnly = false
     }
 
     init(from response: ResponseExercise) {
@@ -433,6 +435,7 @@ struct SessionExerciseState: Identifiable {
                 previousWeightKg: response.weightKg
             )
         }
+        self.isWarmupOnly = false
     }
 
     static func warmupExercise(_ wu: WarmUpExercise) -> SessionExerciseState {
