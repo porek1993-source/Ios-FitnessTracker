@@ -470,14 +470,14 @@ struct SetState {
     let targetRepsMax: Int
     var previousWeightKg: Double?
 
-    init(weightKg: Double? = nil, reps: Int? = nil, rpe: Int? = nil, isCompleted: Bool = false, isWarmup: Bool = false, targetRepsMin: Int, targetRepsMax: Int, previousWeightKg: Double? = nil) {
+    init(targetRepsMin: Int, targetRepsMax: Int, weightKg: Double? = nil, reps: Int? = nil, rpe: Int? = nil, isCompleted: Bool = false, isWarmup: Bool = false, previousWeightKg: Double? = nil) {
+        self.targetRepsMin = targetRepsMin
+        self.targetRepsMax = targetRepsMax
         self.weightKg = weightKg
         self.reps = reps
         self.rpe = rpe
         self.isCompleted = isCompleted
         self.isWarmup = isWarmup
-        self.targetRepsMin = targetRepsMin
-        self.targetRepsMax = targetRepsMax
         self.previousWeightKg = previousWeightKg
     }
 }

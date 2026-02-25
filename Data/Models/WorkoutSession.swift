@@ -21,6 +21,10 @@ final class WorkoutSession {
     var plan: WorkoutPlan?
     var plannedDay: PlannedWorkoutDay?
 
+    var plannedDayName: String {
+        plannedDay?.label ?? "Trénink"
+    }
+
     @Relationship(deleteRule: .cascade)
     var exercises: [SessionExercise]
 
