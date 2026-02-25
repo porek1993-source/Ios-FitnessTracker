@@ -284,7 +284,7 @@ final class AudioCoachService: NSObject, ObservableObject {
 
     // MARK: - Core Speech
 
-    private func speak(_ event: CoachSpeech) {
+    internal func speak(_ event: CoachSpeech) {
         guard isEnabled, isSessionActive else { return }
 
         // Deduplikace — nespouštěj stejnou hlášku víckrát rychle za sebou

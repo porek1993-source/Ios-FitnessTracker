@@ -80,7 +80,8 @@ struct ActiveSessionView: View {
             }
         }
         .confirmationDialog("Dokončit trénink?", isPresented: $showFinishDlg, titleVisibility: .visible) {
-            Button("Uložit a ukončit") { vm.finishWorkout(); dismiss() }
+            @Environment(\.modelContext) var modelContext
+            Button("Uložit a ukončit") { vm.finishWorkout(modelContext: modelContext); dismiss() }
             Button("Zrušit", role: .cancel) {}
         } message: {
             Text("Všechny zalogované série budou uloženy.")

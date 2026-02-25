@@ -97,6 +97,7 @@ enum MuscleLevel: Int, CaseIterable, Comparable {
 
 struct SessionGamificationInput {
     struct ExerciseResult {
+        let exerciseName: String
         let musclesTarget: [MuscleGroup]
         let musclesSecondary: [MuscleGroup]
         let completedSets: [SetResult]

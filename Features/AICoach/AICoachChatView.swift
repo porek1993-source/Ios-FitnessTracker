@@ -189,7 +189,7 @@ struct AICoachChatView: View {
         inputText = ""
         isLoading = true
 
-        let loadingId = UUID()
+        _ = UUID()
         messages.append(AICoachChatMessage(text: "", isUser: false, isLoading: true))
 
         Task {

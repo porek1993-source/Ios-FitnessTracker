@@ -2,7 +2,7 @@
 import SwiftUI
 
 struct WorkoutHeaderView: View {
-    @ObservedObject var vm: WorkoutViewModel
+    @Environment(\.modelContext) private var modelContext
 
     var body: some View {
         HStack(alignment: .center) {
@@ -32,7 +32,7 @@ struct WorkoutHeaderView: View {
 
             Spacer()
 
-            Button { vm.finishWorkout() } label: {
+            Button { vm.finishWorkout(modelContext: modelContext) } label: {
                 Text("Dokončit")
                     .font(.system(size: 14, weight: .semibold))
                     .foregroundStyle(.white)

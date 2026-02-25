@@ -50,6 +50,10 @@ final class SessionExercise {
     @Relationship(deleteRule: .cascade)
     var completedSets: [CompletedSet]
 
+    var exerciseName: String {
+        exercise?.name ?? "Neznámý cvik"
+    }
+
     init(order: Int, exercise: Exercise?, session: WorkoutSession?) {
         self.order = order
         self.wasSubstituted = false
@@ -69,6 +73,8 @@ final class CompletedSet {
     var isWarmupSet: Bool
 
     var sessionExercise: SessionExercise?
+
+    var isWarmup: Bool { isWarmupSet }
 
     init(
         setNumber: Int,

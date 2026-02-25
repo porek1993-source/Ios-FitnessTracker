@@ -28,7 +28,7 @@ struct AgileFitnessTrainerApp: App {
                     ExerciseDatabaseLoader.seedIfNeeded(context: context)
                     // Požádej o oprávnění pro notifikace
                     Task {
-                        await NotificationService.shared.requestPermission()
+                        _ = await NotificationService.shared.requestPermission()
                         NotificationService.shared.scheduleWorkoutReminder(hour: 8, minute: 30)
                     }
                 }

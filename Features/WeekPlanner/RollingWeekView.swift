@@ -408,7 +408,7 @@ struct WeekDayExerciseDetailView: View {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(day.label.uppercased())
                         .font(.system(size: 10, weight: .black))
-                        .foregroundStyle(.appPrimaryAccent)
+                        .foregroundStyle(Color.appPrimaryAccent)
                         .kerning(1.2)
                     Text(exercises.isEmpty ? "Cviky vygeneruje Jakub při startu" : "\(exercises.count) cviků")
                         .font(.system(size: 12))

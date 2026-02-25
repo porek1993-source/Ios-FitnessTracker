@@ -26,42 +26,44 @@ final class WorkoutViewModel: ObservableObject {
         self.planLabel = planLabel
 
         // Priorita: AI response > PlannedExercises z databáze
-        if let response = aiResponse, !response.exercises.isEmpty {
+        if let response = aiResponse, !response.mainBlocks.isEmpty {
             // AI vygenerovala konkrétní cviky
             var states: [SessionExerciseState] = []
 
             // Warmup
-            for wu in response.warmup {
+            for wu in response.warmUp {
                 states.append(SessionExerciseState.warmupExercise(wu))
             }
 
-            // Main exercises
-            for (index, ex) in response.exercises.enumerated() {
-                var state = SessionExerciseState(from: ex)
+            // Main exercises - flatten mainBlocks
+            for block in response.mainBlocks {
+                for (index, ex) in block.exercises.enumerated() {
+                    var state = SessionExerciseState(from: ex)
 
-                // Progressive overload: načti historii z PlannedExercises
-                if let plannedEx = plan.plannedExercises.first(where: {
-                    $0.exercise?.slug == ex.slug || $0.exercise?.nameEN.lowercased() == ex.slug.lowercased()
-                }) {
-                    if let exercise = plannedEx.exercise {
-                        // Použij RPE z minulé session pro rozhodnutí o váze
-                        let suggestion = rpeAwareProgression(exercise: exercise, targetWeight: ex.weightKg)
-                        for j in 0..<state.sets.count {
-                            state.sets[j].previousWeightKg = suggestion
+                    // Progressive overload: načti historii z PlannedExercises
+                    if let plannedEx = plan.plannedExercises.first(where: {
+                        $0.exercise?.slug == ex.slug || $0.exercise?.nameEN.lowercased() == ex.slug.lowercased()
+                    }) {
+                        if let exercise = plannedEx.exercise {
+                            // Použij RPE z minulé session pro rozhodnutí o váze
+                            let suggestion = rpeAwareProgression(exercise: exercise, targetWeight: ex.weightKg)
+                            for j in 0..<state.sets.count {
+                                state.sets[j].previousWeightKg = suggestion
+                            }
                         }
                     }
-                }
 
-                // Warmup pouze pro první cvik
-                if index == 0, let targetWeight = state.sets.first?.previousWeightKg ?? ex.weightKg {
-                    let warmups = WarmupCalculator.generateWarmups(
-                        targetWeight: targetWeight,
-                        targetRepsMin: ex.repsMin
-                    )
-                    state.sets.insert(contentsOf: warmups, at: 0)
-                }
+                    // Warmup pouze pro první cvik v celém tréninku
+                    if states.isEmpty && index == 0, let targetWeight = state.sets.first?.previousWeightKg ?? ex.weightKg {
+                        let warmups = WarmupCalculator.generateWarmups(
+                            targetWeight: targetWeight,
+                            targetRepsMin: ex.repsMin
+                        )
+                        state.sets.insert(contentsOf: warmups, at: 0)
+                    }
 
-                states.append(state)
+                    states.append(state)
+                }
             }
 
             self.exercises = states
@@ -110,7 +112,7 @@ final class WorkoutViewModel: ObservableObject {
             .prefix(6)
 
         // Zkontroluj poslední RPE
-        let lastHighRPE = recentEntries.contains { $0.rpe >= 9 }
+        let lastHighRPE = recentEntries.contains { ($0.rpe ?? 0) >= 9.0 }
         let lastFailure = recentEntries.contains { !$0.wasSuccessful }
 
         guard let lastWeight = recentEntries.first?.weightKg else {
@@ -307,7 +309,7 @@ final class WorkoutViewModel: ObservableObject {
             let setResults: [SessionGamificationInput.SetResult] = completed.map {
                 .init(weightKg: $0.weightKg ?? 0, reps: $0.reps ?? 0, isWarmup: $0.isWarmup)
             }
-            return .init(
+            return SessionGamificationInput.ExerciseResult(
                 exerciseName: state.name,
                 musclesTarget: primary,
                 musclesSecondary: secondary,
@@ -422,6 +424,23 @@ struct SessionExerciseState: Identifiable {
         }
     }
 
+    static func warmupExercise(_ wu: WarmUpExercise) -> SessionExerciseState {
+        let reps = Int(wu.reps.components(separatedBy: CharacterSet.decimalDigits.inverted).first ?? "10") ?? 10
+        let state = SessionExerciseState(
+            id: UUID(),
+            name: wu.name,
+            slug: "warmup-\(wu.name.lowercased())",
+            coachTip: wu.notes,
+            tempo: nil,
+            restSeconds: 60,
+            sets: (0..<wu.sets).map { _ in
+                SetState(targetRepsMin: reps, targetRepsMax: reps, previousWeightKg: nil, isWarmup: true)
+            },
+            isWarmupOnly: true
+        )
+        return state
+    }
+
     static func warmupExercise(_ ex: ResponseExercise) -> SessionExerciseState {
         var state = SessionExerciseState(from: ex)
         state.isWarmupOnly = true
@@ -440,7 +459,7 @@ struct SetState {
     var isWarmup: Bool = false
     let targetRepsMin: Int
     let targetRepsMax: Int
-    let previousWeightKg: Double?
+    var previousWeightKg: Double?
 }
 
 // MARK: - Helpers

@@ -188,6 +188,21 @@ final class WeeklyReportService {
         }
         return text
     }
+
+    /// Odesílá notifikaci o dokončení tréninku (voláno z WorkoutSummaryView)
+    static func sendWorkoutCompletionNotification(session: WorkoutSession) {
+        let content = UNMutableNotificationContent()
+        content.title = "Trénink dokončen! 🎉"
+        content.body = "Skvělá práce! Odcvičeno \(session.exercises.count) cviků. Jakub je na tebe hrdý."
+        content.sound = .default
+
+        let request = UNNotificationRequest(
+            identifier: "workout_complete_\(session.id.uuidString)",
+            content: content,
+            trigger: nil
+        )
+        UNUserNotificationCenter.current().add(request)
+    }
 }
 
 // Chlazení pro kód v SwiftDate extensions nebo Error handlingu:
