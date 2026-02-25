@@ -23,6 +23,7 @@ private struct ExerciseJSON: Decodable {
     let videoURL: String?
 }
 
+@MainActor
 enum ExerciseDatabaseLoader {
 
     /// Seeduje databázi cviků. Pokud cviky už existují, přeskočí.

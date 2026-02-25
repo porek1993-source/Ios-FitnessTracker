@@ -16,15 +16,6 @@
 import HealthKit
 import Foundation
 
-// MARK: - Write Types
-
-enum HealthKitWriteTypes {
-    static let share: Set<HKSampleType> = [
-        .workoutType(),
-        HKObjectType.quantityType(forIdentifier: .activeEnergyBurned)!
-    ]
-}
-
 // MARK: - Result
 
 struct WorkoutWriteResult {
