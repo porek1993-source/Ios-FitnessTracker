@@ -119,43 +119,45 @@ struct AICoachChatView: View {
     // MARK: — Input
 
     private var inputBar: some View {
-        HStack(spacing: 12) {
-            // Quick suggestions
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 8) {
-                    suggestionChip("Tahá mě koleno")
-                    suggestionChip("Mám jen 30 minut")
-                    suggestionChip("Jsem hodně unavený")
-                    suggestionChip("Lavička je obsazená")
+        VStack(spacing: 0) {
+            HStack(spacing: 12) {
+                // Quick suggestions
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 8) {
+                        suggestionChip("Tahá mě koleno")
+                        suggestionChip("Mám jen 30 minut")
+                        suggestionChip("Jsem hodně unavený")
+                        suggestionChip("Lavička je obsazená")
+                    }
+                    .padding(.horizontal, 16)
                 }
-                .padding(.horizontal, 16)
             }
-        }
-        .frame(height: 40)
-        .padding(.top, 8)
+            .frame(height: 40)
+            .padding(.top, 8)
 
-        return HStack(spacing: 10) {
-            TextField("Řekni trenérovi co potřebuješ…", text: $inputText, axis: .vertical)
-                .textFieldStyle(.plain)
-                .font(.system(size: 15))
-                .foregroundStyle(.white)
-                .lineLimit(1...4)
-                .focused($inputFocused)
-                .padding(.horizontal, 14).padding(.vertical, 10)
-                .background(Color.white.opacity(0.08))
-                .clipShape(RoundedRectangle(cornerRadius: 20))
+            HStack(spacing: 10) {
+                TextField("Řekni trenérovi co potřebuješ…", text: $inputText, axis: .vertical)
+                    .textFieldStyle(.plain)
+                    .font(.system(size: 15))
+                    .foregroundStyle(.white)
+                    .lineLimit(1...4)
+                    .focused($inputFocused)
+                    .padding(.horizontal, 14).padding(.vertical, 10)
+                    .background(Color.white.opacity(0.08))
+                    .clipShape(RoundedRectangle(cornerRadius: 20))
 
-            Button {
-                sendMessage()
-            } label: {
-                Image(systemName: inputText.isEmpty ? "mic" : "arrow.up.circle.fill")
-                    .font(.system(size: 28))
-                    .foregroundStyle(inputText.isEmpty ? .white.opacity(0.3) : .blue)
+                Button {
+                    sendMessage()
+                } label: {
+                    Image(systemName: inputText.isEmpty ? "mic" : "arrow.up.circle.fill")
+                        .font(.system(size: 28))
+                        .foregroundStyle(inputText.isEmpty ? .white.opacity(0.3) : .blue)
+                }
+                .disabled(inputText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isLoading)
             }
-            .disabled(inputText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isLoading)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 10)
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 10)
     }
 
     private func suggestionChip(_ text: String) -> some View {

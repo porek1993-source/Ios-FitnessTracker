@@ -432,7 +432,7 @@ struct WeekDayExerciseDetailView: View {
                         Text("Plán čeká na AI")
                             .font(.system(size: 13, weight: .semibold))
                             .foregroundStyle(.white)
-                        Text("Klikni na „Začít trénink" a Jakub sestaví personalizovaný workout.")
+                        Text("Klikni na „Začít trénink“ a Jakub sestaví personalizovaný workout.")
                             .font(.system(size: 11))
                             .foregroundStyle(.white.opacity(0.4))
                             .fixedSize(horizontal: false, vertical: true)
