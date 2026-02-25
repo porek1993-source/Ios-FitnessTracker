@@ -496,9 +496,21 @@ private struct SetLoggerBlock: View {
 
     private var setList: some View {
         VStack(spacing: 6) {
+            let workingSetsOnly = exercise.sets.filter { !$0.isWarmup }
+            var workingCounter = 1
+
             ForEach(exercise.sets.indices, id: \.self) { i in
+                // Vypočteme číslo pouze pro pracovní série
+                let num: Int
+                if exercise.sets[i].isWarmup {
+                    num = 0
+                } else {
+                    num = workingCounter
+                    workingCounter += 1
+                }
+
                 ActiveSetRow(
-                    setNumber:  i + 1,
+                    setNumber:  num,
                     currentSet: $exercise.sets[i],
                     isActive:   i == exercise.nextIncompleteSetIndex,
                     onComplete: { onComplete(i) }
@@ -540,7 +552,8 @@ struct ActiveSetRow: View {
         HStack(spacing: 0) {
 
             // ① Badge
-            SetBadge(number: setNumber, isCompleted: currentSet.isCompleted, isActive: isActive)
+            // Zjistíme pořadové číslo pracovní série (zahřívací se nepočítají do pracovního progresu)
+            SetBadge(number: setNumber, isCompleted: currentSet.isCompleted, isActive: isActive, isWarmup: currentSet.isWarmup)
                 .frame(width: 38)
 
             // ② Weight
@@ -639,7 +652,7 @@ struct ActiveSetRow: View {
 // MARK: - Sub-views for SetRow
 
 private struct SetBadge: View {
-    let number: Int; let isCompleted: Bool; let isActive: Bool
+    let number: Int; let isCompleted: Bool; let isActive: Bool; let isWarmup: Bool
 
     var body: some View {
         ZStack {
@@ -651,7 +664,7 @@ private struct SetBadge: View {
                     .font(.system(size: 11, weight: .black))
                     .foregroundStyle(.black)
             } else {
-                Text("\(number)")
+                Text(isWarmup ? "W" : "\(number)")
                     .font(.system(size: 13, weight: .bold, design: .rounded))
                     .foregroundStyle(isActive ? .white : .white.opacity(0.32))
             }
@@ -661,7 +674,9 @@ private struct SetBadge: View {
 
     private var bgColor: Color {
         if isCompleted { return Color(red:0.13, green:0.80, blue:0.43) }
+        if isActive && isWarmup { return Color.orange.opacity(0.4) }
         if isActive    { return .white.opacity(0.14) }
+        if isWarmup    { return Color.orange.opacity(0.15) }
         return .white.opacity(0.05)
     }
 }

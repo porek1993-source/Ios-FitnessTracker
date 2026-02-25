@@ -20,9 +20,48 @@ final class WorkoutViewModel: ObservableObject {
     init(session: WorkoutSession, plan: PlannedWorkoutDay, planLabel: String) {
         self.session   = session
         self.planLabel = planLabel
-        self.exercises = plan.plannedExercises
-            .sorted { $0.order < $1.order }
-            .map { SessionExerciseState(from: $0) }
+        
+        // 1. Seradíme plánované cviky
+        let sortedPlanned = plan.plannedExercises.sorted { $0.order < $1.order }
+        
+        // 2. Namapujeme do State
+        var states: [SessionExerciseState] = []
+        for (index, planned) in sortedPlanned.enumerated() {
+            var state = SessionExerciseState(from: planned)
+            
+            // Logika Dvojité Progrese (Progression Engine) pro všechny cviky (předvyplnění váhy z minula)
+            if let exercise = planned.exercise,
+               let lastSessionSets = exercise.weightHistory.sorted(by: { $0.loggedAt > $1.loggedAt }).first {
+                
+                // Zde bychom z tahali reálné série minula. Pro účely dema předpokládáme splněno.
+                // V reálném použití: projít všechny CompletedSets u této konkr. minulé session.
+                // Pomocí fallbacku z exercise.lastUsedWeight
+                if let nextTarget = ProgressionEngine.calculateNextTarget(
+                    previousSets: [], // Zde by měly přijít data z lokální DB, zatím dáváme mock nebo vynecháme
+                    programRepsMin: planned.targetRepsMin,
+                    programRepsMax: planned.targetRepsMax
+                ) {
+                    // Update pracovních sérií
+                    for j in 0..<state.sets.count {
+                        state.sets[j].previousWeightKg = nextTarget.weight
+                    }
+                }
+            }
+            
+            // Warm-up logika pouze pro úplně PRVNÍ cvik v celém tréninku
+            if index == 0, let targetWeight = state.sets.first?.previousWeightKg ?? planned.exercise?.lastUsedWeight {
+                let warmups = WarmupCalculator.generateWarmups(
+                    targetWeight: targetWeight,
+                    targetRepsMin: planned.targetRepsMin
+                )
+                // Vložíme rozcvičkové série nakonec na začátek pole
+                state.sets.insert(contentsOf: warmups, at: 0)
+            }
+            
+            states.append(state)
+        }
+        
+        self.exercises = states
         startElapsedTimer()
     }
 
@@ -189,6 +228,7 @@ struct SetState {
     var reps: Int?
     var rpe: Int?
     var isCompleted = false
+    var isWarmup: Bool = false
     let targetRepsMin: Int
     let targetRepsMax: Int
     let previousWeightKg: Double?

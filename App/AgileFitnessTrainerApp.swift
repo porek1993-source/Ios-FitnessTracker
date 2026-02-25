@@ -18,6 +18,11 @@ struct AgileFitnessTrainerApp: App {
             RootView()
                 .modelContainer(Self.container)
                 .environmentObject(healthKitService)
+                // Naplánuj ihned první stažení a registruj service
+                .onAppear {
+                    HealthBackgroundManager.shared.registerBackgroundTasks()
+                    HealthBackgroundManager.shared.scheduleNextSync()
+                }
         }
     }
 }

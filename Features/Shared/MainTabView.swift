@@ -33,7 +33,14 @@ struct MainTabView: View {
                 }
                 .tag(0)
 
-            // 2. Týdenní Plán
+            // 2. Zotavení a Zdraví (Nový Tab)
+            RecoveryInsightsView()
+                .tabItem {
+                    Label("Zotavení", systemImage: "heart.text.square")
+                }
+                .tag(1)
+
+            // 3. Týdenní Plán
             NavigationStack {
                 ZStack {
                     Color(red: 0.055, green: 0.055, blue: 0.08).ignoresSafeArea()
@@ -49,14 +56,14 @@ struct MainTabView: View {
             .tabItem {
                 Label("Plán", systemImage: "calendar")
             }
-            .tag(1)
+            .tag(2)
 
-            // 3. Progres
+            // 4. Progres
             AppProgressView()
                 .tabItem {
                     Label("Progres", systemImage: "chart.line.uptrend.xyaxis")
                 }
-                .tag(2)
+                .tag(3)
         }
         .accentColor(.blue)
         .preferredColorScheme(.dark)
