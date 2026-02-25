@@ -28,6 +28,12 @@ final class AppLogger: ObservableObject {
             }
         }
     }
+    
+    // Static helpers for easier access
+    static func info(_ message: String) { shared.log(message, type: .info) }
+    static func error(_ message: String) { shared.log(message, type: .error) }
+    static func success(_ message: String) { shared.log(message, type: .success) }
+    static func warning(_ message: String) { shared.log(message, type: .warning) }
 }
 
 /// Překryvná vrstva pro zobrazení logů přímo v aplikaci
