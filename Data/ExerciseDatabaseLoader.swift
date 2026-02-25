@@ -51,11 +51,12 @@ enum ExerciseDatabaseLoader {
     // MARK: - Bundle Seed
 
     private static func seedFromBundle(context: ModelContext) -> Bool {
-        // Zkus různé varianty názvu souboru
+        // Zkus různé varianty názvu souboru (podpora pro různé build systémy/případy)
         let candidates = [
             ("ExerciseDatabase", "json"),
             ("exercisedatabase", "json"),
-            ("exerciseDatabase", "json")
+            ("exercise_database", "json"),
+            ("ExerciseDatabase", "JSON")
         ]
 
         var url: URL?
@@ -67,7 +68,9 @@ enum ExerciseDatabaseLoader {
         }
 
         guard let fileURL = url else {
-            AppLogger.error("ExerciseDatabaseLoader: Žádný ExerciseDatabase.json nenalezen v bundle.")
+            // DIAGNOSTIKA: Pokud soubor nenajdeme, vypíšeme co v bundle vůbec je.
+            AppLogger.error("ExerciseDatabaseLoader: ExerciseDatabase.json nenalezen v bundle. Startuji diagnostiku obsahu...")
+            listBundleContents()
             return false
         }
 
@@ -93,21 +96,19 @@ enum ExerciseDatabaseLoader {
         do {
             let dtos = try await repo.fetchAll()
             guard !dtos.isEmpty else {
-                AppLogger.error("ExerciseDatabaseLoader: Supabase vrátil 0 cviků.")
+                AppLogger.info("ExerciseDatabaseLoader: Supabase neobsahuje žádné cviky k seedování.")
                 return
             }
 
             var inserted = 0
             for dto in dtos {
                 let exercise = Exercise(
-                    slug: dto.slug,
-                    name: dto.nameCz,
-                    nameEN: dto.nameEn ?? dto.nameCz,
+                    slug: dto.safeSlug,
+                    name: dto.safeNameCz,
+                    nameEN: dto.nameEn ?? dto.safeNameCz,
                     category: ExerciseCategory(rawValue: dto.category ?? "chest") ?? .chest,
                     movementPattern: .isolation,
-                    equipment: dto.equipment.flatMap { eqStr in
-                        [Equipment(rawValue: eqStr)].compactMap { $0 }
-                    } ?? [],
+                    equipment: dto.equipment?.split(separator: ",").compactMap { Equipment(rawValue: String($0).trimmingCharacters(in: .whitespaces)) } ?? [],
                     musclesTarget: (dto.primaryMuscles ?? []).compactMap { MuscleGroup(rawValue: $0) },
                     musclesSecondary: (dto.secondaryMuscles ?? []).compactMap { MuscleGroup(rawValue: $0) },
                     isUnilateral: false,
@@ -121,7 +122,7 @@ enum ExerciseDatabaseLoader {
             }
 
             try context.save()
-            AppLogger.info("ExerciseDatabaseLoader: Seedováno \(inserted) cviků ze Supabase.")
+            AppLogger.info("ExerciseDatabaseLoader: Úspěšně seedováno \(inserted) cviků ze Supabase.")
         } catch {
             AppLogger.error("ExerciseDatabaseLoader: Supabase fallback selhal: \(error.localizedDescription)")
         }
@@ -169,5 +170,19 @@ enum ExerciseDatabaseLoader {
             parts.append("⚠️ Časté chyby: \(mistakes)")
         }
         return parts.joined(separator: "\n\n")
+    }
+
+    private static func listBundleContents() {
+        let fm = FileManager.default
+        let path = Bundle.main.bundlePath
+        do {
+            let items = try fm.contentsOfDirectory(atPath: path)
+            AppLogger.info("ExerciseDatabaseLoader: Obsah Bundle.main (\(items.count) položek):")
+            for item in items.prefix(50) { // Prvních 50 pro přehlednost
+                AppLogger.info(" - \(item)")
+            }
+        } catch {
+            AppLogger.error("ExerciseDatabaseLoader: Nelze vypsat obsah bundle: \(error)")
+        }
     }
 }

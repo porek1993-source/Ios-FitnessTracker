@@ -21,6 +21,32 @@ actor GeminiAPIClient {
     }
 
     func generate(systemPrompt: String, userMessage: String, responseSchema: [String: Any]? = nil) async throws -> String {
+        var attempts = 0
+        let maxAttempts = 3
+        
+        while attempts < maxAttempts {
+            do {
+                return try await performGenerate(systemPrompt: systemPrompt, userMessage: userMessage, responseSchema: responseSchema)
+            } catch let error as GeminiError {
+                if case .httpError(let statusCode, _) = error, statusCode == 429 {
+                    attempts += 1
+                    if attempts >= maxAttempts { throw error }
+                    
+                    // Exponential backoff: 2^attempts + jitter
+                    let delay = pow(2.0, Double(attempts)) + Double.random(in: 0...1)
+                    AppLogger.info("GeminiAPIClient: Rate limit (429). Retry \(attempts)/\(maxAttempts) za \(String(format: "%.1f", delay))s...")
+                    try await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
+                    continue
+                }
+                throw error
+            } catch {
+                throw error
+            }
+        }
+        throw GeminiError.invalidResponse
+    }
+
+    private func performGenerate(systemPrompt: String, userMessage: String, responseSchema: [String: Any]? = nil) async throws -> String {
         var generationConfig: [String: Any] = [
             "temperature": 0.4,
             "topP": 0.85,

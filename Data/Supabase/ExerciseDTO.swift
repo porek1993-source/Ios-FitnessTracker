@@ -4,10 +4,10 @@
 import Foundation
 
 struct ExerciseDTO: Codable, Identifiable {
-    let id: UUID
-    let slug: String
+    let id: UUID?
+    let slug: String?
     let nameEn: String?
-    let nameCz: String
+    let nameCz: String?
     let category: String?
     let equipment: String?
     let primaryMuscles: [String]?
@@ -16,7 +16,12 @@ struct ExerciseDTO: Codable, Identifiable {
     let instructions: String?
     let instructionsSource: String?
     let instructionsUpdatedAt: Date?
-    let instructionsMissing: Bool
+    let instructionsMissing: Bool?
+
+    var safeId: UUID { id ?? UUID() }
+    var safeSlug: String { slug ?? "unknown-\(safeId.uuidString.prefix(8))" }
+    var safeNameCz: String { nameCz ?? "Neznámý cvik" }
+    var isMissing: Bool { instructionsMissing ?? true }
 
     enum CodingKeys: String, CodingKey {
         case id

@@ -66,7 +66,7 @@ final class RollingWeekViewModel: ObservableObject {
     @Published var days: [WeekDay] = []
     @Published var isRecalculating = false
     @Published var recalculationMessage: String?
-    @Published var editingDay: WeekDay?
+    @Published var lastRecalculated: Date?
 
     init() {
         buildWeek()
@@ -103,6 +103,11 @@ final class RollingWeekViewModel: ObservableObject {
                 isToday: isToday,
                 isOverridden: false
             )
+        }
+        
+        // Pokud jsme přepočítávali před méně než hodinou, nevoláme AI znovu (šetříme requesty)
+        if let last = lastRecalculated, Date().timeIntervalSince(last) < 3600 {
+            return
         }
         
         // Po inicializaci automaticky spustíme AI, aby zvážila sytém "rolling" plánu podle historie
@@ -166,6 +171,7 @@ final class RollingWeekViewModel: ObservableObject {
                 }
             }
 
+            lastRecalculated = Date()
             recalculationMessage = "Plán přepočítán — \(totalWorkoutDays) tréninkových dnů tento týden."
             HapticManager.shared.playSuccess()
         } catch {
@@ -174,6 +180,7 @@ final class RollingWeekViewModel: ObservableObject {
         }
 
         isRecalculating = false
+        lastRecalculated = Date()
     }
 }
 
