@@ -111,25 +111,27 @@ struct BodyFigureView: View {
             .padding(.horizontal, 60)
 
             GeometryReader { geo in
+                let areas = showingFront ? MuscleArea.frontAreas : MuscleArea.backAreas
                 ZStack {
                     BodySilhouette(isFront: showingFront)
                         .fill(Color.white.opacity(0.06))
                         .overlay(BodySilhouette(isFront: showingFront)
                             .stroke(Color.white.opacity(0.12), lineWidth: 1))
 
-                    ForEach(showingFront ? MuscleArea.frontAreas : MuscleArea.backAreas) { area in
-                        MuscleZoneTapArea(
-                            area: area,
-                            state: vm.state(for: area),
-                            canvasSize: geo.size
-                        ) {
-                            vm.lastTappedArea = area
-                            onTap(area)
-                            UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-                        }
+                    // Barevné overlay (jen vizuál, žádná tap logika)
+                    ForEach(areas) { area in
+                        let state = vm.state(for: area)
+                        RoundedRectangle(cornerRadius: area.cornerRadius)
+                            .fill(heatmapFillColor(for: state))
+                            .frame(width: area.relativeRect(in: geo.size).width,
+                                   height: area.relativeRect(in: geo.size).height)
+                            .position(x: area.relativeRect(in: geo.size).midX,
+                                      y: area.relativeRect(in: geo.size).midY)
+                            .animation(.easeInOut(duration: 0.25), value: state)
                     }
 
-                    ForEach(showingFront ? MuscleArea.frontAreas : MuscleArea.backAreas) { area in
+                    // Gamifikace overlay
+                    ForEach(areas) { area in
                         if vm.muscleProgress(for: area) > 0 {
                             MuscleGrowthOverlay(
                                 area: area,
@@ -138,6 +140,20 @@ struct BodyFigureView: View {
                             )
                         }
                     }
+
+                    // OPRAVA: Jediný tap handler přes celý canvas.
+                    // Místo contentShape(Rectangle()) na každé zone (kde vždy vyhrál
+                    // poslední ve ForEach = right_calf) ručně detekujeme oblast.
+                    Color.clear
+                        .contentShape(Rectangle())
+                        .gesture(
+                            DragGesture(minimumDistance: 0)
+                                .onEnded { value in
+                                    handleCanvasTap(at: value.startLocation,
+                                                    canvasSize: geo.size,
+                                                    areas: areas)
+                                }
+                        )
                 }
             }
             .frame(width: 220, height: 420)
@@ -172,6 +188,33 @@ struct BodySilhouette: Shape {
 
 // MARK: - Muscle Zone Tap Area
 
+    // MARK: - Hit-test logic
+
+    private func handleCanvasTap(at point: CGPoint, canvasSize: CGSize, areas: [MuscleArea]) {
+        // Seřaď zóny vzestupně podle plochy — menší oblast = přesnější cíl, vyšší priorita
+        let sorted = areas.sorted { ($0.relW * $0.relH) < ($1.relW * $1.relH) }
+        for area in sorted {
+            let rect = area.relativeRect(in: canvasSize).insetBy(dx: -6, dy: -6)
+            if rect.contains(point) {
+                UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                vm.lastTappedArea = area
+                onTap(area)
+                return
+            }
+        }
+    }
+
+    private func heatmapFillColor(for state: MuscleState) -> Color {
+        switch state {
+        case .healthy:   return .clear
+        case .sore:      return .orange.opacity(0.35)
+        case .fatigued:  return .red.opacity(0.45)
+        case .jointPain: return .red.opacity(0.70)
+        }
+    }
+}
+
+// MARK: - (Legacy stub kept for compilation; no longer used for tap logic)
 struct MuscleZoneTapArea: View {
     let area: MuscleArea
     let state: MuscleState

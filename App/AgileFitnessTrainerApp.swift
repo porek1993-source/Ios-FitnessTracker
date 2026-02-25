@@ -3,6 +3,7 @@
 
 import SwiftUI
 import SwiftData
+import UserNotifications
 
 @main
 struct AgileFitnessTrainerApp: App {
@@ -22,6 +23,8 @@ struct AgileFitnessTrainerApp: App {
                 .onAppear {
                     HealthBackgroundManager.shared.registerBackgroundTasks()
                     HealthBackgroundManager.shared.scheduleNextSync()
+                    // Naplánuj týdenní report notifikaci
+                    WeeklyReportService.scheduleWeeklyNotificationIfNeeded()
                 }
         }
     }

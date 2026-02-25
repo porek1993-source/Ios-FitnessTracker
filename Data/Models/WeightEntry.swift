@@ -42,3 +42,27 @@ final class WeightEntry {
         self.exercise = exercise
     }
 }
+
+// MARK: - Convenience init for WorkoutViewModel
+
+extension WeightEntry {
+    convenience init(
+        exercise: Exercise?,
+        sessionId: UUID,
+        weightKg: Double,
+        reps: Int,
+        rpe: Int?,
+        wasSuccessful: Bool
+    ) {
+        self.init(
+            weightKg: weightKg,
+            reps: reps,
+            rpe: rpe.map { Double($0) },
+            rir: nil,
+            wasSuccessful: wasSuccessful,
+            sessionId: sessionId,
+            setNumber: 0,
+            exercise: exercise
+        )
+    }
+}

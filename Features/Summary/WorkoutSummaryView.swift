@@ -134,7 +134,16 @@ struct WorkoutSummaryView: View {
                     }
 
                     // ── 7. CTA ────────────────────────────────────
-                    Button(action: onDismiss) {
+                    Button {
+                        // Pošli streak notifikaci
+                        let label = session.plannedDay?.label ?? "Trénink"
+                        let streakDays = calculateCurrentStreak()
+                        WeeklyReportService.sendWorkoutCompletionNotification(
+                            streakDays: streakDays,
+                            sessionLabel: label
+                        )
+                        onDismiss()
+                    } label: {
                         HStack(spacing: 10) {
                             Image(systemName: "checkmark.circle.fill")
                                 .font(.system(size: 18))
@@ -166,6 +175,28 @@ struct WorkoutSummaryView: View {
     }
 
     // MARK: - Animation Sequence
+
+    /// Spočítá počet po sobě jdoucích dnů s tréninkem (streak)
+    private func calculateCurrentStreak() -> Int {
+        guard let plan = session.plan else { return 1 }
+        let completedSessions = plan.sessions
+            .filter { $0.status == .completed && $0.finishedAt != nil }
+            .sorted { $0.startedAt > $1.startedAt }
+
+        var streak = 0
+        var checkDate = Calendar.current.startOfDay(for: .now)
+
+        for sess in completedSessions {
+            let sessDay = Calendar.current.startOfDay(for: sess.startedAt)
+            if sessDay == checkDate || sessDay == Calendar.current.date(byAdding: .day, value: -1, to: checkDate)! {
+                streak += 1
+                checkDate = sessDay
+            } else {
+                break
+            }
+        }
+        return max(streak, 1)
+    }
 
     private func startAnimation() {
         // Phase 1: Jakub message typewriter

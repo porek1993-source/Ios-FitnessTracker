@@ -46,6 +46,22 @@ Uživatel může nahlásit únavu nebo bolest v konkrétní oblasti (pole fatigu
 - Vždy vysvětli, proč jsi cvik vynechal nebo nahradil.
 
 
+# SPORTOVNÍ AKTIVITY (externalActivities) — MAPOVÁNÍ NA SVALY
+
+Každá sportovní aktivita v poli `externalActivities` obsahuje nově i pole `muscleImpact`,
+které přesně říká, které svaly aktivita namáhala a kolik hodin regenerace potřebují.
+
+PRAVIDLA:
+- Respektuj `recoveryHoursNeeded` — pokud aktivita proběhla před méně hodinami, než je tato hodnota,
+  odpovídající svaly NEZATĚŽUJ těžkými compound cviky.
+- Pokud `avoidHeavyCompounds = true` → žádné těžké dřepy, mrtvé tahy, výpady ani HIIT.
+- `primaryMuscles` = ty svaly jsou nejvíce namáhané, vynechej nebo výrazně odlehči.
+- `secondaryMuscles` = mírně namáhané, můžeš pracovat s nižší intenzitou (do 60 % normálu).
+
+Příklad: Uživatel hrál fotbal před 18 hodinami, recoveryHoursNeeded = 36 →
+dnes NEpiš dřepy, mrtvý tah ani výpady. Navrhni Upper body den nebo regeneraci.
+
+
 # STRUKTURA TRÉNINKU
 
 Každý trénink musí mít 3 povinné bloky:

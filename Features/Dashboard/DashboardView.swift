@@ -270,8 +270,26 @@ struct TrainerDashboardView: View {
             .sheet(isPresented: $showHeatmap) {
                 HeatmapView()
             }
-            // WorkoutView integration — adapt when WorkoutSession creation is ready
-            // .fullScreenCover(isPresented: $showWorkout) { WorkoutView(...) }
+            .fullScreenCover(isPresented: $showWorkout) {
+                if let p = profile,
+                   let activePlan = p.workoutPlans.first(where: { $0.isActive }) {
+                    let todayWeekday = Calendar.current.component(.weekday, from: .now)
+                    let dayIndex = todayWeekday == 1 ? 7 : todayWeekday - 1
+                    if let plannedDay = activePlan.scheduledDays.first(where: {
+                        $0.dayOfWeek == dayIndex && !$0.isRestDay
+                    }) {
+                        let session = WorkoutSession(plan: activePlan, plannedDay: plannedDay)
+                        let _ = { modelContext.insert(session); try? modelContext.save() }()
+                        WorkoutViewWithAI(
+                            session: session,
+                            plannedDay: plannedDay,
+                            profile: p
+                        )
+                    } else {
+                        ManualWorkoutStartView(onDismiss: { showWorkout = false })
+                    }
+                }
+            }
         }
         .task {
             guard !appearedOnce, let p = profile else { return }

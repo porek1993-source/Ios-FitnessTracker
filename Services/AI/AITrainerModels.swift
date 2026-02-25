@@ -55,6 +55,111 @@ struct ExternalActivityContext: Codable {
     let durationMinutes: Int
     let energyKcal: Double
     let hoursAgo: Double  // Relativní čas — AI chápe lépe než ISO datum
+    var muscleImpact: SportMuscleImpact  // Nově: jaké svaly tento sport namáhal
+
+    init(type: String, durationMinutes: Int, energyKcal: Double, hoursAgo: Double) {
+        self.type = type
+        self.durationMinutes = durationMinutes
+        self.energyKcal = energyKcal
+        self.hoursAgo = hoursAgo
+        self.muscleImpact = SportMuscleMapping.impact(for: type)
+    }
+}
+
+/// Jaké svalové skupiny daný sport primárně/sekundárně zatěžuje
+struct SportMuscleImpact: Codable {
+    let primaryMuscles: [String]    // ["quads", "hamstrings", "calves"]
+    let secondaryMuscles: [String]  // ["glutes", "abs"]
+    let recoveryHoursNeeded: Int    // Doporučená regenerace
+    let avoidHeavyCompounds: Bool   // Pokud true, AI vynechá těžké dřepy/mrtvý
+}
+
+/// Mapování sportů → svalový dopad
+enum SportMuscleMapping {
+    static func impact(for activityType: String) -> SportMuscleImpact {
+        let s = activityType.lowercased()
+
+        // Fotbal, florbal, futsal — nohy primárně
+        if s.contains("soccer") || s.contains("football") || s.contains("floorball") || s.contains("futsal") {
+            return SportMuscleImpact(
+                primaryMuscles: ["quads", "hamstrings", "calves", "glutes"],
+                secondaryMuscles: ["abs", "hip_flexors"],
+                recoveryHoursNeeded: 36,
+                avoidHeavyCompounds: true
+            )
+        }
+        // Tenis, squash, badminton — rotační + nohy + ramena
+        if s.contains("tennis") || s.contains("squash") || s.contains("badminton") {
+            return SportMuscleImpact(
+                primaryMuscles: ["forearms", "delts", "obliques"],
+                secondaryMuscles: ["quads", "calves", "lats"],
+                recoveryHoursNeeded: 24,
+                avoidHeavyCompounds: false
+            )
+        }
+        // Krav maga, bojové sporty — celé tělo
+        if s.contains("krav") || s.contains("martial") || s.contains("boxing") || s.contains("mma") || s.contains("judo") {
+            return SportMuscleImpact(
+                primaryMuscles: ["pecs", "delts", "quads", "hamstrings"],
+                secondaryMuscles: ["abs", "obliques", "biceps", "triceps"],
+                recoveryHoursNeeded: 48,
+                avoidHeavyCompounds: true
+            )
+        }
+        // Jóga, pilates — flexibilita, core
+        if s.contains("yoga") || s.contains("joga") || s.contains("pilates") || s.contains("stretch") {
+            return SportMuscleImpact(
+                primaryMuscles: ["abs", "spinalErectors"],
+                secondaryMuscles: ["hamstrings", "glutes"],
+                recoveryHoursNeeded: 12,
+                avoidHeavyCompounds: false
+            )
+        }
+        // Cyklistika, rotoped — nohy, kardio
+        if s.contains("cycling") || s.contains("bike") || s.contains("cycle") {
+            return SportMuscleImpact(
+                primaryMuscles: ["quads", "calves", "glutes"],
+                secondaryMuscles: ["hamstrings"],
+                recoveryHoursNeeded: 20,
+                avoidHeavyCompounds: false
+            )
+        }
+        // Běh — nohy, kardio
+        if s.contains("run") || s.contains("running") || s.contains("jogging") {
+            return SportMuscleImpact(
+                primaryMuscles: ["quads", "calves", "hamstrings"],
+                secondaryMuscles: ["glutes", "abs"],
+                recoveryHoursNeeded: 24,
+                avoidHeavyCompounds: false
+            )
+        }
+        // Plavání — horní tělo + core
+        if s.contains("swim") || s.contains("swimming") {
+            return SportMuscleImpact(
+                primaryMuscles: ["lats", "delts", "pecs"],
+                secondaryMuscles: ["abs", "triceps"],
+                recoveryHoursNeeded: 24,
+                avoidHeavyCompounds: false
+            )
+        }
+        // Basketbal, volejbal, házená — nohy + horní
+        if s.contains("basket") || s.contains("volleyball") || s.contains("handball") {
+            return SportMuscleImpact(
+                primaryMuscles: ["quads", "calves", "delts"],
+                secondaryMuscles: ["abs", "glutes"],
+                recoveryHoursNeeded: 36,
+                avoidHeavyCompounds: false
+            )
+        }
+
+        // Výchozí — neznámý sport, obecná únava
+        return SportMuscleImpact(
+            primaryMuscles: [],
+            secondaryMuscles: [],
+            recoveryHoursNeeded: 24,
+            avoidHeavyCompounds: false
+        )
+    }
 }
 
 struct FatigueContext: Codable {

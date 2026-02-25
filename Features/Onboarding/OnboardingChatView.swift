@@ -314,9 +314,15 @@ struct OnboardingChatView: View {
         if let profile = manager.extractedProfile {
             AppLogger.shared.log("OnboardingChatView: Ukládám profil do modelContext pro \(profile.name)", type: .info)
             modelContext.insert(profile)
+
+            // ── OPRAVA: Generuj tréninkový plán ihned po uložení profilu ──
+            let plan = WorkoutPlanGenerator.generate(for: profile, in: modelContext)
+            AppLogger.shared.log("OnboardingChatView: Plán '\(plan.title)' vytvořen s \(plan.scheduledDays.count) dny.", type: .success)
+            // ──────────────────────────────────────────────────────────────
+
             do {
                 try modelContext.save()
-                AppLogger.shared.log("OnboardingChatView: Profil úspěšně uložen do SwiftData", type: .success)
+                AppLogger.shared.log("OnboardingChatView: Profil + plán úspěšně uloženy do SwiftData", type: .success)
             } catch {
                 AppLogger.shared.log("OnboardingChatView: Chyba při ukládání do SwiftData - \(error)", type: .error)
             }

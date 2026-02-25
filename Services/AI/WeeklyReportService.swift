@@ -152,3 +152,72 @@ final class WeeklyReportService {
 extension WeeklyReportResult {
     // Pro zpětnou kompatibilitu do modelu, pokud bychom chtěli ukládat
 }
+
+// MARK: - Push Notification Scheduling
+
+import UserNotifications
+
+extension WeeklyReportService {
+
+    /// Naplánuje týdenní push notifikaci (každou neděli v 19:00)
+    static func scheduleWeeklyNotificationIfNeeded() {
+        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { granted, _ in
+            guard granted else { return }
+            WeeklyReportService.scheduleWeeklyTrigger()
+        }
+    }
+
+    private static func scheduleWeeklyTrigger() {
+        let center = UNUserNotificationCenter.current()
+
+        // Odstraň starou notifikaci, aby se neduplíkovala
+        center.removePendingNotificationRequests(withIdentifiers: ["weekly_report"])
+
+        let content = UNMutableNotificationContent()
+        content.title = "Tvůj týdenní report 📊"
+        content.body  = "Jakub má pro tebe shrnutí minulého týdne. Podívej se, jak ses zlepšil!"
+        content.sound = .default
+
+        // Každou neděli v 19:00
+        var dateComponents = DateComponents()
+        dateComponents.weekday = 1   // 1 = Sunday (UNCalendarNotificationTrigger)
+        dateComponents.hour    = 19
+        dateComponents.minute  = 0
+
+        let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents, repeats: true)
+        let request = UNNotificationRequest(identifier: "weekly_report", content: content, trigger: trigger)
+
+        center.add(request) { error in
+            if let error = error {
+                AppLogger.shared.log("WeeklyReportService: Notifikace se nepodařilo naplánovat: \(error)", type: .error)
+            } else {
+                AppLogger.shared.log("WeeklyReportService: Týdenní notifikace naplánována.", type: .success)
+            }
+        }
+    }
+
+    /// Okamžitá notifikace po dokončení tréninku (streak / pochvala)
+    static func sendWorkoutCompletionNotification(streakDays: Int, sessionLabel: String) {
+        let content = UNMutableNotificationContent()
+
+        if streakDays >= 7 {
+            content.title = "🔥 \(streakDays) dní v řadě!"
+            content.body  = "Tohle je \(sessionLabel). Tvoje konzistence je na jiné úrovni!"
+        } else if streakDays >= 3 {
+            content.title = "💪 \(streakDays) tréninky za sebou!"
+            content.body  = "\(sessionLabel) dokončeno. Tak se budujou svaly."
+        } else {
+            content.title = "✅ Trénink hotov!"
+            content.body  = "\(sessionLabel) splněno. Jakub je hrdý."
+        }
+        content.sound = .default
+
+        let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 1, repeats: false)
+        let request = UNNotificationRequest(
+            identifier: "workout_done_\(Date().timeIntervalSince1970)",
+            content: content,
+            trigger: trigger
+        )
+        UNUserNotificationCenter.current().add(request, withCompletionHandler: nil)
+    }
+}

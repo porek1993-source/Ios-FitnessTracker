@@ -152,6 +152,12 @@ struct RollingWeekView: View {
     @StateObject private var vm = RollingWeekViewModel()
     @State private var showOverrideSheet = false
     @State private var selectedDayForEdit: WeekDay?
+    @State private var selectedWorkoutDay: WeekDay?    // Den pro zobrazení cviků
+    @Query private var profiles: [UserProfile]
+
+    private var activePlan: WorkoutPlan? {
+        profiles.first?.workoutPlans.first(where: { $0.isActive })
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -178,7 +184,16 @@ struct RollingWeekView: View {
                 HStack(spacing: 10) {
                     ForEach(vm.days) { day in
                         DayCell(day: day) {
-                            if !day.isToday {
+                            if day.dayType == .workout {
+                                // Tréninkový den → toggle zobrazení cviků
+                                withAnimation(.spring(response: 0.45, dampingFraction: 0.8)) {
+                                    if selectedWorkoutDay?.id == day.id {
+                                        selectedWorkoutDay = nil
+                                    } else {
+                                        selectedWorkoutDay = day
+                                    }
+                                }
+                            } else {
                                 selectedDayForEdit = day
                                 showOverrideSheet = true
                             }
@@ -198,6 +213,15 @@ struct RollingWeekView: View {
                     .font(.system(size: 12, weight: .medium))
                     .foregroundStyle(.white.opacity(0.5))
                     .transition(.opacity)
+            }
+
+            // ── Detail dne se cviky ──────────────────────────────────────────
+            if let selectedDay = selectedWorkoutDay {
+                WeekDayExerciseDetailView(
+                    day: selectedDay,
+                    plan: activePlan
+                )
+                .transition(.move(edge: .bottom).combined(with: .opacity))
             }
         }
         .padding(20)
@@ -349,5 +373,111 @@ private struct DayOverrideSheet: View {
         .background(Color.appSecondaryBackground.ignoresSafeArea())
         .preferredColorScheme(.dark)
         .onAppear { selectedType = day.dayType }
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────
+// MARK: - WeekDayExerciseDetailView
+// Zobrazí seznam cviků pro vybraný tréninkový den z aktivního plánu
+// ─────────────────────────────────────────────────────────────────
+
+struct WeekDayExerciseDetailView: View {
+    let day: WeekDay
+    let plan: WorkoutPlan?
+
+    // Mapování WeekDay.date → dayOfWeek (1=Po...7=Ne)
+    private var ourDayIndex: Int {
+        let cal = Calendar.current
+        let wd = cal.component(.weekday, from: day.date)
+        return wd == 1 ? 7 : wd - 1
+    }
+
+    private var plannedDay: PlannedWorkoutDay? {
+        plan?.scheduledDays.first { $0.dayOfWeek == ourDayIndex && !$0.isRestDay }
+    }
+
+    private var exercises: [PlannedExercise] {
+        (plannedDay?.plannedExercises ?? []).sorted { $0.order < $1.order }
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            // Hlavička
+            HStack {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(day.label.uppercased())
+                        .font(.system(size: 10, weight: .black))
+                        .foregroundStyle(.appPrimaryAccent)
+                        .kerning(1.2)
+                    Text(exercises.isEmpty ? "Cviky vygeneruje Jakub při startu" : "\(exercises.count) cviků")
+                        .font(.system(size: 12))
+                        .foregroundStyle(.white.opacity(0.4))
+                }
+                Spacer()
+                Image(systemName: "chevron.up.circle.fill")
+                    .font(.system(size: 18))
+                    .foregroundStyle(.white.opacity(0.2))
+            }
+
+            Divider().background(Color.white.opacity(0.07))
+
+            if exercises.isEmpty {
+                // Prázdný stav — AI vygeneruje cviky při spuštění tréninku
+                HStack(spacing: 12) {
+                    Image(systemName: "wand.and.sparkles")
+                        .font(.system(size: 20))
+                        .foregroundStyle(.blue.opacity(0.7))
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text("Plán čeká na AI")
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundStyle(.white)
+                        Text("Klikni na „Začít trénink" a Jakub sestaví personalizovaný workout.")
+                            .font(.system(size: 11))
+                            .foregroundStyle(.white.opacity(0.4))
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+                .padding(12)
+                .background(RoundedRectangle(cornerRadius: 12).fill(Color.blue.opacity(0.07))
+                    .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.blue.opacity(0.2), lineWidth: 1)))
+            } else {
+                ForEach(Array(exercises.enumerated()), id: \.element.id) { idx, ex in
+                    HStack(spacing: 12) {
+                        // Pořadí
+                        ZStack {
+                            Circle().fill(Color.white.opacity(0.07)).frame(width: 28, height: 28)
+                            Text("\(idx + 1)")
+                                .font(.system(size: 11, weight: .bold, design: .rounded))
+                                .foregroundStyle(.white.opacity(0.5))
+                        }
+                        // Info
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(ex.exercise?.name ?? "Cvik \(idx + 1)")
+                                .font(.system(size: 14, weight: .semibold))
+                                .foregroundStyle(.white)
+                            Text("\(ex.targetSets)× \(ex.targetRepsMin)–\(ex.targetRepsMax) rep · \(ex.restSeconds / 60)m \(ex.restSeconds % 60)s pauza")
+                                .font(.system(size: 11))
+                                .foregroundStyle(.white.opacity(0.4))
+                        }
+                        Spacer()
+                        if let lastWeight = ex.exercise?.lastUsedWeight {
+                            Text(String(format: "%.0f kg", lastWeight))
+                                .font(.system(size: 11, weight: .semibold))
+                                .foregroundStyle(.orange.opacity(0.8))
+                        }
+                    }
+                    if idx < exercises.count - 1 {
+                        Divider().background(Color.white.opacity(0.05))
+                    }
+                }
+            }
+        }
+        .padding(14)
+        .background(
+            RoundedRectangle(cornerRadius: 16)
+                .fill(Color.white.opacity(0.04))
+                .overlay(RoundedRectangle(cornerRadius: 16)
+                    .stroke(Color.appPrimaryAccent.opacity(0.2), lineWidth: 1))
+        )
     }
 }
