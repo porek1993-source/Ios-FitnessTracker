@@ -186,10 +186,13 @@ struct RollingWeekView: View {
     @State private var showOverrideSheet = false
     @State private var selectedDayForEdit: WeekDay?
     @State private var selectedWorkoutDay: WeekDay?    // Den pro zobrazení cviků
+    @State private var showWorkout = false
     @Query private var profiles: [UserProfile]
+    @Environment(\.modelContext) private var modelContext
 
+    private var profile: UserProfile? { profiles.first }
     private var activePlan: WorkoutPlan? {
-        profiles.first?.workoutPlans.first(where: { $0.isActive })
+        profile?.workoutPlans.first(where: { $0.isActive })
     }
 
     var body: some View {
@@ -252,7 +255,10 @@ struct RollingWeekView: View {
             if let selectedDay = selectedWorkoutDay {
                 WeekDayExerciseDetailView(
                     day: selectedDay,
-                    plan: activePlan
+                    plan: activePlan,
+                    onStartWorkout: {
+                        showWorkout = true
+                    }
                 )
                 .transition(.move(edge: .bottom).combined(with: .opacity))
             }
@@ -270,6 +276,26 @@ struct RollingWeekView: View {
                 showOverrideSheet = false
             }
             .presentationDetents([.height(380)])
+        }
+        .fullScreenCover(isPresented: $showWorkout) {
+            if let p = profile,
+               let plan = activePlan,
+               let selectedDay = selectedWorkoutDay {
+                let cal = Calendar.current
+                let wd = cal.component(.weekday, from: selectedDay.date)
+                let ourIdx = wd == 1 ? 7 : wd - 1
+                if let plannedDay = plan.scheduledDays.first(where: {
+                    $0.dayOfWeek == ourIdx && !$0.isRestDay
+                }) {
+                    let session = WorkoutSession(plan: plan, plannedDay: plannedDay)
+                    let _ = { modelContext.insert(session); try? modelContext.save() }()
+                    WorkoutViewWithAI(
+                        session: session,
+                        plannedDay: plannedDay,
+                        profile: p
+                    )
+                }
+            }
         }
     }
 }
@@ -417,6 +443,7 @@ private struct DayOverrideSheet: View {
 struct WeekDayExerciseDetailView: View {
     let day: WeekDay
     let plan: WorkoutPlan?
+    var onStartWorkout: (() -> Void)? = nil
 
     // Mapování WeekDay.date → dayOfWeek (1=Po...7=Ne)
     private var ourDayIndex: Int {
@@ -503,6 +530,31 @@ struct WeekDayExerciseDetailView: View {
                         Divider().background(Color.white.opacity(0.05))
                     }
                 }
+            }
+            // ── Začít trénink button ──
+            if day.isToday || Calendar.current.isDate(day.date, inSameDayAs: .now) {
+                Button(action: { onStartWorkout?() }) {
+                    HStack(spacing: 10) {
+                        Image(systemName: "play.fill")
+                            .font(.system(size: 14, weight: .bold))
+                        Text("Začít trénink")
+                            .font(.system(size: 16, weight: .bold))
+                    }
+                    .foregroundStyle(.white)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 50)
+                    .background(
+                        RoundedRectangle(cornerRadius: 14)
+                            .fill(LinearGradient(
+                                colors: [Color(red: 0.20, green: 0.52, blue: 1.0),
+                                         Color(red: 0.08, green: 0.35, blue: 0.85)],
+                                startPoint: .topLeading, endPoint: .bottomTrailing
+                            ))
+                    )
+                    .shadow(color: .blue.opacity(0.4), radius: 14, y: 5)
+                }
+                .buttonStyle(.plain)
+                .padding(.top, 4)
             }
         }
         .padding(14)

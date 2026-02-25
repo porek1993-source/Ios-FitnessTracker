@@ -19,3 +19,10 @@ enum HealthKitReadTypes {
         HKObjectType.workoutType()
     ]
 }
+
+enum HealthKitWriteTypes {
+    static let share: Set<HKSampleType> = [
+        HKObjectType.quantityType(forIdentifier: .activeEnergyBurned)!,
+        HKObjectType.workoutType()
+    ]
+}
