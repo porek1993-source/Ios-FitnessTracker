@@ -496,27 +496,22 @@ private struct SetLoggerBlock: View {
 
     private var setList: some View {
         VStack(spacing: 6) {
-            let workingSetsOnly = exercise.sets.filter { !$0.isWarmup }
-            var workingCounter = 1
-
             ForEach(exercise.sets.indices, id: \.self) { i in
-                // Vypočteme číslo pouze pro pracovní série
-                let num: Int
-                if exercise.sets[i].isWarmup {
-                    num = 0
-                } else {
-                    num = workingCounter
-                    workingCounter += 1
-                }
-
                 ActiveSetRow(
-                    setNumber:  num,
+                    setNumber:  calculateWorkingSetNumber(for: i),
                     currentSet: $exercise.sets[i],
                     isActive:   i == exercise.nextIncompleteSetIndex,
                     onComplete: { onComplete(i) }
                 )
             }
         }
+    }
+    
+    private func calculateWorkingSetNumber(for index: Int) -> Int {
+        if exercise.sets[index].isWarmup { return 0 }
+        // Sečteme jen pracovní série před tímto indexem
+        let workingSetsBefore = exercise.sets[...index].filter { !$0.isWarmup }.count
+        return workingSetsBefore
     }
 
     @ViewBuilder
