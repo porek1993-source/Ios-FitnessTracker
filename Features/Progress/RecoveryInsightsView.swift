@@ -80,7 +80,9 @@ struct RecoveryInsightsView: View {
 
 struct DailyInsightCard: View {
     let snapshot: HealthMetricsSnapshot?
-    
+    @Environment(\.modelContext) private var modelContext
+    @State private var insightText: String = "Analyzuji data..."
+
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
@@ -101,7 +103,7 @@ struct DailyInsightCard: View {
                 }
             }
             
-            Text(generateInsightText())
+            Text(insightText)
                 .font(.subheadline)
                 .foregroundColor(.white.opacity(0.8))
                 .lineLimit(4)
@@ -116,25 +118,29 @@ struct DailyInsightCard: View {
             RoundedRectangle(cornerRadius: 16)
                 .stroke(Color.white.opacity(0.1), lineWidth: 1)
         )
+        .task {
+            await fetchInsight()
+        }
+    }
+    
+    private func fetchInsight() async {
+        guard let profile = try? modelContext.fetch(FetchDescriptor<UserProfile>()).first else {
+            insightText = "Nenalezen profil."
+            return
+        }
+        let service = WeeklyReportService(modelContext: modelContext)
+        do {
+            let text = try await service.generateDailyInsight(for: profile, snapshot: snapshot)
+            await MainActor.run { insightText = text }
+        } catch {
+            await MainActor.run { insightText = "Nepodařilo se vygenerovat insight. Dneska to ale dáme!" }
+        }
     }
     
     private func scoreColor(_ score: Double) -> Color {
         if score >= 75 { return .green }
         if score >= 50 { return .orange }
         return .red
-    }
-    
-    private func generateInsightText() -> String {
-        guard let snap = snapshot else {
-            return "Zatím nemám dostatek dat. Až si v noci nasadíš Apple Watch, zítra ti vyhodnotím připravenost na trénink."
-        }
-        
-        // Jednoduchá logika pro demo (v budoucnu to může tahat Gemini)
-        if (snap.readinessScore ?? 100) < 60 {
-            return "Tvé HRV je dnes snížené a spánkové skóre ukazuje únavu. Doporučuji dnes zařadit spíše lehčí izolované cviky nebo aktivní regeneraci. Těžké dřepy si necháme na jindy."
-        } else {
-            return "Tělo je skvěle zregenerované! Spánek i hodnoty srdce jsou v optimu. Dnes je ideální den na překonávání osobních rekordů."
-        }
     }
 }
 

@@ -19,12 +19,18 @@ struct AgileFitnessTrainerApp: App {
             RootView()
                 .modelContainer(Self.container)
                 .environmentObject(healthKitService)
-                // Naplánuj ihned první stažení a registruj service
                 .onAppear {
                     HealthBackgroundManager.shared.registerBackgroundTasks()
                     HealthBackgroundManager.shared.scheduleNextSync()
-                    // Naplánuj týdenní report notifikaci
                     WeeklyReportService.scheduleWeeklyNotificationIfNeeded()
+                    // Seeduj databázi cviků z JSON (pouze při prvním spuštění)
+                    let context = Self.container.mainContext
+                    ExerciseDatabaseLoader.seedIfNeeded(context: context)
+                    // Požádej o oprávnění pro notifikace
+                    Task {
+                        await NotificationService.shared.requestPermission()
+                        NotificationService.shared.scheduleWorkoutReminder(hour: 8, minute: 30)
+                    }
                 }
         }
     }

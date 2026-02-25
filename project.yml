@@ -27,6 +27,9 @@ settings:
     CURRENT_PROJECT_VERSION: "1"
     CODE_SIGN_STYLE: Manual
     DEVELOPMENT_TEAM: $(DEVELOPMENT_TEAM_ID)
+    GEMINI_API_KEY: $(GEMINI_API_KEY)
+    SUPABASE_URL: $(SUPABASE_URL)
+    SUPABASE_ANON_KEY: $(SUPABASE_ANON_KEY)
 
 # ═══════════════════════════════════════════════════════════════════════
 # TARGETS
@@ -58,9 +61,9 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: com.agilefitness.trainer
         INFOPLIST_FILE: Resources/Info.plist
         CODE_SIGN_ENTITLEMENTS: Resources/AgileTrainer.entitlements
-        GEMINI_API_KEY: $(GEMINI_API_KEY)
-        SUPABASE_URL: $(SUPABASE_URL)
-        SUPABASE_ANON_KEY: $(SUPABASE_ANON_KEY)
+        PRODUCT_BUNDLE_IDENTIFIER: com.agilefitness.trainer
+        INFOPLIST_FILE: Resources/Info.plist
+        CODE_SIGN_ENTITLEMENTS: Resources/AgileTrainer.entitlements
 
     entitlements:
       path: Resources/AgileTrainer.entitlements

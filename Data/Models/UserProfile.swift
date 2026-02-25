@@ -21,6 +21,7 @@ final class UserProfile {
 
     var currentLocation: String?
     var availableEquipment: [Equipment]
+    var primarySport: String?   // Primární sport (fotbal, tenis…) pro sportovní výkon
 
     var healthKitAuthorized: Bool
     var createdAt: Date
@@ -57,6 +58,7 @@ final class UserProfile {
         self.sessionDurationMinutes = sessionDurationMinutes
         self.currentLocation = "gym"
         self.availableEquipment = [.barbell, .dumbbell, .cable, .machine]
+        self.primarySport = nil
         self.healthKitAuthorized = false
         self.createdAt = .now
         self.updatedAt = .now
@@ -66,17 +68,43 @@ final class UserProfile {
 }
 
 enum FitnessGoal: String, Codable, CaseIterable {
-    case strength     = "strength"
-    case hypertrophy  = "hypertrophy"
-    case weightLoss   = "weightLoss"
-    case endurance    = "endurance"
+    case strength       = "strength"
+    case hypertrophy    = "hypertrophy"
+    case weightLoss     = "weightLoss"
+    case endurance      = "endurance"
+    case maintenance    = "maintenance"
+    case sportsPerf     = "sportsPerf"
 
     var displayName: String {
         switch self {
         case .strength:    return "Síla"
         case .hypertrophy: return "Objem (Hypertrofie)"
         case .weightLoss:  return "Hubnutí"
-        case .endurance:   return "Vytrvalost"
+        case .endurance:   return "Vytrvalost / Kondice"
+        case .maintenance: return "Udržování formy"
+        case .sportsPerf:  return "Sportovní výkon"
+        }
+    }
+
+    var description: String {
+        switch self {
+        case .strength:    return "Maximální síla, nízká opakování (1–5)"
+        case .hypertrophy: return "Růst svalů, střední opakování (8–12)"
+        case .weightLoss:  return "Hubnutí, vyšší intenzita a kardio"
+        case .endurance:   return "Kardio kondice a svalová vytrvalost"
+        case .maintenance: return "Udržení stávající formy a zdraví"
+        case .sportsPerf:  return "Doplněk k primárnímu sportu"
+        }
+    }
+
+    var icon: String {
+        switch self {
+        case .strength:    return "bolt.fill"
+        case .hypertrophy: return "figure.strengthtraining.traditional"
+        case .weightLoss:  return "flame.fill"
+        case .endurance:   return "heart.fill"
+        case .maintenance: return "checkmark.seal.fill"
+        case .sportsPerf:  return "sportscourt.fill"
         }
     }
 }

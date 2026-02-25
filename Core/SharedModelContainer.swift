@@ -22,7 +22,8 @@ enum SharedModelContainer {
         WorkoutSession.self,
         SessionExercise.self,
         CompletedSet.self,
-        HealthMetricsSnapshot.self
+        HealthMetricsSnapshot.self,
+        MuscleXPRecord.self
     ])
 
     /// Sdílený `ModelContainer` — uložiště dat v App Group kontejneru.

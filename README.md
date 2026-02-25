@@ -112,3 +112,31 @@ Projekt nemá externí závislosti — vše je nativní SwiftUI / SwiftData / He
 Volitelně:
 - `lottie-ios` pro animace cviků
 - `Kingfisher` pro cachování GIF animací z CDN
+
+---
+
+## Changelog — Doimplementované funkce (v2)
+
+### ✅ Nové soubory
+- `Data/ExerciseDatabaseLoader.swift` — automatický seed cviků z JSON při prvním spuštění
+- `Resources/ExerciseDatabase.json` — **100+ cviků** s instrukcemi, tipy na dýchání a časté chyby
+- `Features/Settings/SettingsView.swift` — kompletní nastavení profilu po onboardingu (cíl, split, vybavení, primární sport, notifikace)
+- `Features/AICoach/AICoachChatView.swift` — konverzační AI trenér pro ad-hoc úpravy tréninku
+- `Services/NotificationService.swift` — push notifikace (denní připomínka, PR notifikace, deload upozornění, missed workout nudge)
+
+### ✅ Opravené soubory
+- `Services/AI/WeeklyReportService.swift` — opraven hardcoded `"API_KEY_PLACEHOLDER"` → `AppConstants.geminiAPIKey`
+- `Data/Models/UserProfile.swift` — přidány chybějící `FitnessGoal` hodnoty: `maintenance`, `sportsPerf` s ikonami a popisy; přidáno pole `primarySport`
+- `Core/SharedModelContainer.swift` — přidán `MuscleXPRecord.self` do schema (gamifikace)
+- `App/AgileFitnessTrainerApp.swift` — přidán `ExerciseDatabaseLoader.seedIfNeeded()` a `NotificationService.shared.requestPermission()`
+- `Features/Progress/ProgressView.swift` — **odstraněna mock data**, nahrazena reálným napojením na SwiftData (grafy, 1RM, volume, historie)
+- `Features/Shared/MainTabView.swift` — přidán tab **Nastavení**
+
+### 🔧 Jak přidat ExerciseDatabase.json do Xcode projektu
+V Xcode → Add Files to Target → `Resources/ExerciseDatabase.json` → zaškrtni `AgileFitnessTrainer` target.
+
+### 🔧 Jak přidat nové soubory do Xcode projektu
+- `Data/ExerciseDatabaseLoader.swift` → `AgileFitnessTrainer` target
+- `Features/Settings/SettingsView.swift` → `AgileFitnessTrainer` target
+- `Features/AICoach/AICoachChatView.swift` → `AgileFitnessTrainer` target
+- `Services/NotificationService.swift` → `AgileFitnessTrainer` target

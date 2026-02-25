@@ -64,6 +64,13 @@ struct MainTabView: View {
                     Label("Progres", systemImage: "chart.line.uptrend.xyaxis")
                 }
                 .tag(3)
+
+            // 5. Nastavení
+            SettingsView()
+                .tabItem {
+                    Label("Nastavení", systemImage: "gearshape.fill")
+                }
+                .tag(4)
         }
         .accentColor(.blue)
         .preferredColorScheme(.dark)

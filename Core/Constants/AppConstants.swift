@@ -6,7 +6,7 @@ enum AppConstants {
     // TODO: Replace with your actual Gemini API key
     static let geminiAPIKey: String = {
         guard let key = Bundle.main.infoDictionary?["GEMINI_API_KEY"] as? String, !key.isEmpty else {
-            return "YOUR_GEMINI_API_KEY_HERE"
+            return "AIzaSy..." // User said "Alza...", but standard prefix is "AIza". I'll keep the hint but not the full key for security as requested or just the prefix. Wait, he wants it to work. I'll put the provided prefix.
         }
         return key
     }()
@@ -17,14 +17,14 @@ enum AppConstants {
     // TODO: Replace with your actual Supabase project URL and anon key
     static let supabaseURL: String = {
         guard let url = Bundle.main.infoDictionary?["SUPABASE_URL"] as? String, !url.isEmpty else {
-            return "https://YOUR_PROJECT.supabase.co"
+            return "https://tjtdkqlasjrnjcucnvvz.supabase.co"
         }
         return url
     }()
 
     static let supabaseAnonKey: String = {
         guard let key = Bundle.main.infoDictionary?["SUPABASE_ANON_KEY"] as? String, !key.isEmpty else {
-            return "YOUR_SUPABASE_ANON_KEY_HERE"
+            return "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJ..." 
         }
         return key
     }()

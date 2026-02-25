@@ -282,26 +282,54 @@ struct WorkoutChatView: View {
         messages.append((role: "user", text: text))
         isLoading = true
         Task {
-            try? await Task.sleep(nanoseconds: 1_200_000_000)
+            let responseText = await fetchGeminiResponse(userText: text)
             await MainActor.run {
-                messages.append((role: "assistant", text: contextualResponse(to: text)))
+                messages.append((role: "assistant", text: responseText))
                 isLoading = false
             }
         }
     }
 
-    private func contextualResponse(to msg: String) -> String {
-        let l = msg.lowercased()
-        if l.contains("bolí") || l.contains("koleno") || l.contains("rameno") || l.contains("záda") {
-            return "Jasně, přeskočíme cviky s tlakem na tuto oblast. Bezpečnost první — pohyb, který bolí, nedělej. Chceš alternativu?"
-        } else if l.contains("unav") || l.contains("špatně") || l.contains("nemám sílu") {
-            return "Snížíme objem na 80 %. Kvalita nad kvantitu — takhle to dává smysl. Pokuds ještě tu, tak to dojedeme v pohodě."
-        } else if l.contains("vyměn") || l.contains("obsazen") || l.contains("jiný") {
-            return "Klikni na 'Nahradit' u daného cviku — vyberu ti biomechanicky ekvivalentní alternativu ze stejné svalové skupiny. 💪"
-        } else if l.contains("30 minut") || l.contains("málo čas") || l.contains("spěch") {
-            return "Přejdeme na superserie — spáruju antagonistické svaly. Zkrátíme trénink na ~30 min bez ztráty efektu. 🚀"
-        } else {
-            return "Dobrá. Zaznamenal jsem to pro příslušnou úpravu. Cokoliv dalšího, jsem tady. Makej! 💪"
+    private func fetchGeminiResponse(userText: String) async -> String {
+        let client = GeminiAPIClient(apiKey: AppConstants.geminiAPIKey)
+        let systemPrompt = """
+        Jsi Jakub, elitní, lehce drsný, ale motivující silový trenér (Agilní Fitness Trenér). 
+        Uživatel má právě trénink a napsal ti do chatu. 
+        Odpověz stručně, poraď s technikou, navrhni alternativu nebo ho namotivuj (max 2 věty). Mluv česky.
+        Vrať JSON objekt s klíčem "reply".
+        """
+        
+        let currentExercise = vm.exercises.indices.contains(vm.currentExerciseIndex) ? vm.exercises[vm.currentExerciseIndex].name : "Neznámý cvik"
+        let fullUserMessage = "Aktuálně cvičím: \(currentExercise). Moje zpráva zní: \(userText)"
+
+        let schema: [String: Any] = [
+            "type": "OBJECT",
+            "properties": [
+                "reply": ["type": "STRING"]
+            ],
+            "required": ["reply"]
+        ]
+        
+        do {
+            let responseString = try await client.generate(
+                systemPrompt: systemPrompt,
+                userMessage: fullUserMessage,
+                responseSchema: schema
+            )
+            
+            let cleaned = responseString
+                .replacingOccurrences(of: "```json", with: "")
+                .replacingOccurrences(of: "```",     with: "")
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+
+            guard let data = cleaned.data(using: .utf8),
+                  let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+                  let reply = json["reply"] as? String else {
+                return "Zrovna to padá. Makej a nevymlouvej se!"
+            }
+            return reply
+        } catch {
+            return "Spojení vypadlo. Napiš mi později, teď cvič!"
         }
     }
 }
