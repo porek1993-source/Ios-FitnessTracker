@@ -31,6 +31,11 @@ struct AgileFitnessTrainerApp: App {
                         _ = await NotificationService.shared.requestPermission()
                         NotificationService.shared.scheduleWorkoutReminder(hour: 8, minute: 30)
                     }
+                    // HealthKit: autorizace + okamžitý sync dat
+                    Task {
+                        try? await healthKitService.requestAuthorization()
+                        await HealthBackgroundManager.shared.performForegroundSync(healthKit: healthKitService)
+                    }
                 }
         }
     }
