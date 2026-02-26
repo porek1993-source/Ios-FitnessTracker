@@ -17,7 +17,7 @@ struct WorkoutViewWithAI: View {
     @Environment(\.dismiss) private var dismiss
 
     @State private var trainerResponse: TrainerResponse?
-    @State private var isLoading = true
+    @State private var isLoading = false   // false = zobraz filter screen nejdřív, true = loading AI
     @State private var loadError: String?
     @State private var showWorkout = false
     @State private var offlineMessage: String?
@@ -27,8 +27,7 @@ struct WorkoutViewWithAI: View {
     @State private var selectedEquipment: Set<Equipment> = []
     @State private var timeLimit: Int? = nil  // nil = neomezeno
 
-    // Gamification
-    @StateObject private var gamificationEngine = GamificationEngine()
+    // Gamification handled in WorkoutViewModel.finishWorkout()
 
     var body: some View {
         ZStack {
@@ -40,7 +39,7 @@ struct WorkoutViewWithAI: View {
                     plan: plannedDay,
                     planLabel: plannedDay.label,
                     aiResponse: response,
-                    gamificationEngine: gamificationEngine,
+                    bodyWeightKg: profile.weightKg,
                     onFinish: { xpGains, prEvents in
                         handleWorkoutFinish(xpGains: xpGains, prEvents: prEvents, response: response)
                     }
@@ -68,18 +67,6 @@ struct WorkoutViewWithAI: View {
             }
         }
         .preferredColorScheme(.dark)
-        .sheet(isPresented: $showFilterSheet) {
-            PreWorkoutFiltersView(
-                planLabel: plannedDay.label,
-                selectedEquipment: $selectedEquipment,
-                timeLimit: $timeLimit,
-                onStart: { Task { await loadWorkout() } },
-                onDismiss: { showFilterSheet = false }
-            )
-        }
-        .onAppear {
-            gamificationEngine.loadRecords(from: modelContext)
-        }
     }
 
     // MARK: - Load AI Workout
@@ -101,6 +88,12 @@ struct WorkoutViewWithAI: View {
             trainerResponse = response
             offlineMessage = aiService.offlineMessage
 
+            // Uložíme sessionLabel do plánu pro budoucí kontext (Gemini continuity)
+            if let activePlan = profile.workoutPlans.first(where: \.isActive) {
+                activePlan.geminiSessionContext = response.sessionLabel
+                try? modelContext.save()
+            }
+
             withAnimation(.spring(response: 0.5)) {
                 isLoading = false
                 showWorkout = true
@@ -118,32 +111,19 @@ struct WorkoutViewWithAI: View {
         prEvents: [PREvent],
         response: TrainerResponse
     ) {
-        // Uložit XP do SwiftData (gamification)
-        let input = buildGamificationInput(response: response)
-        gamificationEngine.process(input: input, context: modelContext)
-        try? modelContext.save()
-    }
-
-    private func buildGamificationInput(response: TrainerResponse) -> SessionGamificationInput {
-        let exercises: [SessionGamificationInput.ExerciseResult] = session.exercises.map { ex in
-            let sets: [SessionGamificationInput.SetResult] = ex.completedSets.map { cs in
-                SessionGamificationInput.SetResult(
-                    weightKg: cs.weightKg,
-                    reps: cs.reps,
-                    isWarmup: cs.isWarmup
-                )
-            }
-            // Zjistíme svaly z Exercise modelu
-            let muscles = ex.exercise?.musclesTarget ?? []
-            let secondary = ex.exercise?.musclesSecondary ?? []
-            return SessionGamificationInput.ExerciseResult(
-                exerciseName: ex.exerciseName,
-                musclesTarget: muscles,
-                musclesSecondary: secondary,
-                completedSets: sets
-            )
+        // XP a gamification jsou zpracovány ve WorkoutViewModel.finishWorkout()
+        // Uložíme kontext pro případ neuložených změn
+        do {
+            try modelContext.save()
+        } catch {
+            AppLogger.error("WorkoutViewWithAI: Chyba při ukládání po tréninku: \(error)")
         }
-        return SessionGamificationInput(exercises: exercises, personalRecords: [])
+
+        // Notifikace o dokončení tréninku (streak z Dashboard VM)
+        WeeklyReportService.sendWorkoutCompletionNotification(
+            streakDays: 1,  // Skutečný streak načte DashboardViewModel při příštím otevření
+            sessionLabel: response.sessionLabel
+        )
     }
 }
 
@@ -232,10 +212,16 @@ struct LoadingWorkoutView: View {
     }
 
     private func startAnimation() {
-        Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { t in
+        // Timer se automaticky zastaví po phase >= 9 (max 4.5s)
+        let t = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { t in
             dots = dots.count < 3 ? dots + "." : ""
-            if phase < 9 { phase += 1 }
+            if phase < 9 {
+                phase += 1
+            } else {
+                t.invalidate()
+            }
         }
+        RunLoop.main.add(t, forMode: .common)
     }
 }
 
@@ -298,14 +284,15 @@ struct PreWorkoutFiltersView: View {
                     VStack(spacing: 24) {
                         // Header
                         VStack(spacing: 8) {
-                            Text("Dnešní trénink")
-                                .font(.system(size: 13, weight: .semibold))
-                                .foregroundStyle(.white.opacity(0.4))
-                                .kerning(1.5)
+                            Text("TRÉNINK")
+                                .font(.system(size: 11, weight: .black))
+                                .foregroundStyle(.white.opacity(0.35))
+                                .kerning(1.8)
 
                             Text(planLabel)
                                 .font(.system(size: 28, weight: .black, design: .rounded))
                                 .foregroundStyle(.white)
+                                .multilineTextAlignment(.center)
                         }
                         .padding(.top, 20)
 
@@ -357,7 +344,7 @@ struct PreWorkoutFiltersView: View {
                                     Text("Začít trénink")
                                         .font(.system(size: 18, weight: .bold))
                                 }
-                                .foregroundStyle(.black)
+                                .foregroundStyle(.white)
                                 .frame(maxWidth: .infinity, minHeight: 58)
                                 .background(
                                     RoundedRectangle(cornerRadius: 18)

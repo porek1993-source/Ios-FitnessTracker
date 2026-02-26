@@ -44,17 +44,25 @@ struct WeekDay: Identifiable {
     var isOverridden: Bool     // Uživatel manuálně změnil
 
     var czechDayName: String {
-        let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "cs_CZ")
-        formatter.dateFormat = "EEE"
-        return formatter.string(from: date).capitalized
+        WeekDay.dayFormatter.string(from: date).capitalized
     }
 
     var dayNumber: String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "d"
-        return formatter.string(from: date)
+        WeekDay.numberFormatter.string(from: date)
     }
+
+    private static let dayFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.locale = Locale(identifier: "cs_CZ")
+        f.dateFormat = "EEE"
+        return f
+    }()
+
+    private static let numberFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "d"
+        return f
+    }()
 }
 
 // MARK: ═══════════════════════════════════════════════════════════════════════
@@ -285,24 +293,12 @@ struct RollingWeekView: View {
             .presentationDetents([.height(380)])
         }
         .fullScreenCover(isPresented: $showWorkout) {
-            if let p = profile,
-               let plan = activePlan,
-               let selectedDay = selectedWorkoutDay {
-                let cal = Calendar.current
-                let wd = cal.component(.weekday, from: selectedDay.date)
-                let ourIdx = wd == 1 ? 7 : wd - 1
-                if let plannedDay = plan.scheduledDays.first(where: {
-                    $0.dayOfWeek == ourIdx && !$0.isRestDay
-                }) {
-                    let session = WorkoutSession(plan: plan, plannedDay: plannedDay)
-                    let _ = { modelContext.insert(session); try? modelContext.save() }()
-                    WorkoutViewWithAI(
-                        session: session,
-                        plannedDay: plannedDay,
-                        profile: p
-                    )
-                }
-            }
+            WorkoutLaunchWrapper(
+                profile: profile,
+                activePlan: activePlan,
+                selectedDay: selectedWorkoutDay,
+                onDismiss: { showWorkout = false }
+            )
         }
     }
 }
@@ -451,6 +447,7 @@ struct WeekDayExerciseDetailView: View {
     let day: WeekDay
     let plan: WorkoutPlan?
     var onStartWorkout: (() -> Void)? = nil
+    @Environment(\.modelContext) private var modelContext
 
     // Mapování WeekDay.date → dayOfWeek (1=Po...7=Ne)
     private var ourDayIndex: Int {
@@ -464,7 +461,34 @@ struct WeekDayExerciseDetailView: View {
     }
 
     private var exercises: [PlannedExercise] {
-        (plannedDay?.plannedExercises ?? []).sorted { $0.order < $1.order }
+        let exs = (plannedDay?.plannedExercises ?? []).sorted { $0.order < $1.order }
+        // Auto-repair: pokud exercise relationship chybí, zkus dohledat podle pořadí
+        if exs.contains(where: { $0.exercise == nil }) {
+            repairMissingExercises(exs)
+        }
+        return exs
+    }
+
+    /// Opravuje chybějící exercise relationship v PlannedExercise (race condition při seeding)
+    private func repairMissingExercises(_ exs: [PlannedExercise]) {
+        guard let label = plannedDay?.label else { return }
+        let slugMap: [String: [String]] = [
+            "Push": ["barbell-bench-press", "overhead-press", "lateral-raise", "tricep-pushdown"],
+            "Pull": ["pull-up", "barbell-row", "face-pull", "barbell-curl"],
+            "Legs": ["barbell-squat", "romanian-deadlift", "leg-extension", "calf-raise"],
+            "Upper": ["dumbbell-bench-press", "cable-row", "dumbbell-shoulder-press", "tricep-dip"],
+            "Lower": ["leg-press", "lying-leg-curl", "goblet-squat", "hip-thrust"],
+            "Fullbody": ["barbell-squat", "barbell-bench-press", "barbell-row", "plank"]
+        ]
+        let normalized = label.components(separatedBy: " ").first ?? label
+        guard let slugs = slugMap[normalized] else { return }
+        let allExercises = (try? modelContext.fetch(FetchDescriptor<Exercise>())) ?? []
+        for (i, ex) in exs.enumerated() where ex.exercise == nil && i < slugs.count {
+            if let found = allExercises.first(where: { $0.slug == slugs[i] }) {
+                ex.exercise = found
+            }
+        }
+        try? modelContext.save()
     }
 
     var body: some View {
@@ -519,9 +543,9 @@ struct WeekDayExerciseDetailView: View {
                         }
                         // Info
                         VStack(alignment: .leading, spacing: 2) {
-                            Text(ex.exercise?.name ?? "Cvik \(idx + 1)")
+                            Text(ex.exercise?.name ?? ex.exercise?.nameEN ?? "Cvik \(idx + 1)")
                                 .font(.system(size: 14, weight: .semibold))
-                                .foregroundStyle(.white)
+                                .foregroundStyle(ex.exercise == nil ? .white.opacity(0.4) : .white)
                             Text("\(ex.targetSets)× \(ex.targetRepsMin)–\(ex.targetRepsMax) rep · \(ex.restSeconds / 60)m \(ex.restSeconds % 60)s pauza")
                                 .font(.system(size: 11))
                                 .foregroundStyle(.white.opacity(0.4))
@@ -538,31 +562,37 @@ struct WeekDayExerciseDetailView: View {
                     }
                 }
             }
-            // ── Začít trénink button ──
-            if day.isToday || Calendar.current.isDate(day.date, inSameDayAs: .now) {
-                Button(action: { onStartWorkout?() }) {
-                    HStack(spacing: 10) {
-                        Image(systemName: "play.fill")
-                            .font(.system(size: 14, weight: .bold))
-                        Text("Začít trénink")
-                            .font(.system(size: 16, weight: .bold))
-                    }
-                    .foregroundStyle(.white)
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 50)
-                    .background(
-                        RoundedRectangle(cornerRadius: 14)
-                            .fill(LinearGradient(
+            // ── Začít trénink button — zobrazuje se pro všechny tréninkové dny ──
+            Button(action: { onStartWorkout?() }) {
+                HStack(spacing: 10) {
+                    Image(systemName: day.isToday ? "play.fill" : "play.circle.fill")
+                        .font(.system(size: 14, weight: .bold))
+                    Text(day.isToday ? "Začít trénink" : "Spustit trénink (\(day.czechDayName))")
+                        .font(.system(size: 16, weight: .bold))
+                }
+                .foregroundStyle(.white)
+                .frame(maxWidth: .infinity)
+                .frame(height: 50)
+                .background(
+                    RoundedRectangle(cornerRadius: 14)
+                        .fill(day.isToday
+                            ? LinearGradient(
                                 colors: [Color(red: 0.20, green: 0.52, blue: 1.0),
                                          Color(red: 0.08, green: 0.35, blue: 0.85)],
-                                startPoint: .topLeading, endPoint: .bottomTrailing
-                            ))
-                    )
-                    .shadow(color: .blue.opacity(0.4), radius: 14, y: 5)
-                }
-                .buttonStyle(.plain)
-                .padding(.top, 4)
+                                startPoint: .topLeading, endPoint: .bottomTrailing)
+                            : LinearGradient(
+                                colors: [Color.white.opacity(0.12), Color.white.opacity(0.06)],
+                                startPoint: .topLeading, endPoint: .bottomTrailing)
+                        )
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 14)
+                        .stroke(day.isToday ? Color.clear : Color.white.opacity(0.15), lineWidth: 1)
+                )
+                .shadow(color: day.isToday ? .blue.opacity(0.4) : .clear, radius: 14, y: 5)
             }
+            .buttonStyle(.plain)
+            .padding(.top, 4)
         }
         .padding(14)
         .background(
@@ -571,5 +601,112 @@ struct WeekDayExerciseDetailView: View {
                 .overlay(RoundedRectangle(cornerRadius: 16)
                     .stroke(Color.appPrimaryAccent.opacity(0.2), lineWidth: 1))
         )
+    }
+}
+
+
+// MARK: - WorkoutLaunchWrapper
+// Bezpečně spustí workout, ošetří všechny edge cases aby nevznikla černá obrazovka
+
+struct WorkoutLaunchWrapper: View {
+    let profile: UserProfile?
+    let activePlan: WorkoutPlan?
+    let selectedDay: WeekDay?
+    let onDismiss: () -> Void
+
+    @Environment(\.modelContext) private var modelContext
+    @EnvironmentObject private var healthKit: HealthKitService
+    @State private var session: WorkoutSession?
+    @State private var plannedDay: PlannedWorkoutDay?
+    @State private var isReady = false
+    @State private var errorMessage: String?
+
+    var body: some View {
+        ZStack {
+            Color(red: 0.05, green: 0.05, blue: 0.08).ignoresSafeArea()
+
+            if let errorMessage {
+                // Chyba — zobrazíme info a tlačítko zpět
+                VStack(spacing: 24) {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .font(.system(size: 50))
+                        .foregroundStyle(.orange)
+                    Text("Nelze spustit trénink")
+                        .font(.system(size: 22, weight: .bold))
+                        .foregroundStyle(.white)
+                    Text(errorMessage)
+                        .font(.system(size: 15))
+                        .foregroundStyle(.white.opacity(0.6))
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 32)
+                    Button(action: onDismiss) {
+                        Text("Zpět")
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundStyle(.white)
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 52)
+                            .background(RoundedRectangle(cornerRadius: 14).fill(Color.white.opacity(0.12)))
+                            .padding(.horizontal, 40)
+                    }
+                    .buttonStyle(.plain)
+                }
+                .preferredColorScheme(.dark)
+            } else if isReady, let session, let plannedDay, let profile {
+                WorkoutViewWithAI(
+                    session: session,
+                    plannedDay: plannedDay,
+                    profile: profile
+                )
+            } else {
+                // Loading
+                VStack(spacing: 20) {
+                    ProgressView().tint(.blue).scaleEffect(1.4)
+                    Text("Připravuji trénink…")
+                        .font(.system(size: 16))
+                        .foregroundStyle(.white.opacity(0.5))
+                }
+            }
+        }
+        .onAppear { prepareWorkout() }
+        .preferredColorScheme(.dark)
+    }
+
+    private func prepareWorkout() {
+        guard let profile else {
+            errorMessage = "Profil nenalezen. Zkontroluj nastavení."
+            return
+        }
+        guard let plan = activePlan else {
+            errorMessage = "Nemáš aktivní tréninkový plán. Dokonči onboarding nebo si vytvoř plán."
+            return
+        }
+        guard let day = selectedDay else {
+            errorMessage = "Nebyl vybrán žádný den."
+            return
+        }
+
+        let cal = Calendar.current
+        let wd = cal.component(.weekday, from: day.date)
+        let ourIdx = wd == 1 ? 7 : wd - 1
+
+        // Najdeme plannedDay
+        guard let found = plan.scheduledDays.first(where: {
+            $0.dayOfWeek == ourIdx && !$0.isRestDay
+        }) else {
+            errorMessage = "Pro \(day.label) (\(day.czechDayName)) neexistuje tréninkový plán. Je to odpočinkový den."
+            return
+        }
+
+        // Vytvoříme session pouze jednou (ne při každém renderu)
+        let newSession = WorkoutSession(plan: plan, plannedDay: found)
+        modelContext.insert(newSession)
+        try? modelContext.save()
+
+        self.plannedDay = found
+        self.session = newSession
+
+        withAnimation(.easeInOut(duration: 0.3)) {
+            isReady = true
+        }
     }
 }

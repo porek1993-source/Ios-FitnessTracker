@@ -1,9 +1,5 @@
 // DashboardView.swift
 // Agilní Fitness Trenér — Hlavní obrazovka
-//
-// Nahraď stávající DashboardView v StubViews.swift.
-// Předpokládá existenci HeatmapViewModel, FatigueStore,
-// WorkoutView a dalších komponent z projektu.
 
 import SwiftUI
 import SwiftData
@@ -185,7 +181,32 @@ final class DashboardViewModel: ObservableObject {
 
         plannedThisWeek   = profile.availableDaysPerWeek
         completedThisWeek = completedSessions
-        weeklyStreak      = completedSessions  // simplified — real streak would track consecutive weeks
+
+        // Výpočet streaku: počet po sobě jdoucích týdnů s alespoň jedním tréninkem.
+        // Pokud aktuální týden ještě nemá trénink, přeskočí ho a počítá od minulého.
+        let allCompleted = plan.sessions
+            .filter { $0.status == .completed && $0.finishedAt != nil }
+        
+        var streak = 0
+        var checkWeek = calendar.dateInterval(of: .weekOfYear, for: .now)?.start ?? .now
+        var skippedCurrentWeek = false
+        
+        for _ in 0..<52 {  // max 52 týdnů zpět
+            let weekEnd = calendar.date(byAdding: .day, value: 7, to: checkWeek) ?? checkWeek
+            let hasWorkout = allCompleted.contains { $0.startedAt >= checkWeek && $0.startedAt < weekEnd }
+            if hasWorkout {
+                streak += 1
+                checkWeek = calendar.date(byAdding: .day, value: -7, to: checkWeek) ?? checkWeek
+            } else if !skippedCurrentWeek && streak == 0 {
+                // Aktuální týden ještě nemá trénink — přeskoč ho a zkus minulý
+                skippedCurrentWeek = true
+                checkWeek = calendar.date(byAdding: .day, value: -7, to: checkWeek) ?? checkWeek
+            } else {
+                break
+            }
+        }
+        
+        weeklyStreak = streak
     }
 
     private func makeGreeting() -> String {
@@ -271,24 +292,10 @@ struct TrainerDashboardView: View {
                 HeatmapView()
             }
             .fullScreenCover(isPresented: $showWorkout) {
-                if let p = profile,
-                   let activePlan = p.workoutPlans.first(where: { $0.isActive }) {
-                    let todayWeekday = Calendar.current.component(.weekday, from: .now)
-                    let dayIndex = todayWeekday == 1 ? 7 : todayWeekday - 1
-                    if let plannedDay = activePlan.scheduledDays.first(where: {
-                        $0.dayOfWeek == dayIndex && !$0.isRestDay
-                    }) {
-                        let session = WorkoutSession(plan: activePlan, plannedDay: plannedDay)
-                        let _ = { modelContext.insert(session); try? modelContext.save() }()
-                        WorkoutViewWithAI(
-                            session: session,
-                            plannedDay: plannedDay,
-                            profile: p
-                        )
-                    } else {
-                        ManualWorkoutStartView(onDismiss: { showWorkout = false })
-                    }
-                }
+                TodayWorkoutLaunchWrapper(
+                    profile: profile,
+                    onDismiss: { showWorkout = false }
+                )
             }
         }
         .task {
@@ -428,11 +435,13 @@ struct ReadinessCardView: View {
                 .frame(width: 88, height: 88)
 
             VStack(alignment: .leading, spacing: 10) {
-                ForEach([0.6, 0.8, 0.5], id: \.self) { w in
-                    RoundedRectangle(cornerRadius: 4)
-                        .fill(Color.white.opacity(0.07))
-                        .frame(maxWidth: .infinity * w)
-                        .frame(height: 12)
+                ForEach([CGFloat(0.6), 0.8, 0.5], id: \.self) { w in
+                    GeometryReader { geo in
+                        RoundedRectangle(cornerRadius: 4)
+                            .fill(Color.white.opacity(0.07))
+                            .frame(width: geo.size.width * w, height: 12)
+                    }
+                    .frame(height: 12)
                 }
             }
         }
@@ -608,9 +617,11 @@ private struct WeeklyProgressBar: View {
     }
 
     private func dayState(index: Int) -> DayDotState {
-        if index < completed         { return .done }
-        if index == todayIndex       { return .today }
-        if index <= todayIndex + 1   { return .upcoming }
+        // Hotové dny jsou jen ty v minulosti (index < todayIndex) kde počítáme dokončené tréninky
+        let completedUpToToday = min(completed, todayIndex)
+        if index < completedUpToToday   { return .done }
+        if index == todayIndex          { return .today }
+        if index == todayIndex + 1      { return .upcoming }
         return .future
     }
 }
@@ -952,9 +963,10 @@ private struct TodayPlanCard: View {
                 .buttonStyle(.plain)
                 .scaleEffect(buttonPressed ? 0.97 : 1.0)
                 .animation(.spring(response: 0.2), value: buttonPressed)
-                ._onButtonGesture(pressing: { p in
-                    withAnimation(.spring(response: 0.15)) { buttonPressed = p }
-                }, perform: {})
+                .simultaneousGesture(DragGesture(minimumDistance: 0)
+                    .onChanged { _ in withAnimation(.spring(response: 0.15)) { buttonPressed = true } }
+                    .onEnded { _ in withAnimation(.spring(response: 0.15)) { buttonPressed = false } }
+                )
                 .padding(.horizontal, 16)
                 .padding(.bottom, 18)
             }
@@ -993,7 +1005,7 @@ private struct TodayPlanCard: View {
     }
 
     private var estimatedCalories: String {
-        let kcal = Int(Double(vm.estimatedMinutes) * 7.5)  // ~7.5 kcal/min for strength training
+        let kcal = Int(Double(vm.estimatedMinutes) * 5.0)  // ~5 kcal/min pro silový trénink (WHO reference)
         return "\(kcal)"
     }
 }
@@ -1106,4 +1118,81 @@ private struct FlowLayout: Layout {
                                Exercise.self, WorkoutSession.self,
                                HealthMetricsSnapshot.self], inMemory: true)
         .environmentObject(HealthKitService())
+}
+
+
+// MARK: - TodayWorkoutLaunchWrapper
+struct TodayWorkoutLaunchWrapper: View {
+    let profile: UserProfile?
+    let onDismiss: () -> Void
+
+    @Environment(\.modelContext) private var modelContext
+    @EnvironmentObject private var healthKit: HealthKitService
+    @State private var session: WorkoutSession?
+    @State private var plannedDay: PlannedWorkoutDay?
+    @State private var isReady = false
+    @State private var errorMessage: String?
+    @State private var todayWeekDay: WeekDay? = nil
+
+    var body: some View {
+        ZStack {
+            Color(red: 0.05, green: 0.05, blue: 0.08).ignoresSafeArea()
+            if let errorMessage {
+                VStack(spacing: 24) {
+                    Image(systemName: "moon.zzz.fill")
+                        .font(.system(size: 50))
+                        .foregroundStyle(.blue.opacity(0.7))
+                    Text("Dnes máš volno")
+                        .font(.system(size: 22, weight: .bold))
+                        .foregroundStyle(.white)
+                    Text(errorMessage)
+                        .font(.system(size: 15))
+                        .foregroundStyle(.white.opacity(0.6))
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 32)
+                    Button(action: onDismiss) {
+                        Text("Zpět")
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundStyle(.white)
+                            .frame(maxWidth: .infinity).frame(height: 52)
+                            .background(RoundedRectangle(cornerRadius: 14).fill(Color.white.opacity(0.12)))
+                            .padding(.horizontal, 40)
+                    }
+                    .buttonStyle(.plain)
+                }
+                .preferredColorScheme(.dark)
+            } else if isReady, let session, let plannedDay, let profile {
+                WorkoutViewWithAI(session: session, plannedDay: plannedDay, profile: profile)
+            } else {
+                VStack(spacing: 20) {
+                    ProgressView().tint(.blue).scaleEffect(1.4)
+                    Text("Připravuji trénink…")
+                        .font(.system(size: 16))
+                        .foregroundStyle(.white.opacity(0.5))
+                }
+            }
+        }
+        .onAppear { prepareWorkout() }
+        .preferredColorScheme(.dark)
+    }
+
+    private func prepareWorkout() {
+        guard let profile else { errorMessage = "Profil nenalezen."; return }
+        guard let plan = profile.workoutPlans.first(where: { $0.isActive }) else {
+            errorMessage = "Nemáš aktivní tréninkový plán."
+            return
+        }
+        let todayWeekday = Calendar.current.component(.weekday, from: .now)
+        let dayIndex = todayWeekday == 1 ? 7 : todayWeekday - 1
+        guard let found = plan.scheduledDays.first(where: { $0.dayOfWeek == dayIndex && !$0.isRestDay }) else {
+            errorMessage = "Dnešek je odpočinkový den. Odpočinek je součástí plánu — tělo roste při zotavení! 💪"
+            return
+        }
+        let newSession = WorkoutSession(plan: plan, plannedDay: found)
+        modelContext.insert(newSession)
+        try? modelContext.save()
+        self.plannedDay = found
+        self.session = newSession
+        withAnimation(.easeInOut(duration: 0.3)) { isReady = true }
+    }
 }

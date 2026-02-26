@@ -3,6 +3,7 @@ import SwiftUI
 
 struct ExerciseCardView: View {
     let exercise: SessionExerciseState
+    let exerciseIndex: Int  // Vlastní index tohoto cviku (ne vm.currentExerciseIndex!)
     @ObservedObject var vm: WorkoutViewModel
 
     var body: some View {
@@ -50,11 +51,12 @@ struct ExerciseCardView: View {
                         ForEach(exercise.sets.indices, id: \.self) { i in
                             SetRowView(
                                 setNumber: i + 1,
-                                setData:   $vm.exercises[vm.currentExerciseIndex].sets[i],
+                                setData:   $vm.exercises[exerciseIndex].sets[i],
                                 isActive:  i == exercise.nextIncompleteSetIndex,
                                 onComplete: {
+                                    HapticManager.shared.playMediumClick()
                                     vm.completeSet(
-                                        exerciseIndex: vm.currentExerciseIndex,
+                                        exerciseIndex: exerciseIndex,
                                         setIndex: i
                                     )
                                 }
@@ -71,6 +73,10 @@ struct ExerciseCardView: View {
                     .padding(.bottom, 40)
                 }
             }
+        }
+        .scrollDismissesKeyboard(.interactively)  // iOS 16+ - keyboard dismiss on scroll
+        .onTapGesture {
+            UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
         }
     }
 }
@@ -124,25 +130,88 @@ struct ExerciseAnimationView: View {
     let slug: String
     var body: some View {
         ZStack {
-            LinearGradient(colors: [Color(white: 0.08), Color.black], startPoint: .top, endPoint: .bottom)
-            VStack(spacing: 12) {
-                Image(systemName: exerciseIcon(slug))
-                    .font(.system(size: 64))
-                    .foregroundStyle(LinearGradient(colors: [.blue, .cyan], startPoint: .topLeading, endPoint: .bottomTrailing))
-                    .symbolEffect(.pulse)
-                Text("animace cviku")
-                    .font(.system(size: 11))
-                    .foregroundStyle(.white.opacity(0.2))
+            LinearGradient(
+                colors: [Color(white: 0.08), Color.black],
+                startPoint: .top, endPoint: .bottom
+            )
+            VStack(spacing: 16) {
+                Spacer()
+                ZStack {
+                    Circle()
+                        .fill(exerciseColor(slug).opacity(0.12))
+                        .frame(width: 130, height: 130)
+                    Circle()
+                        .stroke(exerciseColor(slug).opacity(0.2), lineWidth: 1)
+                        .frame(width: 130, height: 130)
+                    Image(systemName: exerciseIcon(slug))
+                        .font(.system(size: 58, weight: .light))
+                        .foregroundStyle(
+                            LinearGradient(
+                                colors: [exerciseColor(slug), exerciseColor(slug).opacity(0.6)],
+                                startPoint: .topLeading, endPoint: .bottomTrailing
+                            )
+                        )
+                        .symbolEffect(.bounce, options: .repeating)
+                }
+                Text(exerciseCategoryLabel(slug))
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(exerciseColor(slug).opacity(0.6))
+                    .kerning(1.5)
+                    .textCase(.uppercase)
+                Spacer()
             }
-            LinearGradient(colors: [.clear, .black], startPoint: .init(x: 0.5, y: 0.6), endPoint: .bottom)
+            LinearGradient(
+                colors: [.clear, .black],
+                startPoint: .init(x: 0.5, y: 0.55), endPoint: .bottom
+            )
         }
     }
 
     private func exerciseIcon(_ slug: String) -> String {
-        if slug.contains("bench") || slug.contains("press") { return "dumbbell.fill" }
-        if slug.contains("squat") || slug.contains("leg")   { return "figure.strengthtraining.traditional" }
-        if slug.contains("pull") || slug.contains("row")    { return "figure.gymnastics" }
-        if slug.contains("run")  || slug.contains("cardio") { return "figure.run" }
-        return "figure.core.training"
+        let s = slug.lowercased()
+        if s.contains("bench") || s.contains("chest") || s.contains("fly") { return "dumbbell.fill" }
+        if s.contains("press") && (s.contains("shoulder") || s.contains("overhead") || s.contains("ohp")) { return "figure.arms.open" }
+        if s.contains("press") { return "dumbbell.fill" }
+        if s.contains("squat") { return "figure.strengthtraining.traditional" }
+        if s.contains("leg-press") || s.contains("leg_press") { return "figure.strengthtraining.traditional" }
+        if s.contains("deadlift") || s.contains("rdl") || s.contains("hip-thrust") { return "figure.strengthtraining.functional" }
+        if s.contains("pull-up") || s.contains("pullup") || s.contains("chin") { return "figure.gymnastics" }
+        if s.contains("row") || s.contains("pull") || s.contains("lat") { return "figure.rowing" }
+        if s.contains("curl") || s.contains("bicep") { return "figure.arms.open" }
+        if s.contains("tricep") || s.contains("extension") || s.contains("pushdown") { return "figure.arms.open" }
+        if s.contains("calf") || s.contains("raise") { return "figure.walk" }
+        if s.contains("lateral") || s.contains("shoulder") || s.contains("delt") { return "figure.arms.open" }
+        if s.contains("plank") || s.contains("core") || s.contains("ab") || s.contains("crunch") { return "figure.core.training" }
+        if s.contains("run") || s.contains("cardio") || s.contains("treadmill") { return "figure.run" }
+        if s.contains("warmup") || s.contains("warm") || s.contains("stretch") { return "figure.flexibility" }
+        return "figure.strengthtraining.traditional"
+    }
+
+    private func exerciseColor(_ slug: String) -> Color {
+        let s = slug.lowercased()
+        if s.contains("bench") || s.contains("chest") || s.contains("press") { return .blue }
+        if s.contains("pull") || s.contains("row") || s.contains("lat") { return .purple }
+        if s.contains("squat") || s.contains("leg") || s.contains("deadlift") { return Color(red: 0.3, green: 0.8, blue: 0.4) }
+        if s.contains("shoulder") || s.contains("lateral") || s.contains("overhead") { return .orange }
+        if s.contains("curl") || s.contains("bicep") { return .cyan }
+        if s.contains("tricep") || s.contains("pushdown") { return Color(red: 0.9, green: 0.5, blue: 0.2) }
+        if s.contains("core") || s.contains("plank") || s.contains("ab") { return .yellow }
+        if s.contains("warmup") || s.contains("stretch") { return .teal }
+        return .blue
+    }
+
+    private func exerciseCategoryLabel(_ slug: String) -> String {
+        let s = slug.lowercased()
+        if s.contains("bench") || s.contains("chest") { return "Hrudník" }
+        if s.contains("pull") || s.contains("row") || s.contains("lat") { return "Záda" }
+        if s.contains("squat") || s.contains("leg") { return "Nohy" }
+        if s.contains("deadlift") || s.contains("rdl") { return "Zadní řetězec" }
+        if s.contains("shoulder") || s.contains("lateral") || s.contains("overhead") { return "Ramena" }
+        if s.contains("curl") || s.contains("bicep") { return "Biceps" }
+        if s.contains("tricep") || s.contains("pushdown") || s.contains("extension") { return "Triceps" }
+        if s.contains("core") || s.contains("plank") || s.contains("ab") { return "Střed těla" }
+        if s.contains("warmup") || s.contains("stretch") { return "Rozcvička" }
+        if s.contains("calf") { return "Lýtka" }
+        return "Silový trénink"
     }
 }

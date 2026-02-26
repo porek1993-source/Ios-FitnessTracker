@@ -110,15 +110,15 @@ final class ExerciseDetailViewModel: ObservableObject {
             Task {
                 do {
                     try await repository.updateExercise(slug: slug, with: data)
-                    print("[ExerciseDetail] Obohacená data úspěšně uložena do Supabase pro cvik: \(slug)")
+                    AppLogger.info("[ExerciseDetail] Obohacená data úspěšně uložena do Supabase pro cvik: \(slug)")
                 } catch {
-                    print("[ExerciseDetail] Chyba při asynchronním ukládání do Supabase: \(error.localizedDescription)")
+                    AppLogger.error("[ExerciseDetail] Chyba při asynchronním ukládání do Supabase: \(error.localizedDescription)")
                 }
             }
 
         } catch {
             // Enrichment selhal — zobrazíme co máme, nepřerušujeme UX
-            print("[ExerciseDetail] AI enrichment selhal: \(error.localizedDescription)")
+            AppLogger.error("[ExerciseDetail] AI enrichment selhal: \(error.localizedDescription)")
         }
     }
 }

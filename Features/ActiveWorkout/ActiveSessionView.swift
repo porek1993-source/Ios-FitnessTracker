@@ -15,6 +15,7 @@ struct ActiveSessionView: View {
 
     @StateObject private var vm: WorkoutViewModel
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.modelContext) private var modelContext
 
     @State private var showSwap       = false
     @State private var showFinishDlg  = false
@@ -81,9 +82,8 @@ struct ActiveSessionView: View {
             }
         }
         .confirmationDialog("Dokončit trénink?", isPresented: $showFinishDlg, titleVisibility: .visible) {
-            @Environment(\.modelContext) var modelContext
             Button("Uložit a ukončit") { vm.finishWorkout(modelContext: modelContext); dismiss() }
-            Button("Zrušit", role: .cancel) {}
+            Button("Pokračovat", role: .cancel) {}
         } message: {
             Text("Všechny zalogované série budou uloženy.")
         }
@@ -671,7 +671,8 @@ struct ActiveSetRow: View {
             ? String(format: "%.0f", prev) : String(format: "%.1f", prev)
     }
 
-    private var canComplete: Bool { currentSet.weightKg != nil && currentSet.reps != nil }
+    private var isBodyweight: Bool { currentSet.previousWeightKg == nil && currentSet.weightKg == nil }
+    private var canComplete: Bool { currentSet.reps != nil && (isBodyweight || currentSet.weightKg != nil) }
 
     private func handleComplete() {
         withAnimation(.spring(response: 0.12, dampingFraction: 0.45)) { bounce = 0.80 }

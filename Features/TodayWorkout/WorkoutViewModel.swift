@@ -1,5 +1,5 @@
 // WorkoutViewModel.swift
-// OPRAVENO: AI response integrace, RPE v progressive overload, audio coach, finishWorkout s DB save
+// Agilní Fitness Trenér — ViewModel pro aktivní trénink
 
 import SwiftUI
 import SwiftData
@@ -21,6 +21,11 @@ final class WorkoutViewModel: ObservableObject {
 
     let session: WorkoutSession
     let planLabel: String
+
+    deinit {
+        restTimer?.invalidate()
+        elapsedTimer?.invalidate()
+    }
 
     init(session: WorkoutSession, plan: PlannedWorkoutDay, planLabel: String, aiResponse: TrainerResponse? = nil) {
         self.exercises = []
@@ -77,13 +82,16 @@ final class WorkoutViewModel: ObservableObject {
 
                     state.exercise = exerciseRef
 
-                    // Warmup pouze pro první cvik v celém tréninku
-                    if states.isEmpty && index == 0, let targetWeight = state.sets.first?.previousWeightKg ?? ex.weightKg {
-                        let warmups = WarmupCalculator.generateWarmups(
-                            targetWeight: targetWeight,
-                            targetRepsMin: ex.repsMin
-                        )
-                        state.sets.insert(contentsOf: warmups, at: 0)
+                    // Warmup pouze pro první working cvik v celém tréninku (ne warmup bloky)
+                    if states.filter({ !$0.isWarmupOnly }).isEmpty, index == 0 {
+                        let targetWeight = state.sets.first?.previousWeightKg ?? ex.weightKg
+                        if let targetWeight {
+                            let warmups = WarmupCalculator.generateWarmups(
+                                targetWeight: targetWeight,
+                                targetRepsMin: ex.repsMin
+                            )
+                            state.sets.insert(contentsOf: warmups, at: 0)
+                        }
                     }
 
                     states.append(state)
@@ -142,15 +150,30 @@ final class WorkoutViewModel: ObservableObject {
             self.exercises = states
         }
 
+        // Populate session.exercises so finishWorkout can save WeightEntry records
+        // SessionExercise záznamy musí existovat v DB aby se mohly uložit completed sety
+        // Note: Toto se spustí v background - modelContext není k dispozici v initu
+        // Proto ukládáme přes sessionExerciseCache a přistupujeme z finishWorkout přes state.exercise
+        
         startElapsedTimer()
 
         // Init audio coach
         audioCoach = AudioCoachService()
     }
 
-    // MARK: - RPE-aware progression (DEPRECATED - Moved to ProgressionEngine)
+    // MARK: - RPE-aware progression (přesunuto do ProgressionEngine)
+    // Tato metoda je zachována pro zpětnou kompatibilitu, ale logika je v ProgressionEngine.
     private func rpeAwareProgression(exercise: Exercise, targetWeight: Double?) -> Double? {
-        return targetWeight // placeholder
+        guard let targetWeight else { return nil }
+        // Pokud průměrné RPE bylo ≥10 (failure), mírně sniž váhu
+        let recentEntries = exercise.weightHistory
+            .sorted { $0.loggedAt > $1.loggedAt }
+            .prefix(3)
+        let avgRpe = recentEntries.compactMap(\.rpe).reduce(0, +) / Double(max(recentEntries.compactMap(\.rpe).count, 1))
+        if avgRpe >= 10 {
+            return WeightRounder.roundToNearestPlates(weight: targetWeight * 0.95)
+        }
+        return targetWeight
     }
 
     // MARK: - Timer
@@ -164,9 +187,12 @@ final class WorkoutViewModel: ObservableObject {
     // MARK: - Set Complete
 
     func completeSet(exerciseIndex: Int, setIndex: Int) {
-        guard
-            exercises[exerciseIndex].sets[setIndex].weightKg != nil,
-            exercises[exerciseIndex].sets[setIndex].reps != nil
+        // Bounds check - prevence pádu při neplatném indexu
+        guard exercises.indices.contains(exerciseIndex),
+              exercises[exerciseIndex].sets.indices.contains(setIndex)
+        else { return }
+        // Povolíme dokončit i bez váhy (bodyweight cviky) - jen reps jsou povinné
+        guard exercises[exerciseIndex].sets[setIndex].reps != nil
         else { return }
 
         withAnimation(.spring(response: 0.3)) {
@@ -266,42 +292,52 @@ final class WorkoutViewModel: ObservableObject {
 
     func skipExercise() { withAnimation { advanceToNextExercise() } }
 
+    @Published var allExercisesDone = false   // true = uživatel dokončil všechny cviky
+
     private func advanceToNextExercise() {
-        guard currentExerciseIndex < exercises.count - 1 else { return }
+        guard currentExerciseIndex < exercises.count - 1 else {
+            // Všechny cviky dokončeny — upozorni UI
+            withAnimation { allExercisesDone = true }
+            if audioEnabled { audioCoach?.speak(.sessionStart) }  // sessionStart = "Skvělý trénink!" audio event
+            UINotificationFeedbackGenerator().notificationOccurred(.success)
+            return
+        }
         withAnimation(.easeInOut) { currentExerciseIndex += 1 }
+        HapticManager.shared.playMediumClick()
 
         // Audio coach — příští cvik
         if audioEnabled {
             let next = exercises[min(currentExerciseIndex, exercises.count - 1)]
-            audioCoach?.speak(.setStarting(1, next.sets.filter { !$0.isWarmup }.count))
+            let workingSets = next.sets.filter { !$0.isWarmup }.count
+            audioCoach?.speak(.setStarting(1, workingSets))
         }
     }
 
     // MARK: - Smart Swap Logic
 
-    func swapExercise(at index: Int, newName: String, newSlug: String) {
+    func swapExercise(at index: Int, newName: String, newSlug: String, newExercise: Exercise? = nil) {
         guard exercises.indices.contains(index) else { return }
         
         let old = exercises[index]
         
         // Vytvoříme nový stav pro náhradní cvik
-        // Ponecháme počet sérií a rep range (pokud je to biomechanická alternativa, bývá to podobné)
         let newState = SessionExerciseState(
             name: newName,
             slug: newSlug,
-            coachTip: "Sestaveno jako náhrada za \(old.name)",
+            coachTip: newExercise?.instructions.isEmpty == false
+                ? newExercise?.instructions
+                : "Sestaveno jako náhrada za \(old.name)",
             tempo: old.tempo,
             restSeconds: old.restSeconds,
             sets: old.sets.map { s in
                 var newSet = s
                 newSet.isCompleted = false // Resetujeme progres na novém cviku
+                // Progressive overload pro nový cvik
+                newSet.previousWeightKg = newExercise?.lastUsedWeight ?? old.sets.first?.previousWeightKg
                 return newSet
-            }
+            },
+            exercise: newExercise  // Nastavíme Exercise referenci pro gamifikaci a PR tracking
         )
-        
-        // Zkusíme najít Exercise objekt pro nový slug v databázi, abychom měli data pro gamifikaci
-        // (Tento VM nemá přímý přístup k celému ModelContextu v initu, ale můžeme se pokusit 
-        //  vytáhnout ho z PlannedExercises pokud tam náhodou je, nebo ho nechat nil.)
         
         withAnimation(.spring(response: 0.4)) {
             exercises[index] = newState
@@ -319,7 +355,8 @@ final class WorkoutViewModel: ObservableObject {
 
     // MARK: - Finish — ukládá WeightEntry do SwiftData pro progressive overload
 
-    func finishWorkout(modelContext: ModelContext, bodyWeightKg: Double = 75.0) {
+    @discardableResult
+    func finishWorkout(modelContext: ModelContext, bodyWeightKg: Double = 75.0) -> ([XPGain], [PREvent]) {
         restTimer?.invalidate()
         elapsedTimer?.invalidate()
         session.durationMinutes = elapsedSeconds / 60
@@ -329,25 +366,32 @@ final class WorkoutViewModel: ObservableObject {
         // Ulož WeightEntry pro každý dokončený working set (ne warmup)
         for ex in exercises {
             guard !ex.isWarmupOnly else { continue }
-            let sessionEx = session.exercises.first { $0.exercise?.slug == ex.slug }
-            guard let exercise = sessionEx?.exercise else { continue }
+            // Použij exercise přímo ze state (nastaveno v initu) - nepotřebujeme session.exercises lookup
+            guard let exercise = ex.exercise else { continue }
 
             let workingSets = ex.sets.filter { $0.isCompleted && !$0.isWarmup }
-            for set in workingSets {
-                guard let weight = set.weightKg, let reps = set.reps else { continue }
+            for (setIdx, set) in workingSets.enumerated() {
+                // Bodyweight cviky mohou mít weightKg = nil nebo 0
+                let weight = set.weightKg ?? 0
+                guard let reps = set.reps, reps > 0 else { continue }
                 let entry = WeightEntry(
                     exercise: exercise,
                     sessionId: session.id,
                     weightKg: weight,
                     reps: reps,
                     rpe: set.rpe,
-                    wasSuccessful: rpe_isSuccessful(set.rpe)
+                    wasSuccessful: rpe_isSuccessful(set.rpe),
+                    setNumber: setIdx + 1
                 )
                 modelContext.insert(entry)
             }
         }
 
-        try? modelContext.save()
+        do {
+            try modelContext.save()
+        } catch {
+            AppLogger.error("WorkoutViewModel: Chyba při ukládání tréninku: \(error)")
+        }
         Task { await LiveActivityManager.shared.endCurrentActivity() }
 
         // ── Zápis do Apple Health ──
@@ -356,23 +400,48 @@ final class WorkoutViewModel: ObservableObject {
             let result = await writer.write(session: session, bodyWeightKg: bodyWeightKg)
             self.hkWriteResult = result
             if result.success {
-                print("[HealthKit] Trénink zapsán do Apple Health. Kalorie: \(result.caloriesWritten ?? 0) kcal")
+                AppLogger.info("[HealthKit] Trénink zapsán do Apple Health. Kalorie: \(result.caloriesWritten ?? 0) kcal")
             } else {
                 print("[HealthKit] Zápis selhal: \(result.error?.localizedDescription ?? "neznámá chyba")")
             }
         }
 
-        // ── Gamifikace: přepočítej XP po dokončení tréninku ──
-        let gamificationInput = buildGamificationInput(from: exercises)
+        // ── PR detection ──
+        let prEvents = detectPersonalRecords()
+
+        // ── Gamifikace: přepočítej XP po dokončení tréninku (předej PR events pro bonus XP) ──
+        let gamificationInput = buildGamificationInput(from: exercises, prEvents: prEvents)
         let engine = GamificationEngine()
         engine.loadRecords(from: modelContext)
         let gains = engine.process(input: gamificationInput, context: modelContext)
         if gains.contains(where: { $0.didLevelUp }) {
             UINotificationFeedbackGenerator().notificationOccurred(.success)
         }
+
+        return (gains, prEvents)
     }
 
-    private func buildGamificationInput(from states: [SessionExerciseState]) -> SessionGamificationInput {
+    private func detectPersonalRecords() -> [PREvent] {
+        var prs: [PREvent] = []
+        for ex in exercises {
+            guard let exercise = ex.exercise else { continue }
+            let maxWeight = ex.sets.filter { $0.isCompleted && !$0.isWarmup }
+                .compactMap { $0.weightKg }.max() ?? 0
+            let prev = exercise.lastUsedWeight ?? 0
+            if maxWeight > prev && prev > 0 {
+                prs.append(PREvent(
+                    exerciseName: ex.name,
+                    muscleGroup: exercise.musclesTarget.first ?? .pecs,
+                    oldValue: prev,
+                    newValue: maxWeight,
+                    type: .weight
+                ))
+            }
+        }
+        return prs
+    }
+
+    private func buildGamificationInput(from states: [SessionExerciseState], prEvents: [PREvent] = []) -> SessionGamificationInput {
         let exerciseResults: [SessionGamificationInput.ExerciseResult] = states.compactMap { state in
             guard !state.isWarmupOnly else { return nil }
             let completed = state.sets.filter { $0.isCompleted }
@@ -402,7 +471,7 @@ final class WorkoutViewModel: ObservableObject {
                 completedSets: setResults
             )
         }
-        return SessionGamificationInput(exercises: exerciseResults, personalRecords: [])
+        return SessionGamificationInput(exercises: exerciseResults, personalRecords: prEvents)
     }
 
     /// Jednoduchá heuristika pro mapování slug → svalové skupiny
@@ -493,12 +562,15 @@ struct SessionExerciseState: Identifiable {
 
     init(from planned: PlannedExercise) {
         self.id          = UUID()
-        self.name        = planned.exercise?.name ?? ""
-        self.slug        = planned.exercise?.slug ?? ""
-        self.coachTip    = nil
+        // Bezpečný fallback pokud exercise relationship chybí (seed race condition)
+        let exerciseName = planned.exercise?.name ?? planned.exercise?.nameEN ?? "Cvik"
+        let exerciseSlug = planned.exercise?.slug ?? "unknown-\(UUID().uuidString.prefix(8))"
+        self.name        = exerciseName
+        self.slug        = exerciseSlug
+        self.coachTip    = planned.exercise?.instructions.isEmpty == false ? planned.exercise?.instructions : nil
         self.tempo       = nil
         self.restSeconds = planned.restSeconds
-        self.sets = (0..<planned.targetSets).map { _ in
+        self.sets = (0..<max(1, planned.targetSets)).map { _ in
             SetState(
                 targetRepsMin:    planned.targetRepsMin,
                 targetRepsMax:    planned.targetRepsMax,

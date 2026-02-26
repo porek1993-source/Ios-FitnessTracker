@@ -1,6 +1,5 @@
 // WorkoutView.swift
 // Agilní Fitness Trenér — Aktivní trénink
-// OPRAVENO: AI response, gamification, audio coach, Jakub chat, finish flow
 
 import SwiftUI
 import SwiftData
@@ -11,19 +10,21 @@ struct WorkoutView: View {
     @Environment(\.dismiss) private var dismiss
 
     let onFinish: (([XPGain], [PREvent]) -> Void)?
+    let bodyWeightKg: Double  // Skutečná váha uživatele pro HealthKit záznam
 
     @State private var showSummary = false
     @State private var summaryXPGains: [XPGain] = []
     @State private var summaryPREvents: [PREvent] = []
     @State private var summaryCoachMsg = ""
-    @State private var showThorChat = false
+    @State private var showJakubChat = false
+    @State private var showFinishConfirm = false
 
     init(
         session: WorkoutSession,
         plan: PlannedWorkoutDay,
         planLabel: String,
         aiResponse: TrainerResponse? = nil,
-        gamificationEngine: GamificationEngine? = nil,
+        bodyWeightKg: Double = 75.0,
         onFinish: (([XPGain], [PREvent]) -> Void)? = nil
     ) {
         _vm = StateObject(wrappedValue: WorkoutViewModel(
@@ -32,27 +33,60 @@ struct WorkoutView: View {
             planLabel: planLabel,
             aiResponse: aiResponse
         ))
+        self.bodyWeightKg = bodyWeightKg
         self.onFinish = onFinish
     }
 
     var body: some View {
         ZStack {
-            Color.black.ignoresSafeArea()
+            // Background — sjednoceně s app theme
+            Color(hue: 0.62, saturation: 0.18, brightness: 0.07).ignoresSafeArea()
 
             VStack(spacing: 0) {
-                WorkoutHeaderView(vm: vm)
+                WorkoutHeaderView(vm: vm, onFinish: { finishWorkout() })
 
                 if vm.exercises.isEmpty {
                     emptyWorkoutPlaceholder
                 } else {
-                    TabView(selection: $vm.currentExerciseIndex) {
-                        ForEach(vm.exercises.indices, id: \.self) { index in
-                            ExerciseCardView(exercise: vm.exercises[index], vm: vm)
+                    ZStack(alignment: .top) {
+                        TabView(selection: $vm.currentExerciseIndex) {
+                            ForEach(vm.exercises.indices, id: \.self) { index in
+                                ExerciseCardView(
+                                    exercise: vm.exercises[index],
+                                    exerciseIndex: index,
+                                    vm: vm
+                                )
                                 .tag(index)
+                            }
+                        }
+                        .tabViewStyle(.page(indexDisplayMode: .never))
+                        .animation(.spring(response: 0.44, dampingFraction: 0.82), value: vm.currentExerciseIndex)
+
+                        // Exercise counter pill
+                        let workingExercises = vm.exercises.filter { !$0.isWarmupOnly }
+                        let workingIdx = vm.exercises.prefix(vm.currentExerciseIndex + 1).filter { !$0.isWarmupOnly }.count
+                        HStack(spacing: 6) {
+                            Text(vm.exercises[min(vm.currentExerciseIndex, vm.exercises.count-1)].isWarmupOnly
+                                 ? "ROZCVIČKA"
+                                 : "\(workingIdx) / \(workingExercises.count)")
+                                .font(.system(size: 10, weight: .black))
+                                .foregroundStyle(.white.opacity(0.5))
+                                .kerning(1.2)
+                        }
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 5)
+                        .background(Capsule().fill(Color.white.opacity(0.07)))
+                        .padding(.top, 8)
+
+                        // Všechny cviky hotové — banner
+                        if vm.allExercisesDone {
+                            allDoneBanner
+                                .transition(.move(edge: .top).combined(with: .opacity))
+                                .zIndex(10)
+                                .padding(.top, 8)
+                                .padding(.horizontal, 20)
                         }
                     }
-                    .tabViewStyle(.page(indexDisplayMode: .never))
-                    .animation(.easeInOut, value: vm.currentExerciseIndex)
                 }
 
                 // Bottom action bar
@@ -69,7 +103,21 @@ struct WorkoutView: View {
         }
         .preferredColorScheme(.dark)
         .navigationBarHidden(true)
-        .sheet(isPresented: $showThorChat) {
+        .onChange(of: vm.allExercisesDone) { _, done in
+            if done {
+                // Všechny cviky hotové — zobraz completion banner s výzvou ukončit
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                    withAnimation { showFinishConfirm = true }
+                }
+            }
+        }
+        .confirmationDialog("Trénink dokončen! 💪", isPresented: $showFinishConfirm, titleVisibility: .visible) {
+            Button("Uložit a zobrazit výsledky") { finishWorkout() }
+            Button("Pokračovat", role: .cancel) {}
+        } message: {
+            Text("Všechny cviky máš za sebou. Skvělý výkon!")
+        }
+        .sheet(isPresented: $showJakubChat) {
             WorkoutChatView(vm: vm)
         }
         .fullScreenCover(isPresented: $showSummary) {
@@ -78,7 +126,7 @@ struct WorkoutView: View {
                 coachMessage: summaryCoachMsg,
                 xpGains: summaryXPGains,
                 prEvents: summaryPREvents,
-                hkResult: nil,
+                hkResult: vm.hkWriteResult,
                 onDismiss: {
                     showSummary = false
                     dismiss()
@@ -87,12 +135,46 @@ struct WorkoutView: View {
         }
     }
 
+    // MARK: - All Done Banner
+
+    private var allDoneBanner: some View {
+        HStack(spacing: 12) {
+            Image(systemName: "checkmark.circle.fill")
+                .font(.system(size: 22))
+                .foregroundStyle(.green)
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Všechny cviky hotové! 💪")
+                    .font(.system(size: 15, weight: .bold))
+                    .foregroundStyle(.white)
+                Text("Klepni Hotovo pro zobrazení výsledků")
+                    .font(.system(size: 12))
+                    .foregroundStyle(.white.opacity(0.55))
+            }
+            Spacer()
+            Button { finishWorkout() } label: {
+                Text("Hotovo")
+                    .font(.system(size: 13, weight: .bold))
+                    .foregroundStyle(.black)
+                    .padding(.horizontal, 14).padding(.vertical, 8)
+                    .background(Capsule().fill(Color.green))
+            }
+        }
+        .padding(.horizontal, 16).padding(.vertical, 12)
+        .background(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .fill(Color(red: 0.1, green: 0.25, blue: 0.15))
+                .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .stroke(Color.green.opacity(0.35), lineWidth: 1))
+        )
+        .shadow(color: .green.opacity(0.2), radius: 12, y: 4)
+    }
+
     // MARK: - Bottom Bar
 
     private var bottomBar: some View {
         HStack(spacing: 12) {
             // Jakub chat
-            Button { showThorChat = true } label: {
+            Button { showJakubChat = true } label: {
                 HStack(spacing: 6) {
                     Image(systemName: "bubble.left.and.bubble.right.fill")
                         .font(.system(size: 12))
@@ -102,12 +184,24 @@ struct WorkoutView: View {
                 .foregroundStyle(.white.opacity(0.7))
                 .padding(.horizontal, 14)
                 .padding(.vertical, 9)
-                .background(Capsule().fill(Color.white.opacity(0.1)))
+                .background(Capsule().fill(Color.white.opacity(0.09))
+                    .overlay(Capsule().stroke(Color.white.opacity(0.1), lineWidth: 1)))
             }
 
             Spacer()
 
-            // Audio coach
+            // Remaining sets indicator
+            if !vm.allExercisesDone, vm.exercises.indices.contains(vm.currentExerciseIndex) {
+                let ex = vm.exercises[vm.currentExerciseIndex]
+                let remaining = ex.sets.filter { !$0.isCompleted && !$0.isWarmup }.count
+                if remaining > 0 {
+                    Text("\(remaining) sérií")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(.white.opacity(0.4))
+                }
+            }
+
+            // Audio coach toggle
             Button { vm.toggleAudio() } label: {
                 Image(systemName: vm.audioEnabled ? "speaker.wave.2.fill" : "speaker.slash.fill")
                     .font(.system(size: 15))
@@ -116,19 +210,32 @@ struct WorkoutView: View {
                     .background(Circle().fill(Color.white.opacity(0.09)))
             }
 
-            // Finish workout
+            // Finish workout CTA
             Button { finishWorkout() } label: {
-                Text("Dokončit")
-                    .font(.system(size: 14, weight: .bold))
-                    .foregroundStyle(.black)
-                    .padding(.horizontal, 20)
-                    .padding(.vertical, 10)
-                    .background(Capsule().fill(Color(red: 0.25, green: 0.9, blue: 0.5)))
+                HStack(spacing: 6) {
+                    Image(systemName: "flag.checkered")
+                        .font(.system(size: 13, weight: .semibold))
+                    Text("Ukončit")
+                        .font(.system(size: 14, weight: .bold))
+                }
+                .foregroundStyle(.white)
+                .padding(.horizontal, 18)
+                .padding(.vertical, 10)
+                .background(
+                    Capsule().fill(
+                        vm.allExercisesDone
+                        ? Color(red: 0.1, green: 0.72, blue: 0.4)
+                        : Color.white.opacity(0.12)
+                    )
+                )
             }
         }
         .padding(.horizontal, 20)
         .padding(.vertical, 12)
-        .background(Color(white: 0.06))
+        .background(
+            Color(hue: 0.62, saturation: 0.18, brightness: 0.07)
+                .overlay(alignment: .top) { Divider().opacity(0.08) }
+        )
     }
 
     // MARK: - Empty State
@@ -151,60 +258,35 @@ struct WorkoutView: View {
     // MARK: - Finish
 
     private func finishWorkout() {
-        vm.finishWorkout(modelContext: modelContext)
+        // Dokončení tréninku + zápis do DB (předáme skutečnou váhu uživatele)
+        let (xpGains, prEvents) = vm.finishWorkout(
+            modelContext: modelContext,
+            bodyWeightKg: bodyWeightKg
+        )
 
-        let gamEngine = GamificationEngine()
-        gamEngine.loadRecords(from: modelContext)
-        let input = buildGamificationInput()
-        let gains = gamEngine.process(input: input, context: modelContext)
-        try? modelContext.save()
+        // Sestavíme coach message pro summary
+        summaryPREvents = prEvents
+        summaryXPGains = xpGains
+        summaryCoachMsg = buildCoachMessage(gains: summaryXPGains, prs: summaryPREvents)
 
-        summaryXPGains = gains
-        summaryPREvents = detectPRs()
-        summaryCoachMsg = buildCoachMessage(gains: gains, prs: summaryPREvents)
-        onFinish?(gains, summaryPREvents)
-
-        withAnimation { showSummary = true }
-    }
-
-    private func buildGamificationInput() -> SessionGamificationInput {
-        let exercises: [SessionGamificationInput.ExerciseResult] = vm.exercises.map { ex in
-            let sets = ex.sets.filter { $0.isCompleted }.map {
-                SessionGamificationInput.SetResult(
-                    weightKg: $0.weightKg ?? 0,
-                    reps: $0.reps ?? 0,
-                    isWarmup: $0.isWarmup
-                )
-            }
-            let sessionEx = vm.session.exercises.first { $0.exercise?.slug == ex.slug }
-            return SessionGamificationInput.ExerciseResult(
-                exerciseName: ex.name,
-                musclesTarget: sessionEx?.exercise?.musclesTarget ?? [],
-                musclesSecondary: sessionEx?.exercise?.musclesSecondary ?? [],
-                completedSets: sets
-            )
-        }
-        return SessionGamificationInput(exercises: exercises, personalRecords: [])
-    }
-
-    private func detectPRs() -> [PREvent] {
-        var prs: [PREvent] = []
-        for ex in vm.exercises {
-            let sessionEx = vm.session.exercises.first { $0.exercise?.slug == ex.slug }
-            guard let exercise = sessionEx?.exercise else { continue }
-            let max = ex.sets.filter { $0.isCompleted && !$0.isWarmup }.compactMap { $0.weightKg }.max() ?? 0
-            let prev = exercise.lastUsedWeight ?? 0
-            if max > prev && prev > 0 {
-                prs.append(PREvent(
-                    exerciseName: ex.name,
-                    muscleGroup: exercise.musclesTarget.first ?? .pecs,
-                    oldValue: prev,
-                    newValue: max,
-                    type: .weight
-                ))
+        // Pošleme push notifikace za PR (mimo hlavní vlákno s malým delay)
+        if !prEvents.isEmpty {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                for pr in prEvents {
+                    NotificationService.shared.sendPersonalRecordNotification(
+                        exerciseName: pr.exerciseName,
+                        weight: pr.newValue
+                    )
+                }
             }
         }
-        return prs
+
+        onFinish?(summaryXPGains, summaryPREvents)
+
+        // Malý delay aby HK write stihlo dokončit a vrátit výsledek
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+            withAnimation { showSummary = true }
+        }
     }
 
     private func buildCoachMessage(gains: [XPGain], prs: [PREvent]) -> String {
@@ -219,7 +301,6 @@ struct WorkoutView: View {
         return "Hotovo! \(vol) kg objemu. Každý trénink tě posouvá blíž k cíli — jdeme dál!"
     }
 }
-
 // MARK: - Workout Chat View
 
 struct WorkoutChatView: View {

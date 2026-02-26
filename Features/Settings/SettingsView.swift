@@ -20,7 +20,11 @@ struct SettingsView: View {
                 Color.appBackground.ignoresSafeArea()
                 if let profile {
                     ProfileSettingsForm(profile: profile, onSave: {
-                        try? modelContext.save()
+                        do {
+                            try modelContext.save()
+                        } catch {
+                            AppLogger.error("SettingsView: Chyba při ukládání profilu: \(error)")
+                        }
                         withAnimation { showSaved = true }
                         DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
                             withAnimation { showSaved = false }
@@ -70,6 +74,9 @@ struct ProfileSettingsForm: View {
     @State private var draftDuration: Int = 60
     @State private var draftSport: String = ""
     @State private var draftEquipment: Set<Equipment> = [.barbell, .dumbbell, .cable, .machine]
+    @EnvironmentObject private var healthKitService: HealthKitService
+    @State private var healthKitRequesting = false
+    @State private var healthKitMessage: String? = nil
 
     var body: some View {
         ScrollView(showsIndicators: false) {
@@ -195,6 +202,81 @@ struct ProfileSettingsForm: View {
                     }
                 }
 
+                // MARK: — Apple Health
+                settingsSection(title: "Apple Health", icon: "heart.fill") {
+                    VStack(alignment: .leading, spacing: 12) {
+                        HStack(spacing: 12) {
+                            Image(systemName: healthKitService.isAuthorized ? "checkmark.circle.fill" : "xmark.circle.fill")
+                                .font(.system(size: 22))
+                                .foregroundStyle(healthKitService.isAuthorized ? .green : .orange)
+                            VStack(alignment: .leading, spacing: 3) {
+                                Text(healthKitService.isAuthorized ? "Přístup povolen" : "Přístup není povolen")
+                                    .font(.system(size: 14, weight: .semibold))
+                                    .foregroundStyle(.white)
+                                Text(healthKitService.isAuthorized
+                                     ? "Spánek, HRV a tep se načítají automaticky."
+                                     : "Bez přístupu nelze zobrazit zdravotní data.")
+                                    .font(.system(size: 12))
+                                    .foregroundStyle(.white.opacity(0.5))
+                                    .fixedSize(horizontal: false, vertical: true)
+                            }
+                        }
+                        Button {
+                            healthKitRequesting = true
+                            healthKitMessage = nil
+                            Task {
+                                do {
+                                    try await healthKitService.requestAuthorization()
+                                    healthKitMessage = "✅ Přístup k Apple Health byl udělen."
+                                } catch {
+                                    healthKitMessage = "⚠️ Oprávnění se nezdařilo: \(error.localizedDescription)\n\nOtevři Nastavení → Soukromí → Zdraví → Agile Trainer."
+                                }
+                                healthKitRequesting = false
+                            }
+                        } label: {
+                            HStack(spacing: 8) {
+                                if healthKitRequesting {
+                                    ProgressView().tint(.white).scaleEffect(0.8)
+                                } else {
+                                    Image(systemName: "heart.text.square.fill")
+                                }
+                                Text(healthKitService.isAuthorized ? "Znovu požádat o přístup" : "Povolit přístup k Apple Health")
+                                    .font(.system(size: 14, weight: .semibold))
+                            }
+                            .foregroundStyle(.white)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 12)
+                            .background(Color.red.opacity(0.75))
+                            .clipShape(RoundedRectangle(cornerRadius: 12))
+                        }
+                        .buttonStyle(.plain)
+                        .disabled(healthKitRequesting)
+
+                        if let msg = healthKitMessage {
+                            Text(msg)
+                                .font(.system(size: 12))
+                                .foregroundStyle(.white.opacity(0.7))
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+
+                        Button {
+                            if let url = URL(string: "App-Prefs:HEALTH") {
+                                UIApplication.shared.open(url)
+                            } else if let url = URL(string: UIApplication.openSettingsURLString) {
+                                UIApplication.shared.open(url)
+                            }
+                        } label: {
+                            HStack(spacing: 6) {
+                                Image(systemName: "gear")
+                                Text("Otevřít Nastavení → Zdraví")
+                                    .font(.system(size: 13, weight: .medium))
+                            }
+                            .foregroundStyle(.white.opacity(0.5))
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+
                 // MARK: — Uložit
                 Button(action: saveProfile) {
                     Text("Uložit nastavení")
@@ -211,6 +293,7 @@ struct ProfileSettingsForm: View {
             .padding(.top, 16)
         }
         .onAppear { loadFromProfile() }
+        .onChange(of: profile.updatedAt) { loadFromProfile() }
     }
 
     // MARK: — Row builders

@@ -61,6 +61,12 @@ struct SetRowView: View {
                 isCompleted: setData.isCompleted
             )
             .frame(maxWidth: .infinity)
+            .onChange(of: weightFocused) { _, focused in
+                // Auto-fill předchozí váhu při prvním klepnutí (pokud je pole prázdné)
+                if focused && setData.weightKg == nil, let prev = setData.previousWeightKg {
+                    setData.weightKg = prev
+                }
+            }
 
             CompactIntField(
                 value: Binding(
@@ -103,7 +109,10 @@ struct SetRowView: View {
         .animation(.easeInOut(duration: 0.2), value: isActive)
     }
 
-    private var canComplete: Bool { setData.weightKg != nil && setData.reps != nil }
+    // Bodyweight cviky nevyžadují váhu (previousWeightKg == nil → typicky bodyweight)
+    // Ale i u normálních cviků povolíme dokončení pokud uživatel nevyplnil váhu (jsou nastavené reps)
+    // MUSÍ odpovídat guardu v WorkoutViewModel.completeSet()!
+    private var canComplete: Bool { setData.reps != nil }
 }
 
 // MARK: - Number Fields
@@ -135,6 +144,16 @@ struct CompactNumberField: View {
                 .multilineTextAlignment(.center)
                 .onChange(of: text) { _, v in
                     value = Double(v.replacingOccurrences(of: ",", with: "."))
+                }
+                .onChange(of: value) { _, v in
+                    // Sync external changes back to text (e.g. previous weight loaded)
+                    if !isFocused, let v {
+                        let formatted = v == v.rounded() ? String(Int(v)) : String(format: "%.1f", v)
+                        if text != formatted { text = formatted }
+                    } else if !isFocused && v == nil && !text.isEmpty {
+                        // Value cleared externally
+                        text = ""
+                    }
                 }
         }
         .frame(height: 42)
@@ -168,6 +187,12 @@ struct CompactIntField: View {
                 .foregroundStyle(.white)
                 .multilineTextAlignment(.center)
                 .onChange(of: text) { _, v in value = Int(v) }
+                .onChange(of: value) { _, v in
+                    if !isFocused {
+                        let newText = v.map { "\($0)" } ?? ""
+                        if text != newText { text = newText }
+                    }
+                }
         }
         .frame(height: 42)
         .disabled(!isActive || isCompleted)

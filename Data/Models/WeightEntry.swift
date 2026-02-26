@@ -52,7 +52,8 @@ extension WeightEntry {
         weightKg: Double,
         reps: Int,
         rpe: Int?,
-        wasSuccessful: Bool
+        wasSuccessful: Bool,
+        setNumber: Int = 0
     ) {
         self.init(
             weightKg: weightKg,
@@ -61,7 +62,7 @@ extension WeightEntry {
             rir: nil,
             wasSuccessful: wasSuccessful,
             sessionId: sessionId,
-            setNumber: 0,
+            setNumber: setNumber,
             exercise: exercise
         )
     }

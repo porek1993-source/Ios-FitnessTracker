@@ -4,6 +4,7 @@
 
 import SwiftData
 import Foundation
+import SwiftUI  // Pro AppLogger (je v Core/Utilities)
 
 enum SharedModelContainer {
 
@@ -43,9 +44,20 @@ enum SharedModelContainer {
             allowsSave: true
         )
 
-        return try! ModelContainer(
-            for: schema,
-            configurations: config
-        )
+        do {
+            return try ModelContainer(for: schema, configurations: config)
+        } catch {
+            // Pokud se DB nepodaří otevřít (corruption), pokus se ji smazat a znovu vytvořit
+            AppLogger.error("SharedModelContainer: Nepodařilo se otevřít DB: \(error). Pokus o reset...")
+            try? FileManager.default.removeItem(at: storeURL)
+            do {
+                return try ModelContainer(for: schema, configurations: config)
+            } catch {
+                // Absolutní fallback - in-memory DB (ztráta dat, ale app nespadne)
+                AppLogger.error("SharedModelContainer: Reset selhal: \(error). Používám in-memory DB.")
+                let fallbackConfig = ModelConfiguration(schema: schema, isStoredInMemoryOnly: true)
+                return try! ModelContainer(for: schema, configurations: fallbackConfig)
+            }
+        }
     }()
 }

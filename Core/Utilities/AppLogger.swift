@@ -47,7 +47,7 @@ struct DebugOverlayView: View {
                 // Console UI
                 VStack(spacing: 0) {
                     HStack {
-                        Text("Thor Debug Console")
+                        Text("Debug Console")
                             .font(.system(size: 14, weight: .bold, design: .monospaced))
                         Spacer()
                         Button("Kopírovat") {
@@ -64,7 +64,7 @@ struct DebugOverlayView: View {
                     }
                     .padding(10)
                     .background(Color.black.opacity(0.9))
-                    .foregroundColor(.white)
+                    .foregroundStyle(.white)
                     
                     ScrollView {
                         VStack(alignment: .leading, spacing: 4) {
@@ -72,7 +72,7 @@ struct DebugOverlayView: View {
                                 HStack(alignment: .top, spacing: 5) {
                                     Text(entry.timestamp, style: .time)
                                         .font(.system(size: 10, design: .monospaced))
-                                        .foregroundColor(.gray)
+                                        .foregroundStyle(.gray)
                                     
                                     let color: Color = {
                                         switch entry.type {
@@ -85,7 +85,7 @@ struct DebugOverlayView: View {
                                     
                                     Text(entry.message)
                                         .font(.system(size: 11, design: .monospaced))
-                                        .foregroundColor(color)
+                                        .foregroundStyle(color)
                                         .fixedSize(horizontal: false, vertical: true)
                                 }
                                 Divider().background(Color.gray.opacity(0.3))

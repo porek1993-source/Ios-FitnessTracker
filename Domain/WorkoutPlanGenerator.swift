@@ -59,7 +59,11 @@ enum WorkoutPlanGenerator {
         }
 
         profile.workoutPlans.append(plan)
-        try? context.save()
+        do {
+            try context.save()
+        } catch {
+            AppLogger.error("WorkoutPlanGenerator: Chyba při ukládání plánu: \(error)")
+        }
         return plan
     }
 

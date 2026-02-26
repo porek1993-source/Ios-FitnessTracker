@@ -33,6 +33,9 @@ struct AgileFitnessTrainerApp: App {
                     }
                     // HealthKit: autorizace + okamžitý sync dat
                     Task {
+                        // Nejprve zkontrolujeme stav (i když jsme nepožádali znovu)
+                        await healthKitService.checkAuthorizationStatus()
+                        // Požádáme o přístup (pokud ještě nebylo rozhodnuto)
                         try? await healthKitService.requestAuthorization()
                         await HealthBackgroundManager.shared.performForegroundSync(healthKit: healthKitService)
                     }

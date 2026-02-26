@@ -36,17 +36,30 @@ struct WorkoutSummaryView: View {
     @State private var showXPBars = false
     @State private var showCTA = false
 
-    enum AnimationPhase { case idle, jakub, figure, xp, pr, cta }
+    enum AnimationPhase: Int, Comparable {
+        case idle = 0, jakub = 1, figure = 2, xp = 3, pr = 4, cta = 5
+        static func < (l: Self, r: Self) -> Bool { l.rawValue < r.rawValue }
+    }
 
     // Computed
     private var topGains: [XPGain] { Array(xpGains.prefix(6)) }
     private var levelUps: [XPGain] { xpGains.filter { $0.didLevelUp } }
+    // Computed - bezpečné výpočty (session.exercises je prázdné pro AI workout)
     private var totalVolume: Double {
-        session.exercises.reduce(0) { acc, ex in
+        // Primárně z xpGains (přesný objem z VM), fallback na session.exercises
+        let xpVolume = xpGains.reduce(0) { $0 + $1.volumeKg }
+        if xpVolume > 0 { return xpVolume }
+        return session.exercises.reduce(0) { acc, ex in
             acc + ex.completedSets.reduce(0) { $0 + $1.weightKg * Double($1.reps) }
         }
     }
-    private var totalSets: Int { session.exercises.reduce(0) { $0 + $1.completedSets.count } }
+    private var totalSets: Int {
+        // Spočítej ze session (přesné pro non-AI workout)
+        let sessionSets = session.exercises.reduce(0) { $0 + $1.completedSets.count }
+        if sessionSets > 0 { return sessionSets }
+        // Pro AI workout: z xpGains odvoď min. počet sérií (každý gain = min 3 série)
+        return xpGains.isEmpty ? 0 : max(xpGains.count * 3, xpGains.count)
+    }
 
     var body: some View {
         ZStack {
@@ -196,7 +209,7 @@ struct WorkoutSummaryView: View {
         for day in uniqueDays {
             if day == expectedDay {
                 streak += 1
-                expectedDay = calendar.date(byAdding: .day, value: -1, to: expectedDay)!
+                expectedDay = calendar.date(byAdding: .day, value: -1, to: expectedDay) ?? expectedDay
             } else if day < expectedDay {
                 // Mezera v sérii — konec
                 break
@@ -263,10 +276,6 @@ struct WorkoutSummaryView: View {
             }
         }
     }
-}
-
-extension WorkoutSummaryView.AnimationPhase: Comparable {
-    static func < (l: Self, r: Self) -> Bool { l.rawValue < r.rawValue }
 }
 
 extension WorkoutSummaryView.AnimationPhase: RawRepresentable {
@@ -655,12 +664,11 @@ private struct XPBarRow: View {
     private var prevProgress: CGFloat {
         let level = gain.previousLevel
         let next = MuscleLevel(rawValue: level.rawValue + 1) ?? level
-        let xpInLevel = max(0, (gain.gain.newLevel == gain.previousLevel
-            ? gain.newLevel.xpThreshold
-            : level.xpThreshold) - level.xpThreshold
-        )
         let needed = next.xpThreshold - level.xpThreshold
-        return needed > 0 ? CGFloat(xpInLevel / needed) : 0
+        guard needed > 0 else { return 1.0 }  // max level — bezpečná ochrana
+        // XP v rámci předchozí úrovně
+        let xpInLevel = max(0, gain.gain.xpEarned > 0 ? 0 : gain.newLevel.xpThreshold - level.xpThreshold)
+        return min(CGFloat(xpInLevel) / CGFloat(needed), 1.0)
     }
 
     private var currentProgress: CGFloat {

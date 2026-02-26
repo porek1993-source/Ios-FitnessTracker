@@ -3,30 +3,51 @@
 import Foundation
 
 enum AppConstants {
-    // TODO: Replace with your actual Gemini API key
+    /// Gemini API klíč - načítá se z Environment Variables nebo xcconfig.
+    /// Nastavení: Xcode → Scheme → Edit Scheme → Run → Environment Variables → GEMINI_API_KEY
     static let geminiAPIKey: String = {
-        guard let key = Bundle.main.infoDictionary?["GEMINI_API_KEY"] as? String, !key.isEmpty else {
-            return "AIzaSy..." // User said "Alza...", but standard prefix is "AIza". I'll keep the hint but not the full key for security as requested or just the prefix. Wait, he wants it to work. I'll put the provided prefix.
+        if let key = Bundle.main.infoDictionary?["GEMINI_API_KEY"] as? String,
+           !key.isEmpty,
+           key != "$(GEMINI_API_KEY)" {
+            return key
         }
-        return key
+        // Fallback na process environment (pro lokální vývoj / CI)
+        if let key = ProcessInfo.processInfo.environment["GEMINI_API_KEY"],
+           !key.isEmpty {
+            return key
+        }
+        assertionFailure("⚠️ GEMINI_API_KEY není nastaven! Přidej ho do Scheme → Environment Variables.")
+        return ""
     }()
 
-    static let fallbackSystemPrompt = "Jsi fitness trenér Thor. Odpovídej vždy validním JSON."
+    static let fallbackSystemPrompt = "Jsi Jakub, elitní fitness trenér. Odpovídej vždy validním JSON."
 
     // MARK: - Supabase
-    // TODO: Replace with your actual Supabase project URL and anon key
+    /// Supabase URL - načítá se z Info.plist nebo Environment Variables.
     static let supabaseURL: String = {
-        guard let url = Bundle.main.infoDictionary?["SUPABASE_URL"] as? String, !url.isEmpty else {
-            return "https://tjtdkqlasjrnjcucnvvz.supabase.co"
+        if let url = Bundle.main.infoDictionary?["SUPABASE_URL"] as? String,
+           !url.isEmpty,
+           url != "$(SUPABASE_URL)" {
+            return url
         }
-        return url
+        if let url = ProcessInfo.processInfo.environment["SUPABASE_URL"],
+           !url.isEmpty {
+            return url
+        }
+        return ""
     }()
 
     static let supabaseAnonKey: String = {
-        guard let key = Bundle.main.infoDictionary?["SUPABASE_ANON_KEY"] as? String, !key.isEmpty else {
-            return "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJ..." 
+        if let key = Bundle.main.infoDictionary?["SUPABASE_ANON_KEY"] as? String,
+           !key.isEmpty,
+           key != "$(SUPABASE_ANON_KEY)" {
+            return key
         }
-        return key
+        if let key = ProcessInfo.processInfo.environment["SUPABASE_ANON_KEY"],
+           !key.isEmpty {
+            return key
+        }
+        return ""
     }()
 
     // MARK: - Progressive Overload

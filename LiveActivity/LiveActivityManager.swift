@@ -57,7 +57,7 @@ final class LiveActivityManager: ObservableObject {
                 pushType: nil
             )
         } catch {
-            print("LiveActivity start error: \(error.localizedDescription)")
+            AppLogger.error("LiveActivityManager: start error — \(error.localizedDescription)")
         }
     }
 

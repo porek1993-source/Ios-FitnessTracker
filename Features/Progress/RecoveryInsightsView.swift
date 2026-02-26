@@ -100,7 +100,7 @@ struct RecoveryInsightsView: View {
                 let result = try await service.generateWeeklyReport(for: profile)
                 self.weeklyReport = result
             } catch {
-                print("Chyba generování reportu: \(error)")
+                AppLogger.error("RecoveryInsightsView: Chyba generování reportu: \(error)")
                 // Místo alertu jen tisk do konzole pro zjednodušení v prototypu
             }
             isGeneratingReport = false
@@ -114,31 +114,42 @@ struct DailyInsightCard: View {
     let snapshot: HealthMetricsSnapshot?
     @Environment(\.modelContext) private var modelContext
     @State private var insightText: String = "Analyzuji data..."
+    @State private var isLoading = false
+    @AppStorage("dailyInsightText") private var cachedInsight: String = ""
+    @AppStorage("dailyInsightDate") private var cachedDate: String = ""
+
+    private var todayKey: String {
+        let f = DateFormatter()
+        f.dateFormat = "yyyy-MM-dd"
+        return f.string(from: .now)
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
                 Image(systemName: "sparkles")
-                    .foregroundColor(.yellow)
+                    .foregroundStyle(.yellow)
                 Text("AI Daily Insight")
                     .font(.headline)
-                    .foregroundColor(.white)
+                    .foregroundStyle(.white)
                 Spacer()
-                if let score = snapshot?.readinessScore {
+                if isLoading {
+                    ProgressView().tint(.yellow).scaleEffect(0.7)
+                } else if let score = snapshot?.readinessScore {
                     Text("\(Int(score))/100")
                         .font(.subheadline.bold())
-                        .foregroundColor(scoreColor(score))
+                        .foregroundStyle(scoreColor(score))
                         .padding(.horizontal, 8)
                         .padding(.vertical, 4)
                         .background(scoreColor(score).opacity(0.2))
-                        .cornerRadius(8)
+                        .clipShape(RoundedRectangle(cornerRadius: 8))
                 }
             }
             
             Text(insightText)
                 .font(.subheadline)
-                .foregroundColor(.white.opacity(0.8))
-                .lineLimit(4)
+                .foregroundStyle(.white.opacity(0.8))
+                .lineLimit(5)
                 .fixedSize(horizontal: false, vertical: true)
         }
         .padding()
@@ -151,21 +162,37 @@ struct DailyInsightCard: View {
                 .stroke(Color.white.opacity(0.1), lineWidth: 1)
         )
         .task {
+            // Použij cache pokud je dnešní
+            if cachedDate == todayKey && !cachedInsight.isEmpty {
+                insightText = cachedInsight
+                return
+            }
             await fetchInsight()
         }
     }
     
     private func fetchInsight() async {
+        guard !isLoading else { return }
+        isLoading = true
         guard let profile = try? modelContext.fetch(FetchDescriptor<UserProfile>()).first else {
             insightText = "Nenalezen profil."
+            isLoading = false
             return
         }
         let service = WeeklyReportService(modelContext: modelContext)
         do {
             let text = try await service.generateDailyInsight(for: profile, snapshot: snapshot)
-            await MainActor.run { insightText = text }
+            await MainActor.run {
+                insightText = text
+                cachedInsight = text
+                cachedDate = todayKey
+                isLoading = false
+            }
         } catch {
-            await MainActor.run { insightText = "Nepodařilo se vygenerovat insight. Dneska to ale dáme!" }
+            await MainActor.run {
+                insightText = "Nepodařilo se vygenerovat insight. Dneska to ale dáme!"
+                isLoading = false
+            }
         }
     }
     
@@ -185,11 +212,11 @@ struct SleepChartCard: View {
         VStack(alignment: .leading, spacing: 16) {
             Text("Spánek (Posledních 7 dní)")
                 .font(.headline)
-                .foregroundColor(.white)
+                .foregroundStyle(.white)
             
             if data.isEmpty {
                 Text("Žádná data")
-                    .foregroundColor(.gray)
+                    .foregroundStyle(.gray)
                     .frame(height: 150)
             } else {
                 Chart(data) { item in
@@ -229,11 +256,11 @@ struct HRVChartCard: View {
         VStack(alignment: .leading, spacing: 16) {
             Text("Variabilita srdeční frekvence (HRV)")
                 .font(.headline)
-                .foregroundColor(.white)
+                .foregroundStyle(.white)
             
             if data.isEmpty {
                 Text("Žádná data")
-                    .foregroundColor(.gray)
+                    .foregroundStyle(.gray)
                     .frame(height: 150)
             } else {
                 Chart(data) { item in
@@ -287,11 +314,11 @@ struct RestingHRChartCard: View {
         VStack(alignment: .leading, spacing: 16) {
             Text("Klidový tep (Posledních 7 dní)")
                 .font(.headline)
-                .foregroundColor(.white)
+                .foregroundStyle(.white)
             
             if data.isEmpty || data.allSatisfy({ $0.restingHeartRate == nil }) {
                 Text("Žádná data")
-                    .foregroundColor(.gray)
+                    .foregroundStyle(.gray)
                     .frame(height: 150)
             } else {
                 Chart(data) { item in
@@ -350,7 +377,7 @@ struct WeeklyReportCard: View {
             HStack {
                 Text("Jakubovo týdenní zhodnocení")
                     .font(.headline)
-                    .foregroundColor(.white)
+                    .foregroundStyle(.white)
                 Spacer()
                 if isLoading {
                     ProgressView()
@@ -359,7 +386,7 @@ struct WeeklyReportCard: View {
                     Button(action: onGenerate) {
                         Text("Generovat")
                             .font(.subheadline.bold())
-                            .foregroundColor(.white)
+                            .foregroundStyle(.white)
                             .padding(.horizontal, 12)
                             .padding(.vertical, 6)
                             .background(Color.blue)
@@ -372,7 +399,7 @@ struct WeeklyReportCard: View {
                 VStack(alignment: .leading, spacing: 12) {
                     Text(r.summary)
                         .font(.subheadline)
-                        .foregroundColor(.white.opacity(0.9))
+                        .foregroundStyle(.white.opacity(0.9))
                     
                     ReportSection(title: "Co se povedlo", text: r.praise, icon: "hand.thumbsup.fill", color: .green)
                     ReportSection(title: "Kde přidat", text: r.mistakes, icon: "exclamationmark.triangle.fill", color: .orange)
@@ -382,7 +409,7 @@ struct WeeklyReportCard: View {
             } else if !isLoading {
                 Text("Získej detailní AI rozbor svých tréninků, spánku a progresu od trenéra.")
                     .font(.subheadline)
-                    .foregroundColor(.gray)
+                    .foregroundStyle(.gray)
             }
         }
         .padding()
@@ -405,15 +432,15 @@ struct ReportSection: View {
         VStack(alignment: .leading, spacing: 4) {
             HStack(spacing: 6) {
                 Image(systemName: icon)
-                    .foregroundColor(color)
+                    .foregroundStyle(color)
                     .font(.caption)
                 Text(title.uppercased())
                     .font(.caption.bold())
-                    .foregroundColor(color)
+                    .foregroundStyle(color)
             }
             Text(text)
                 .font(.subheadline)
-                .foregroundColor(.white.opacity(0.8))
+                .foregroundStyle(.white.opacity(0.8))
                 .fixedSize(horizontal: false, vertical: true)
         }
         .padding(.top, 4)

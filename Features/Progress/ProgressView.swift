@@ -17,15 +17,25 @@ struct AppProgressView: View {
         sessions.filter { $0.status == .completed }
     }
 
+    @Query(sort: \WeightEntry.loggedAt, order: .reverse) private var weightEntries: [WeightEntry]
+
     private var volumeByWeek: [(label: String, volume: Double)] {
         let calendar = Calendar.current
         var grouped: [Int: Double] = [:]
-        for session in completedSessions {
-            let week = calendar.component(.weekOfYear, from: session.startedAt)
-            let vol = session.exercises
-                .flatMap { $0.completedSets }
-                .reduce(0.0) { $0 + $1.weightKg * Double($1.reps) }
-            grouped[week, default: 0] += vol
+        // Použij WeightEntry (přesná data ze všech typů tréninků)
+        for entry in weightEntries {
+            let week = calendar.component(.weekOfYear, from: entry.loggedAt)
+            grouped[week, default: 0] += entry.weightKg * Double(entry.reps)
+        }
+        // Fallback na session.exercises pro zpětnou kompatibilitu
+        if grouped.isEmpty {
+            for session in completedSessions {
+                let week = calendar.component(.weekOfYear, from: session.startedAt)
+                let vol = session.exercises
+                    .flatMap { $0.completedSets }
+                    .reduce(0.0) { $0 + $1.weightKg * Double($1.reps) }
+                grouped[week, default: 0] += vol
+            }
         }
         return grouped.sorted { $0.key < $1.key }.suffix(6).map { ("T\($0.key)", $0.value) }
     }
@@ -39,7 +49,11 @@ struct AppProgressView: View {
     }
 
     private var totalVolume: Double {
-        completedSessions
+        // WeightEntry je přesný zdroj - zahrnuje AI workout data
+        let fromEntries = weightEntries.reduce(0.0) { $0 + $1.weightKg * Double($1.reps) }
+        if fromEntries > 0 { return fromEntries }
+        // Fallback
+        return completedSessions
             .flatMap { $0.exercises }
             .flatMap { $0.completedSets }
             .reduce(0) { $0 + $1.weightKg * Double($1.reps) }
@@ -213,7 +227,12 @@ struct AppProgressView: View {
     }
 
     private func sessionCard(_ session: WorkoutSession) -> some View {
-        HStack(spacing: 12) {
+        // Výpočet objemu ze session WeightEntries (přesné pro AI workout)
+        let sessionVolume = weightEntries
+            .filter { $0.sessionId == session.id }
+            .reduce(0.0) { $0 + $1.weightKg * Double($1.reps) }
+
+        return HStack(spacing: 12) {
             RoundedRectangle(cornerRadius: 4).fill(Color.blue.opacity(0.8)).frame(width: 4)
             VStack(alignment: .leading, spacing: 4) {
                 Text(session.plannedDay?.label ?? "Trénink")
@@ -221,8 +240,15 @@ struct AppProgressView: View {
                 HStack(spacing: 12) {
                     Label("\(session.durationMinutes) min", systemImage: "clock")
                         .font(.system(size: 12)).foregroundStyle(.white.opacity(0.6))
-                    Label("\(session.exercises.count) cviků", systemImage: "dumbbell.fill")
-                        .font(.system(size: 12)).foregroundStyle(.white.opacity(0.6))
+                    if sessionVolume > 0 {
+                        Label(formatKg(sessionVolume), systemImage: "scalemass")
+                            .font(.system(size: 12)).foregroundStyle(.white.opacity(0.6))
+                    }
+                    let exCount = session.exercises.count > 0 ? session.exercises.count : (session.plannedDay?.plannedExercises.count ?? 0)
+                    if exCount > 0 && sessionVolume == 0 {
+                        Label("\(exCount) cviků", systemImage: "dumbbell.fill")
+                            .font(.system(size: 12)).foregroundStyle(.white.opacity(0.6))
+                    }
                 }
             }
             Spacer()
