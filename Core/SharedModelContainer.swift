@@ -2,7 +2,7 @@
 // Sdílený ModelContainer pro hlavní aplikaci i Widget Extension.
 // Oba cíle musí sdílet stejnou App Group, aby měly přístup ke stejným datům.
 
-import SwiftData
+@preconcurrency import SwiftData
 import Foundation
 import SwiftUI  // Pro AppLogger (je v Core/Utilities)
 
@@ -13,7 +13,7 @@ enum SharedModelContainer {
     static let appGroupID = "group.com.agilefitness.shared"
 
     /// Společné schéma pro všechny SwiftData modely.
-    static let schema = Schema([
+    nonisolated(unsafe) static let schema = Schema([
         UserProfile.self,
         WorkoutPlan.self,
         PlannedWorkoutDay.self,

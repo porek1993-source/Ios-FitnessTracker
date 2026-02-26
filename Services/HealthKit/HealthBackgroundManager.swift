@@ -6,7 +6,7 @@ import HealthKit
 import SwiftData
 
 final class HealthBackgroundManager {
-    static let shared = HealthBackgroundManager()
+    nonisolated(unsafe) static let shared = HealthBackgroundManager()
     
     // Identifikátor úlohy musí odpovídat Info.plist (Permitted background task scheduler identifiers)
     static let healthSyncTaskIdentifier = "com.agilefitness.healthSync"

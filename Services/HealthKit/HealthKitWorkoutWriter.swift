@@ -18,14 +18,14 @@ import Foundation
 
 // MARK: - Result
 
-struct WorkoutWriteResult {
+struct HealthKitWriteResult {
     let success: Bool
     let hkWorkoutID: UUID?
     let caloriesWritten: Double?
     let error: Error?
 
     static func failure(_ error: Error) -> Self {
-        WorkoutWriteResult(success: false, hkWorkoutID: nil, caloriesWritten: nil, error: error)
+        HealthKitWriteResult(success: false, hkWorkoutID: nil, caloriesWritten: nil, error: error)
     }
 }
 
@@ -42,9 +42,9 @@ final class HealthKitWorkoutWriter {
 
     /// Hlavní metoda — zavolej po dokončení tréninku.
     /// `bodyWeightKg` — reálná váha uživatele z `UserProfile.weightKg` pro přesný odhad kalorií.
-    func write(session: WorkoutSession, bodyWeightKg: Double = 75.0) async -> WorkoutWriteResult {
+    func write(session: WorkoutSession, bodyWeightKg: Double = 75.0) async -> HealthKitWriteResult {
         guard HKHealthStore.isHealthDataAvailable() else {
-            return WorkoutWriteResult.failure(WriterError.healthKitUnavailable)
+            return HealthKitWriteResult.failure(WriterError.healthKitUnavailable)
         }
 
         // Kontrola oprávnění k zápisu
@@ -96,14 +96,14 @@ final class HealthKitWorkoutWriter {
             
             let workout = try await builder.finishWorkout()
             
-            return WorkoutWriteResult(
+            return HealthKitWriteResult(
                 success: true,
                 hkWorkoutID: workout?.uuid,
                 caloriesWritten: estimatedCalories,
                 error: nil
             )
         } catch {
-            return WorkoutWriteResult.failure(error)
+            return HealthKitWriteResult.failure(error)
         }
     }
 

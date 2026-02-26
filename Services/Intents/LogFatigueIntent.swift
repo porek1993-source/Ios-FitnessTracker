@@ -6,11 +6,13 @@ import SwiftData
 
 struct LogFatigueIntent: AppIntent {
 
-    static var title: LocalizedStringResource = "Zaznamenat únavu svalu"
-    static var description = IntentDescription(
-        "Zapíše únavu nebo bolest svalové skupiny do kontextu pro AI trenéra.",
-        categoryName: "Trénink"
-    )
+    static var title: LocalizedStringResource { "Zaznamenat únavu svalu" }
+    static var description: IntentDescription {
+        IntentDescription(
+            "Zapíše únavu nebo bolest svalové skupiny do kontextu pro AI trenéra.",
+            categoryName: "Trénink"
+        )
+    }
 
     /// Svalová skupina, kterou chce uživatel zaznamenat.
     @Parameter(title: "Svalová skupina", description: "Například: ramena, záda, nohy, kolena")

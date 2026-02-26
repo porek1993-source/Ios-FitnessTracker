@@ -310,7 +310,7 @@ final class AITrainerService: ObservableObject {
 
 enum WorkoutCache {
 
-    private static let defaults = UserDefaults.standard
+    nonisolated(unsafe) private static let defaults = UserDefaults.standard
     private static let keyPrefix = "workout_cache_"
     private static let ttlSeconds: TimeInterval = 24 * 60 * 60  // 24 hodin
 

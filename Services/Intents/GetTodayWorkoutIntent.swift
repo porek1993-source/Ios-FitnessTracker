@@ -6,11 +6,13 @@ import SwiftData
 
 struct GetTodayWorkoutIntent: AppIntent {
 
-    static var title: LocalizedStringResource = "Co mám dnes cvičit?"
-    static var description = IntentDescription(
-        "Zjistí, jaký trénink máš dnes naplánovaný.",
-        categoryName: "Trénink"
-    )
+    static var title: LocalizedStringResource { "Co mám dnes cvičit?" }
+    static var description: IntentDescription {
+        IntentDescription(
+            "Zjistí, jaký trénink máš dnes naplánovaný.",
+            categoryName: "Trénink"
+        )
+    }
 
     /// Siri přečte toto shrnutí nahlas.
     @MainActor

@@ -45,7 +45,6 @@ final class ActiveSessionViewModel: ObservableObject {
     // AI Coach state
     @Published var isLoadingCoachTip:     Bool = false
     @Published var coachMessage:          String?
-    @Published var sessionSummary:        WorkoutSummaryData?
     @Published var isFinishing:           Bool = false
     @Published var hkWriteResult:         WorkoutWriteResult?
 
@@ -55,7 +54,6 @@ final class ActiveSessionViewModel: ObservableObject {
     // Bez zrušení by Task pokračoval i po dealokaci ViewModelu → memory leak.
 
     private var coachTipTask:   Task<Void, Never>?
-    private var summaryTask:    Task<Void, Never>?
     private var finishTask:     Task<Void, Never>?
 
     // MARK: - Timers (musí být invalidovány v deinit)
@@ -99,7 +97,6 @@ final class ActiveSessionViewModel: ObservableObject {
 
         // Zruš běžící Tasks — jinak poběží i po dealokaci
         coachTipTask?.cancel()
-        summaryTask?.cancel()
         finishTask?.cancel()
 
         AppLogger.info("[ActiveSessionViewModel] deinit — vše vyčištěno.")
@@ -350,12 +347,14 @@ final class ActiveSessionViewModel: ObservableObject {
     // MARK: - Private Helpers
 
     private func writeToHealthKit(session: WorkoutSession) async -> WorkoutWriteResult {
-        do {
-            try await HealthKitWorkoutWriter.write(session: session)
+        let writer = HealthKitWorkoutWriter()
+        let result = await writer.write(session: session)
+        if result.success {
             return .success
-        } catch {
-            AppLogger.error("[ActiveSession] HealthKit zápis selhal: \(error)")
-            return .failed(error.localizedDescription)
+        } else {
+            let errorMsg = result.error?.localizedDescription ?? "Neznámá chyba zápisu"
+            AppLogger.error("[ActiveSession] HealthKit zápis selhal: \(errorMsg)")
+            return .failed(errorMsg)
         }
     }
 
@@ -403,12 +402,4 @@ enum WorkoutWriteResult: Equatable {
     case notAttempted
 }
 
-// MARK: ═══════════════════════════════════════════════════════════════════════
-// MARK: Safe subscript helper
-// MARK: ═══════════════════════════════════════════════════════════════════════
 
-extension Array {
-    subscript(safe index: Index) -> Element? {
-        indices.contains(index) ? self[index] : nil
-    }
-}

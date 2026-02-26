@@ -3,7 +3,7 @@ import Foundation
 import UIKit
 
 final class HapticManager {
-    static let shared = HapticManager()
+    nonisolated(unsafe) static let shared = HapticManager()
     
     private init() {}
     
