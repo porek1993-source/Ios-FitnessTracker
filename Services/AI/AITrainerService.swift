@@ -131,7 +131,7 @@ final class AITrainerService: ObservableObject {
             }
 
             // Validace počtu cviků
-            ExerciseCountValidator.validate(response)
+            AIExerciseCountValidator.validate(response)
 
             // ── KROK 3: Ulož do cache (fire-and-forget) ─────────────────
             Task.detached(priority: .utility) { [weak self] in
@@ -388,10 +388,10 @@ enum WorkoutCache {
 }
 
 // MARK: ═══════════════════════════════════════════════════════════════════════
-// MARK: ExerciseCountValidator
+// MARK: AIExerciseCountValidator
 // MARK: ═══════════════════════════════════════════════════════════════════════
 
-enum ExerciseCountValidator {
+enum AIExerciseCountValidator {
     static let minimum = 6
     static let maximum = 8
 
