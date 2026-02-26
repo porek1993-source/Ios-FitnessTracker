@@ -38,10 +38,11 @@ final class HealthBackgroundManager {
             let summary = try await healthKit.fetchDailySummary(for: today)
             let externalActivities = try await healthKit.fetchExternalActivities(since: today.startOfDay)
             
-            await saveToSwiftData(summary: summary, externalActivities: externalActivities, date: today)
-            AppLogger.info("[HealthSync] Foreground sync úspěšný.")
-        } catch {
-            AppLogger.error("[HealthSync] Foreground sync selhal: \(error.localizedDescription)")
+                        saveToSwiftData(summary: summary, externalActivities: externalActivities, date: today)
+                AppLogger.info("[HealthSync] Foreground sync úspěšný.")
+            } catch {
+                AppLogger.error("[HealthSync] Foreground sync selhal: \(error.localizedDescription)")
+            }
         }
     }
     
@@ -96,7 +97,7 @@ final class HealthBackgroundManager {
                 let externalActivities = try await healthKitService.fetchExternalActivities(since: today.startOfDay)
                 
                 // 3. Uložíme do SwiftData
-                await saveToSwiftData(summary: summary, externalActivities: externalActivities, date: today)
+                saveToSwiftData(summary: summary, externalActivities: externalActivities, date: today)
                 
                 AppLogger.info("[HealthSync] Sync dokončen úspěšně.")
                 task.setTaskCompleted(success: true)

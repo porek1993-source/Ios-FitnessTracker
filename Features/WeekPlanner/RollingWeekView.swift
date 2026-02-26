@@ -151,10 +151,10 @@ final class RollingWeekViewModel: ObservableObject {
         let context = SharedModelContainer.container.mainContext
         let statusCompleted = SessionStatus.completed
         let descriptor = FetchDescriptor<WorkoutSession>(
-            predicate: #Predicate<WorkoutSession> { $0.status == statusCompleted },
-            sortBy: [SortDescriptor(\.startedAt, order: .reverse)]
+            predicate: #Predicate<WorkoutSession> { $0.status == statusCompleted }
         )
-        let recentSessions: [WorkoutSession] = (try? context.fetch(descriptor)) ?? []
+        let allSessions: [WorkoutSession] = (try? context.fetch(descriptor)) ?? []
+        let recentSessions = allSessions.sorted(by: { $0.startedAt > $1.startedAt })
         let historyLabels = recentSessions.prefix(5).map { session -> String in
             if let label = session.plannedDay?.label { return label }
             if let firstEx = session.exercises.first { return firstEx.exerciseName }

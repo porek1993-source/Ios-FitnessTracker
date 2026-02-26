@@ -34,7 +34,7 @@ actor GeminiAPIClient {
                     
                     // Exponential backoff: 2^attempts + jitter
                     let delay = pow(2.0, Double(attempts)) + Double.random(in: 0...1)
-                    AppLogger.info("GeminiAPIClient: Rate limit (429). Retry \(attempts)/\(maxAttempts) za \(String(format: "%.1f", delay))s...")
+                    await AppLogger.info("GeminiAPIClient: Rate limit (429). Retry \(attempts)/\(maxAttempts) za \(String(format: "%.1f", delay))s...")
                     try await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
                     continue
                 }

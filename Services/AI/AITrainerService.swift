@@ -132,8 +132,8 @@ final class AITrainerService: ObservableObject {
             AIExerciseCountValidator.validate(response)
 
             // ── KROK 3: Ulož do cache (fire-and-forget) ─────────────────
-            let container = await SharedModelContainer.container
-            Task.detached(priority: .utility) { 
+            let container = SharedModelContainer.container
+            Task.detached(priority: .utility) {
                 // Vytvoříme bezpečný background context pro asynchronní uložení
                 let backgroundContext = ModelContext(container)
                 
