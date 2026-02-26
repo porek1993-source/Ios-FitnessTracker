@@ -95,6 +95,7 @@ targets:
       - path: Widget
       # Sdílené soubory potřebné pro widget
       - path: Core/SharedModelContainer.swift
+      - path: Core/Utilities/AppLogger.swift
       - path: Core/Extensions/Color+App.swift
       - path: Core/Extensions/Extensions.swift
       - path: Core/Constants/AppConstants.swift
