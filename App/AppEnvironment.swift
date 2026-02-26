@@ -68,8 +68,7 @@ final class AppEnvironment: ObservableObject {
         // 3. Týdenní report notifikace
         WeeklyReportService.scheduleWeeklyNotificationIfNeeded()
 
-        // 4. Seed databáze cviků (jen při prvním spuštění)
-        ExerciseDatabaseLoader.seedIfNeeded(context: modelContext)
+        // 4. (Cviky se nyní načítají přímo z Supabase muscle_wiki_data — seed není potřeba)
 
         // 5. Notifikační oprávnění + reminder (non-blocking)
         Task.detached(priority: .utility) {

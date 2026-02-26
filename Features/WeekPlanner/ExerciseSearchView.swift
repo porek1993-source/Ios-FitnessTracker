@@ -1,5 +1,5 @@
 // ExerciseSearchView.swift
-// Fulltextové vyhledávání cviků ze Supabase pro ad-hoc trénink. Vše česky.
+// Fulltextové vyhledávání cviků z MuscleWiki pro ad-hoc trénink. Vše česky.
 
 import SwiftUI
 
@@ -10,45 +10,35 @@ import SwiftUI
 @MainActor
 final class ExerciseSearchViewModel: ObservableObject {
     @Published var query = ""
-    @Published var results: [ExerciseDTO] = []
+    @Published var allExercises: [MuscleWikiExercise] = []
     @Published var isLoading = false
-    @Published var selectedExercises: [ExerciseDTO] = []
+    @Published var selectedExercises: [MuscleWikiExercise] = []
 
     private let repository = SupabaseExerciseRepository()
     private var searchTask: Task<Void, Never>?
 
-    /// Debounced vyhledávání — spustí se 300ms po posledním úhozu klávesy.
-    func search() {
-        searchTask?.cancel()
-        guard !query.trimmingCharacters(in: .whitespaces).isEmpty else {
-            results = []
-            return
-        }
-
-        searchTask = Task {
-            isLoading = true
-            defer { isLoading = false }
-
-            // Krátká pauza (debounce)
-            try? await Task.sleep(nanoseconds: 300_000_000)
-            guard !Task.isCancelled else { return }
-
-            do {
-                let all = try await repository.fetchAll()
-                let q = query.lowercased()
-                results = all.filter {
-                    $0.safeNameCz.localizedCaseInsensitiveContains(q) ||
-                    ($0.nameEn?.localizedCaseInsensitiveContains(q) ?? false) ||
-                    ($0.category?.localizedCaseInsensitiveContains(q) ?? false)
-                }
-            } catch {
-                results = []
-            }
+    var results: [MuscleWikiExercise] {
+        guard !query.trimmingCharacters(in: .whitespaces).isEmpty else { return [] }
+        let q = query.lowercased()
+        return allExercises.filter {
+            $0.name.localizedCaseInsensitiveContains(q) ||
+            $0.muscleGroup.localizedCaseInsensitiveContains(q)
         }
     }
 
-    func toggleSelection(_ exercise: ExerciseDTO) {
-        if let idx = selectedExercises.firstIndex(where: { $0.safeSlug == exercise.safeSlug }) {
+    func loadIfNeeded() async {
+        guard allExercises.isEmpty else { return }
+        isLoading = true
+        defer { isLoading = false }
+        do {
+            allExercises = try await repository.fetchMuscleWikiAll()
+        } catch {
+            allExercises = []
+        }
+    }
+
+    func toggleSelection(_ exercise: MuscleWikiExercise) {
+        if let idx = selectedExercises.firstIndex(where: { $0.name == exercise.name }) {
             selectedExercises.remove(at: idx)
         } else {
             selectedExercises.append(exercise)
@@ -56,8 +46,8 @@ final class ExerciseSearchViewModel: ObservableObject {
         }
     }
 
-    func isSelected(_ exercise: ExerciseDTO) -> Bool {
-        selectedExercises.contains(where: { $0.safeSlug == exercise.safeSlug })
+    func isSelected(_ exercise: MuscleWikiExercise) -> Bool {
+        selectedExercises.contains(where: { $0.name == exercise.name })
     }
 }
 
@@ -66,7 +56,7 @@ final class ExerciseSearchViewModel: ObservableObject {
 // MARK: ═══════════════════════════════════════════════════════════════════════
 
 struct ExerciseSearchView: View {
-    let onStartWorkout: ([ExerciseDTO]) -> Void
+    let onStartWorkout: ([MuscleWikiExercise]) -> Void
 
     @StateObject private var vm = ExerciseSearchViewModel()
     @Environment(\.dismiss) private var dismiss
@@ -96,6 +86,7 @@ struct ExerciseSearchView: View {
                 }
             }
             .preferredColorScheme(.dark)
+            .task { await vm.loadIfNeeded() }
         }
     }
 
@@ -106,11 +97,10 @@ struct ExerciseSearchView: View {
             Image(systemName: "magnifyingglass")
                 .font(.system(size: 15))
                 .foregroundStyle(.white.opacity(0.35))
-            TextField("Hledat cvik česky nebo anglicky…", text: $vm.query)
+            TextField("Hledat cvik…", text: $vm.query)
                 .font(.system(size: 15))
                 .foregroundStyle(.white)
                 .tint(.appPrimaryAccent)
-                .onChange(of: vm.query) { _, _ in vm.search() }
             if !vm.query.isEmpty {
                 Button { vm.query = "" } label: {
                     Image(systemName: "xmark.circle.fill")
@@ -131,7 +121,7 @@ struct ExerciseSearchView: View {
                 VStack {
                     Spacer()
                     ProgressView().tint(.white.opacity(0.5))
-                    Text("Hledám…")
+                    Text("Načítám cviky…")
                         .font(.system(size: 13))
                         .foregroundStyle(.white.opacity(0.3))
                         .padding(.top, 8)
@@ -217,7 +207,7 @@ struct ExerciseSearchView: View {
 // MARK: - Search Row
 
 private struct ExerciseSearchRow: View {
-    let exercise: ExerciseDTO
+    let exercise: MuscleWikiExercise
     let isSelected: Bool
     let onTap: () -> Void
 
@@ -237,34 +227,21 @@ private struct ExerciseSearchRow: View {
                 }
 
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(exercise.safeNameCz)
+                    Text(exercise.name)
                         .font(.system(size: 15, weight: .bold))
                         .foregroundStyle(.white)
                         .lineLimit(1)
 
-                    HStack(spacing: 8) {
-                        if let cat = exercise.category {
-                            Text(cat)
-                                .font(.system(size: 11))
-                                .foregroundStyle(.white.opacity(0.4))
-                        }
-                        if let equip = exercise.equipment {
-                            Text("·").foregroundStyle(.white.opacity(0.15))
-                            Text(equip)
-                                .font(.system(size: 11))
-                                .foregroundStyle(.white.opacity(0.4))
-                        }
-                    }
+                    Text(exercise.localizedMuscleGroup)
+                        .font(.system(size: 11))
+                        .foregroundStyle(.white.opacity(0.4))
                 }
 
                 Spacer()
 
-                if let muscles = exercise.primaryMuscles, !muscles.isEmpty {
-                    Text(muscles.prefix(2).joined(separator: ", "))
-                        .font(.system(size: 10, weight: .medium))
-                        .foregroundStyle(.white.opacity(0.3))
-                        .lineLimit(1)
-                }
+                Image(systemName: exercise.muscleGroupIcon)
+                    .font(.system(size: 16))
+                    .foregroundStyle(.white.opacity(0.3))
             }
             .padding(12)
             .background(

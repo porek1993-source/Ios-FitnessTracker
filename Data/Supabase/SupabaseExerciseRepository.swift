@@ -1,5 +1,5 @@
 // SupabaseExerciseRepository.swift
-// Nativní REST klient pro Supabase tabulku public.exercises (bez SDK).
+// Nativní REST klient pro Supabase — muscle_wiki_data (bez SDK).
 
 import Foundation
 
@@ -40,119 +40,25 @@ actor SupabaseExerciseRepository {
         self.apiKey  = apiKey
     }
 
-    // MARK: - Fetch All
+    // MARK: - MuscleWiki Data
 
-    /// Načte všechny cviky z tabulky `public.exercises`.
-    func fetchAll() async throws -> [ExerciseDTO] {
-        let url = try buildURL(path: "/rest/v1/exercises", query: [
+    /// Načte všechny cviky z tabulky `public.muscle_wiki_data`.
+    func fetchMuscleWikiAll() async throws -> [MuscleWikiExercise] {
+        let url = try buildURL(path: "/rest/v1/muscle_wiki_data", query: [
             ("select", "*"),
-            ("order", "name_cz.asc")
+            ("order", "muscle_group.asc,name.asc")
         ])
         return try await performRequest(url: url)
     }
 
-    // MARK: - Fetch by Slug
-
-    /// Načte jeden cvik podle slugu.
-    func fetchBySlug(_ slug: String) async throws -> ExerciseDTO? {
-        let url = try buildURL(path: "/rest/v1/exercises", query: [
+    /// Načte cviky z `muscle_wiki_data` filtrované podle svalové skupiny.
+    func fetchMuscleWikiByGroup(_ group: String) async throws -> [MuscleWikiExercise] {
+        let url = try buildURL(path: "/rest/v1/muscle_wiki_data", query: [
             ("select", "*"),
-            ("slug", "eq.\(slug)")
-        ])
-        let results: [ExerciseDTO] = try await performRequest(url: url)
-        return results.first
-    }
-
-    // MARK: - Fetch by Category
-
-    /// Načte cviky podle kategorie (např. "chest", "legs").
-    func fetchByCategory(_ category: String) async throws -> [ExerciseDTO] {
-        let url = try buildURL(path: "/rest/v1/exercises", query: [
-            ("select", "*"),
-            ("category", "eq.\(category)"),
-            ("order", "name_cz.asc")
+            ("muscle_group", "eq.\(group)"),
+            ("order", "name.asc")
         ])
         return try await performRequest(url: url)
-    }
-
-    // MARK: - Fetch Missing Instructions
-
-    /// Načte cviky s chybějícími instrukcemi (pro AI enrichment).
-    func fetchMissingInstructions() async throws -> [ExerciseDTO] {
-        let url = try buildURL(path: "/rest/v1/exercises", query: [
-            ("select", "*"),
-            ("instructions_missing", "eq.true"),
-            ("order", "name_cz.asc")
-        ])
-        return try await performRequest(url: url)
-    }
-
-    // MARK: - Update Exercise (Write-back)
-
-    /// Aktualizuje data cviku v Supabase po dogenerování AI.
-    func updateExercise(slug: String, with aiData: AIEnrichedExerciseData) async throws {
-        let url = try buildURL(path: "/rest/v1/exercises", query: [
-            ("slug", "eq.\(slug)")
-        ])
-
-        struct ExerciseUpdatePayload: Encodable {
-            let nameEn: String
-            let equipment: String
-            let primaryMuscles: [String]
-            let secondaryMuscles: [String]
-            let instructions: String
-            let instructionsMissing: Bool
-            let instructionsSource: String
-            let instructionsUpdatedAt: String
-
-            enum CodingKeys: String, CodingKey {
-                case nameEn = "name_en"
-                case equipment
-                case primaryMuscles = "primary_muscles"
-                case secondaryMuscles = "secondary_muscles"
-                case instructions
-                case instructionsMissing = "instructions_missing"
-                case instructionsSource = "instructions_source"
-                case instructionsUpdatedAt = "instructions_updated_at"
-            }
-        }
-
-        let formatter = ISO8601DateFormatter()
-        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        let timestamp = formatter.string(from: Date())
-
-        let payload = ExerciseUpdatePayload(
-            nameEn: aiData.nameEn,
-            equipment: aiData.equipment,
-            primaryMuscles: aiData.primaryMuscles,
-            secondaryMuscles: aiData.secondaryMuscles,
-            instructions: aiData.instructions,
-            instructionsMissing: false,
-            instructionsSource: "ai_gemini_flash",
-            instructionsUpdatedAt: timestamp
-        )
-
-        var request = URLRequest(url: url)
-        request.httpMethod = "PATCH"
-        request.timeoutInterval = 15
-        
-        // Setup headers manually since defaultHeaders has Prefer: return=representation. We may not need it here, or we can use it.
-        for (key, value) in defaultHeaders {
-            request.setValue(value, forHTTPHeaderField: key)
-        }
-        
-        request.httpBody = try JSONEncoder().encode(payload)
-
-        let (_, response) = try await URLSession.shared.data(for: request)
-
-        guard let http = response as? HTTPURLResponse else {
-            throw SupabaseError.httpError(statusCode: 0)
-        }
-
-        // 200...299 indicates successful patch
-        guard (200...299).contains(http.statusCode) else {
-            throw SupabaseError.httpError(statusCode: http.statusCode)
-        }
     }
 
     // MARK: - Helpers

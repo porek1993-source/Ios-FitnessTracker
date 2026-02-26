@@ -40,7 +40,16 @@ struct MainTabView: View {
                 }
                 .tag(1)
 
-            // 3. Týdenní Plán
+            // 3. Knihovna cviků (MuscleWiki)
+            NavigationStack {
+                ExerciseLibraryView()
+            }
+            .tabItem {
+                Label("Cviky", systemImage: "dumbbell.fill")
+            }
+            .tag(2)
+
+            // 4. Týdenní Plán
             NavigationStack {
                 ZStack {
                     Color(red: 0.055, green: 0.055, blue: 0.08).ignoresSafeArea()
@@ -56,21 +65,21 @@ struct MainTabView: View {
             .tabItem {
                 Label("Plán", systemImage: "calendar")
             }
-            .tag(2)
+            .tag(3)
 
-            // 4. Progres
+            // 5. Progres
             AppProgressView()
                 .tabItem {
                     Label("Progres", systemImage: "chart.line.uptrend.xyaxis")
                 }
-                .tag(3)
+                .tag(4)
 
-            // 5. Nastavení
+            // 6. Nastavení
             SettingsView()
                 .tabItem {
                     Label("Nastavení", systemImage: "gearshape.fill")
                 }
-                .tag(4)
+                .tag(5)
         }
         .accentColor(.blue)
         .preferredColorScheme(.dark)
