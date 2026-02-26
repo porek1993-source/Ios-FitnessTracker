@@ -212,16 +212,13 @@ struct LoadingWorkoutView: View {
     }
 
     private func startAnimation() {
-        // Timer se automaticky zastaví po phase >= 9 (max 4.5s)
-        let t = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { t in
-            dots = dots.count < 3 ? dots + "." : ""
-            if phase < 9 {
+        Task { @MainActor in
+            while phase < 9 && !Task.isCancelled {
+                try? await Task.sleep(nanoseconds: 500_000_000)
+                dots = dots.count < 3 ? dots + "." : ""
                 phase += 1
-            } else {
-                t.invalidate()
             }
         }
-        RunLoop.main.add(t, forMode: .common)
     }
 }
 

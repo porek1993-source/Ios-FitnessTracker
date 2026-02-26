@@ -4,7 +4,7 @@ import UIKit
 
 @MainActor
 final class HapticManager {
-    nonisolated(unsafe) static let shared = HapticManager()
+    static let shared = HapticManager()
     
     private init() {}
     

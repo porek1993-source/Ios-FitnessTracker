@@ -62,7 +62,9 @@ enum WorkoutPlanGenerator {
         do {
             try context.save()
         } catch {
-            AppLogger.error("WorkoutPlanGenerator: Chyba při ukládání plánu: \(error)")
+            Task { @MainActor in
+                AppLogger.error("WorkoutPlanGenerator: Chyba při ukládání plánu: \(error)")
+            }
         }
         return plan
     }

@@ -5,8 +5,9 @@ import BackgroundTasks
 import HealthKit
 import SwiftData
 
+@MainActor
 final class HealthBackgroundManager {
-    nonisolated(unsafe) static let shared = HealthBackgroundManager()
+    static let shared = HealthBackgroundManager()
     
     // Identifikátor úlohy musí odpovídat Info.plist (Permitted background task scheduler identifiers)
     static let healthSyncTaskIdentifier = "com.agilefitness.healthSync"
@@ -46,9 +47,11 @@ final class HealthBackgroundManager {
     
     /// Zaregistruje background task. Musí být zavoláno hned po spuštění aplikace.
     func registerBackgroundTasks() {
-        BGTaskScheduler.shared.register(forTaskWithIdentifier: Self.healthSyncTaskIdentifier, using: nil) { [weak self] task in
+        BGTaskScheduler.shared.register(forTaskWithIdentifier: Self.healthSyncTaskIdentifier, using: nil) { task in
             guard let task = task as? BGAppRefreshTask else { return }
-            self?.handleHealthSync(task: task)
+            Task { @MainActor in
+                HealthBackgroundManager.shared.handleHealthSync(task: task)
+            }
         }
     }
     
