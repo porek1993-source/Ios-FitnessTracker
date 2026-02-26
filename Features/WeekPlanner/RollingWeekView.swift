@@ -672,7 +672,7 @@ struct WorkoutLaunchWrapper: View {
     }
 
     private func prepareWorkout() {
-        guard let profile else {
+        guard profile != nil else {
             errorMessage = "Profil nenalezen. Zkontroluj nastavení."
             return
         }

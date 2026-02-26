@@ -5,12 +5,17 @@ struct ExerciseCardView: View {
     let exercise: SessionExerciseState
     let exerciseIndex: Int  // Vlastní index tohoto cviku (ne vm.currentExerciseIndex!)
     @ObservedObject var vm: WorkoutViewModel
+    @Environment(\.openURL) private var openURL
 
     var body: some View {
         ScrollView(showsIndicators: false) {
             VStack(spacing: 0) {
-                ExerciseAnimationView(slug: exercise.slug)
-                    .frame(height: 260)
+                ExerciseAnimationView(
+                    slug: exercise.slug,
+                    nameCz: exercise.name,
+                    nameEn: exercise.exercise?.nameEN
+                )
+                .frame(height: 260)
 
                 VStack(spacing: 24) {
                     VStack(spacing: 8) {
@@ -128,6 +133,11 @@ struct TechBadge: View {
 
 struct ExerciseAnimationView: View {
     let slug: String
+    let nameCz: String
+    let nameEn: String?
+
+    @Environment(\.openURL) private var openURL
+
     var body: some View {
         ZStack {
             LinearGradient(
@@ -136,36 +146,74 @@ struct ExerciseAnimationView: View {
             )
             VStack(spacing: 16) {
                 Spacer()
-                ZStack {
+                ZStack(alignment: .bottomTrailing) {
                     Circle()
                         .fill(exerciseColor(slug).opacity(0.12))
                         .frame(width: 130, height: 130)
                     Circle()
                         .stroke(exerciseColor(slug).opacity(0.2), lineWidth: 1)
                         .frame(width: 130, height: 130)
-                    Image(systemName: exerciseIcon(slug))
-                        .font(.system(size: 58, weight: .light))
-                        .foregroundStyle(
-                            LinearGradient(
-                                colors: [exerciseColor(slug), exerciseColor(slug).opacity(0.6)],
-                                startPoint: .topLeading, endPoint: .bottomTrailing
-                            )
+                        if #available(iOS 18.0, *) {
+                            Image(systemName: exerciseIcon(slug))
+                                .font(.system(size: 58, weight: .light))
+                                .foregroundStyle(
+                                    LinearGradient(
+                                        colors: [exerciseColor(slug), exerciseColor(slug).opacity(0.6)],
+                                        startPoint: .topLeading, endPoint: .bottomTrailing
+                                    )
+                                )
+                                .symbolEffect(.bounce, options: .repeating)
+                        } else {
+                            Image(systemName: exerciseIcon(slug))
+                                .font(.system(size: 58, weight: .light))
+                                .foregroundStyle(
+                                    LinearGradient(
+                                        colors: [exerciseColor(slug), exerciseColor(slug).opacity(0.6)],
+                                        startPoint: .topLeading, endPoint: .bottomTrailing
+                                    )
+                                )
+                                 .symbolEffect(.pulse) // Safe fallback for iOS 17
+                         }
+                 }
+
+                VStack(spacing: 4) {
+                    Text(exerciseCategoryLabel(slug))
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(exerciseColor(slug).opacity(0.6))
+                        .kerning(1.5)
+                        .textCase(.uppercase)
+
+                    Button {
+                        HapticManager.shared.playMediumClick()
+                        let url = YouTubeLinkGenerator.searchURL(nameEn: nameEn, nameCz: nameCz)
+                        openURL(url)
+                    } label: {
+                        HStack(spacing: 6) {
+                            Image(systemName: "play.rectangle.fill")
+                                .font(.system(size: 12))
+                            Text("Technika")
+                                .font(.system(size: 13, weight: .bold))
+                        }
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 6)
+                        .background(
+                            Capsule()
+                                .fill(Color.red.opacity(0.8))
+                                .shadow(color: .red.opacity(0.3), radius: 4, y: 2)
                         )
-                        .symbolEffect(.bounce, options: .repeating)
+                    }
+                    .padding(.top, 4)
                 }
-                Text(exerciseCategoryLabel(slug))
-                    .font(.system(size: 11, weight: .semibold))
-                    .foregroundStyle(exerciseColor(slug).opacity(0.6))
-                    .kerning(1.5)
-                    .textCase(.uppercase)
-                Spacer()
-            }
-            LinearGradient(
-                colors: [.clear, .black],
-                startPoint: .init(x: 0.5, y: 0.55), endPoint: .bottom
-            )
-        }
-    }
+
+                 Spacer()
+             }
+             LinearGradient(
+                 colors: [.clear, .black],
+                 startPoint: .init(x: 0.5, y: 0.55), endPoint: .bottom
+             )
+         }
+     }
 
     private func exerciseIcon(_ slug: String) -> String {
         let s = slug.lowercased()
