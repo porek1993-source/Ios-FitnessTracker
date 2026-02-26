@@ -1,48 +1,46 @@
 // AgileFitnessTrainerApp.swift
-// Agilní Fitness Trenér — @main entry point
+// Agilní Fitness Trenér — @main entry point (refaktorovaný)
+//
+// ✅ AppEnvironment jako jediný zdroj pravdy pro sdílené závislosti
+// ✅ Startup sequence oddelegována do AppEnvironment.performStartup()
+// ✅ GlobalErrorModifier aplikován na root view
+// ✅ Žádné duplicitní instance služeb
 
 import SwiftUI
 import SwiftData
-import UserNotifications
 
 @main
 struct AgileFitnessTrainerApp: App {
 
-    /// Sdílený ModelContainer pro hlavní app i Widget Extension (App Groups).
-    /// Definice viz `SharedModelContainer.swift`.
+    /// Sdílený ModelContainer (App Group pro Widget Extension).
     static let container = SharedModelContainer.container
 
-    @StateObject private var healthKitService = HealthKitService()
+    /// Centrální DI kontejner — jeden pro celou aplikaci.
+    /// @StateObject zajišťuje životní cyklus svázaný s App, ne s View.
+    @StateObject private var appEnv = AppEnvironment()
 
     var body: some Scene {
         WindowGroup {
             RootView()
                 .modelContainer(Self.container)
-                .environmentObject(healthKitService)
-                .onAppear {
-                    HealthBackgroundManager.shared.registerBackgroundTasks()
-                    HealthBackgroundManager.shared.scheduleNextSync()
-                    WeeklyReportService.scheduleWeeklyNotificationIfNeeded()
-                    // Seeduj databázi cviků z JSON (pouze při prvním spuštění)
-                    let context = Self.container.mainContext
-                    ExerciseDatabaseLoader.seedIfNeeded(context: context)
-                    // Požádej o oprávnění pro notifikace
-                    Task {
-                        _ = await NotificationService.shared.requestPermission()
-                        NotificationService.shared.scheduleWorkoutReminder(hour: 8, minute: 30)
-                    }
-                    // HealthKit: autorizace + okamžitý sync dat
-                    Task {
-                        // Nejprve zkontrolujeme stav (i když jsme nepožádali znovu)
-                        await healthKitService.checkAuthorizationStatus()
-                        // Požádáme o přístup (pokud ještě nebylo rozhodnuto)
-                        try? await healthKitService.requestAuthorization()
-                        await HealthBackgroundManager.shared.performForegroundSync(healthKit: healthKitService)
-                    }
+                // Předání závislostí do SwiftUI stromu
+                .environmentObject(appEnv)
+                .environmentObject(appEnv.healthKitService)
+                // Globální error toast nad celou aplikací
+                .modifier(GlobalErrorModifier(error: $appEnv.globalError))
+                // Startup sequence — spustí se jednou, ne při každém renderu
+                .task {
+                    await appEnv.performStartup(
+                        modelContext: Self.container.mainContext
+                    )
                 }
         }
     }
 }
+
+// MARK: ═══════════════════════════════════════════════════════════════════════
+// MARK: RootView — navigační root s onboarding/main větvením
+// MARK: ═══════════════════════════════════════════════════════════════════════
 
 struct RootView: View {
     @Query private var profiles: [UserProfile]
@@ -53,7 +51,10 @@ struct RootView: View {
             if profiles.isEmpty {
                 if showChat {
                     OnboardingChatView()
-                        .transition(.asymmetric(insertion: .move(edge: .trailing), removal: .opacity))
+                        .transition(.asymmetric(
+                            insertion: .move(edge: .trailing),
+                            removal: .opacity
+                        ))
                 } else {
                     WelcomeView(onStart: {
                         withAnimation(.spring(response: 0.45, dampingFraction: 0.8)) {
@@ -66,9 +67,11 @@ struct RootView: View {
                 MainTabView()
                     .transition(.opacity)
             }
-            
-            // Floating Debug Console (Triple tap top-left corner to toggle)
+
+            // Debug overlay (triple-tap v levém horním rohu)
             DebugOverlayView()
         }
+        .animation(.easeInOut(duration: 0.3), value: profiles.isEmpty)
+        .animation(.easeInOut(duration: 0.3), value: showChat)
     }
 }
