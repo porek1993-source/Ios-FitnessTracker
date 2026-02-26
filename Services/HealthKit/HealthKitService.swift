@@ -39,7 +39,17 @@ final class HealthKitService: ObservableObject {
             toShare: HealthKitWriteTypes.share,
             read: HealthKitReadTypes.all
         )
-        isAuthorized = true
+        await checkAuthorizationStatus()
+    }
+
+    /// Ověří skutečný stav oprávnění (nejen zda byl zobrazen dialog)
+    func checkAuthorizationStatus() async {
+        let sleepType = HKObjectType.categoryType(forIdentifier: .sleepAnalysis)!
+        let status = store.authorizationStatus(for: sleepType)
+        await MainActor.run {
+            // .sharingAuthorized = uživatel povolil, .sharingDenied = zakázáno, .notDetermined = ještě nerozhodl
+            isAuthorized = status != .notDetermined
+        }
     }
 
     func fetchDailySummary(for date: Date) async throws -> HKDailySummary {

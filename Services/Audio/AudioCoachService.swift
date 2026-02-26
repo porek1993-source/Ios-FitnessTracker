@@ -121,7 +121,7 @@ final class AudioCoachService: NSObject, ObservableObject {
             isEnabled = true
             isSessionActive = true
         } catch {
-            print("AudioCoachService: session setup failed — \(error)")
+            AppLogger.error("AudioCoachService: session setup failed — \(error)")
         }
     }
 

@@ -67,30 +67,65 @@ enum ProgressionEngine {
         let weight: Double
         let repsMin: Int
         let repsMax: Int
+        let reason: String
     }
     
-    /// Spočítá doporučenou pracovní váhu a opakování pro dnešní trénink metodou Dvojité Progrese.
+    /// Spočítá doporučenou pracovní váhu a opakování metodou Dvojité Progrese s RPE korekci.
+    /// - Pokud uživatel splnil maximální reps ve všech sériích → +2.5 kg
+    /// - Pokud RPE bylo příliš vysoké (≥9.5) → udrž váhu i přes splněná reps
+    /// - Pokud RPE bylo nízké (≤6) → +5 kg (příliš lehké)
+    /// - Jinak → udrž váhu, přidej reps
     static func calculateNextTarget(previousSets: [CompletedSet], programRepsMin: Int, programRepsMax: Int) -> Target? {
         guard !previousSets.isEmpty else { return nil }
         
         let workingSets = previousSets.filter { !$0.isWarmup }
         guard !workingSets.isEmpty else { return nil }
         
-        // Zkontrolujeme, zda uživatel splnil ve všech sériích horní hranici
         let didCompleteAllMaxReps = workingSets.allSatisfy { $0.reps >= programRepsMax }
-        
-        // Zjistíme poslední použitou váhu
         let lastWeight = workingSets.max(by: { $0.weightKg < $1.weightKg })?.weightKg ?? 0
         
+        // RPE analýza (průměr ze všech sérií kde je RPE zadán)
+        let rpeValues = workingSets.compactMap { $0.rpe }
+        let avgRpe = rpeValues.isEmpty ? nil : rpeValues.reduce(0, +) / Double(rpeValues.count)
+        
+        if let avgRpe, avgRpe >= 9.5 {
+            // Bylo příliš těžké → drž váhu, nepřidávej
+            return Target(
+                weight: lastWeight,
+                repsMin: programRepsMin,
+                repsMax: programRepsMax,
+                reason: "RPE \(String(format: "%.1f", avgRpe)) → váha je na hranici, drž ji"
+            )
+        }
+        
+        if let avgRpe, avgRpe <= 6.0, didCompleteAllMaxReps {
+            // Bylo příliš lehké → přidej 5 kg
+            let newWeight = WeightRounder.roundToNearestPlates(weight: lastWeight + 5.0)
+            return Target(
+                weight: newWeight,
+                repsMin: programRepsMin,
+                repsMax: programRepsMax,
+                reason: "RPE \(String(format: "%.1f", avgRpe)) — příliš lehké, +5 kg"
+            )
+        }
+        
         if didCompleteAllMaxReps {
-            // SPLNĚNO: Zvýšit váhu o 2.5kg, spadnout na spodní hranici opakování
+            // Standardní progrese: +2.5 kg
             let newWeight = WeightRounder.roundToNearestPlates(weight: lastWeight + 2.5)
-            return Target(weight: newWeight, repsMin: programRepsMin, repsMax: programRepsMax)
+            return Target(
+                weight: newWeight,
+                repsMin: programRepsMin,
+                repsMax: programRepsMax,
+                reason: "Splněna max. reps → +2.5 kg"
+            )
         } else {
-            // NESPLNĚNO: Váha zůstává, cílem je přidat opakování
-            // Pokud posledně dal např. 6, dnes by měl dát aspoň 7.
-            // Ale programový rozsah vracíme jako referenci.
-            return Target(weight: lastWeight, repsMin: programRepsMin, repsMax: programRepsMax)
+            // Nesplněno: váha zůstává, cílem je přidat opakování
+            return Target(
+                weight: lastWeight,
+                repsMin: programRepsMin,
+                repsMax: programRepsMax,
+                reason: "Max. reps nesplněny → drž váhu, přidej reps"
+            )
         }
     }
 }

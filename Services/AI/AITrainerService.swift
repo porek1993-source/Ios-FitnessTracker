@@ -19,8 +19,8 @@ final class AITrainerService: ObservableObject {
     /// Zpráva viditelná v UI, pokud se aktivoval offline fallback.
     @Published var offlineMessage: String?
 
-    /// Timeout pro Gemini API v sekundách.
-    private let apiTimeoutSeconds: UInt64 = 15
+    /// Timeout pro Gemini API v sekundách. Musí být nižší než timeoutInterval v URLRequest (45s).
+    private let apiTimeoutSeconds: UInt64 = 30
 
     init(modelContext: ModelContext, healthKitService: HealthKitService) {
         self.modelContext    = modelContext

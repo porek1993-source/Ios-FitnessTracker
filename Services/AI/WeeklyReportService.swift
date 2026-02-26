@@ -37,7 +37,6 @@ struct WeeklyReportResult: Codable, Hashable {
 @MainActor
 final class WeeklyReportService {
     
-    // Klíč může být zapsán v Constants, prozatím použijeme stub z appky
     private let geminiClient = GeminiAPIClient(apiKey: AppConstants.geminiAPIKey)
     private let modelContext: ModelContext
     

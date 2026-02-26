@@ -75,7 +75,7 @@ actor GeminiAPIClient {
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.httpBody   = try JSONSerialization.data(withJSONObject: body)
-        request.timeoutInterval = 30
+        request.timeoutInterval = 45
 
         let (data, response) = try await session.data(for: request)
 

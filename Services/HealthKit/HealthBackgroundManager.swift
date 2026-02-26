@@ -38,9 +38,9 @@ final class HealthBackgroundManager {
             let externalActivities = try await healthKit.fetchExternalActivities(since: today.startOfDay)
             
             await saveToSwiftData(summary: summary, externalActivities: externalActivities, date: today)
-            print("[HealthSync] Foreground sync úspěšný.")
+            AppLogger.info("[HealthSync] Foreground sync úspěšný.")
         } catch {
-            print("[HealthSync] Foreground sync selhal: \(error.localizedDescription)")
+            AppLogger.error("[HealthSync] Foreground sync selhal: \(error.localizedDescription)")
         }
     }
     
@@ -69,7 +69,7 @@ final class HealthBackgroundManager {
             try BGTaskScheduler.shared.submit(request)
             print("[\(Self.healthSyncTaskIdentifier)] Úspěšně naplánováno na \(request.earliestBeginDate?.description ?? "neznámo").")
         } catch {
-            print("[\(Self.healthSyncTaskIdentifier)] Nelze naplánovat background task: \(error.localizedDescription)")
+            AppLogger.error("[HealthSync] Nelze naplánovat background task: \(error.localizedDescription)")
         }
     }
     
@@ -80,7 +80,7 @@ final class HealthBackgroundManager {
         
         let operation = Task {
             do {
-                print("[\(Self.healthSyncTaskIdentifier)] Začínám background sync Health dat...")
+                AppLogger.info("[HealthSync] Začínám background sync Health dat...")
                 
                 // 1. Zkontrolujeme oprávnění (na pozadí se nové dialogy neukážou, ale data přečteme pokud už práva máme)
                 if !healthKitService.isAuthorized {
@@ -95,17 +95,17 @@ final class HealthBackgroundManager {
                 // 3. Uložíme do SwiftData
                 await saveToSwiftData(summary: summary, externalActivities: externalActivities, date: today)
                 
-                print("[\(Self.healthSyncTaskIdentifier)] Sync dokončen úspěšně.")
+                AppLogger.info("[HealthSync] Sync dokončen úspěšně.")
                 task.setTaskCompleted(success: true)
                 
             } catch {
-                print("[\(Self.healthSyncTaskIdentifier)] Sync selhal: \(error.localizedDescription)")
+                AppLogger.error("[HealthSync] Sync selhal: \(error.localizedDescription)")
                 task.setTaskCompleted(success: false)
             }
         }
         
         task.expirationHandler = {
-            print("[\(Self.healthSyncTaskIdentifier)] Task vypršel (čas vyhrazený systémem došel).")
+            AppLogger.warning("[HealthSync] Task vypršel (čas vyhrazený systémem došel).")
             operation.cancel()
         }
     }
@@ -118,7 +118,7 @@ final class HealthBackgroundManager {
         // Získáme uživatele
         let descriptor = FetchDescriptor<UserProfile>()
         guard let profile = try? context.fetch(descriptor).first else {
-            print("Nenalezen žádný UserProfile. Nemohu uložit zdravotní data.")
+            AppLogger.warning("[HealthSync] Nenalezen žádný UserProfile. Nemohu uložit zdravotní data.")
             return
         }
         
@@ -181,12 +181,12 @@ final class HealthBackgroundManager {
         
         do {
             try context.save()
-            print("Uloženo: \(summary.sleepDurationHours ?? 0) h spánku, HRV: \(summary.hrv ?? 0)")
+            AppLogger.info("[HealthSync] Uloženo: \(summary.sleepDurationHours ?? 0) h spánku, HRV: \(summary.hrv ?? 0)")
             
             // Kontrola trendu přetrénování (deload detekce)
             checkDeloadTrend(profile: profile)
         } catch {
-            print("Chyba při ukládání do SwiftData: \(error)")
+            AppLogger.error("[HealthSync] Chyba při ukládání do SwiftData: \(error)")
         }
     }
     

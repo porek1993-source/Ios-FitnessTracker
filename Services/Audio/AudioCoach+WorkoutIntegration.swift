@@ -1,11 +1,5 @@
 // AudioCoach+WorkoutIntegration.swift
-// Agilní Fitness Trenér — Integrace AudioCoachService do WorkoutViewModel
-// + SwiftUI komponenty (toggle tlačítko, tempo indikátor)
-//
-// POSTUP:
-//  1. Přidej `@StateObject private var audioCoach = AudioCoachService()` do WorkoutView
-//  2. Předej ho jako @EnvironmentObject nebo přímo do WorkoutViewModel.init()
-//  3. Zavolej hook metody (viz níže) na správných místech v WorkoutViewModel
+// Agilní Fitness Trenér — Rozšíření WorkoutViewModel o audio kouče + SwiftUI komponenty
 
 import SwiftUI
 import Combine
