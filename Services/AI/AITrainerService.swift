@@ -134,11 +134,15 @@ final class AITrainerService: ObservableObject {
             // ── KROK 3: Ulož do cache (fire-and-forget) ─────────────────
             Task.detached(priority: .utility) { [weak self] in
                 guard let self else { return }
+                
+                // Vytvoříme bezpečný background context
+                let backgroundContext = ModelContext(SharedModelContainer.container)
+                
                 await WorkoutCache.save(
                     response: response,
                     for: date,
                     plannedDayID: plannedDay.id,
-                    context: self.modelContext
+                    context: backgroundContext
                 )
             }
 
@@ -323,7 +327,7 @@ enum WorkoutCache {
             return nil
         }
 
-        AppLogger.info("[WorkoutCache] Cache HIT: \(key)")
+        Task { @MainActor in AppLogger.info("[WorkoutCache] Cache HIT: \(key)") }
         return entry.response
     }
 
@@ -348,14 +352,14 @@ enum WorkoutCache {
     static func invalidate(for date: Date, plannedDayID: PersistentIdentifier) {
         let key = cacheKey(for: date, plannedDayID: plannedDayID)
         defaults.removeObject(forKey: key)
-        AppLogger.info("[WorkoutCache] Cache invalidována: \(key)")
+        Task { @MainActor in AppLogger.info("[WorkoutCache] Cache invalidována: \(key)") }
     }
 
     /// Vymaže všechny cachované tréninky (např. po změně profilu nebo splitu).
     static func clearAll() {
         let allKeys = defaults.dictionaryRepresentation().keys
         allKeys.filter { $0.hasPrefix(keyPrefix) }.forEach { defaults.removeObject(forKey: $0) }
-        AppLogger.info("[WorkoutCache] Celá cache vymazána.")
+        Task { @MainActor in AppLogger.info("[WorkoutCache] Celá cache vymazána.") }
     }
 
     // MARK: - CacheEntry
@@ -384,11 +388,11 @@ enum AIExerciseCountValidator {
         let total = response.mainBlocks.reduce(0) { $0 + $1.exercises.count }
 
         if total < minimum {
-            AppLogger.warning("[Validator] ⚠️ Pouze \(total) cviků (min \(minimum)). AI nedodrželo pravidlo.")
+            Task { @MainActor in AppLogger.warning("[Validator] ⚠️ Pouze \(total) cviků (min \(minimum)). AI nedodrželo pravidlo.") }
         } else if total > maximum {
-            AppLogger.warning("[Validator] ⚠️ \(total) cviků (max \(maximum)). Zvažte oříznutí.")
+            Task { @MainActor in AppLogger.warning("[Validator] ⚠️ \(total) cviků (max \(maximum)). Zvažte oříznutí.") }
         } else {
-            AppLogger.info("[Validator] ✅ \(total) cviků — v pořádku.")
+            Task { @MainActor in AppLogger.info("[Validator] ✅ \(total) cviků — v pořádku.") }
         }
 
         return response

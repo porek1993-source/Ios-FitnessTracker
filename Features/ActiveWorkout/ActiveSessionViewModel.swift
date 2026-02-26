@@ -99,7 +99,7 @@ final class ActiveSessionViewModel: ObservableObject {
         coachTipTask?.cancel()
         finishTask?.cancel()
 
-        AppLogger.info("[ActiveSessionViewModel] deinit — vše vyčištěno.")
+        Task { @MainActor in AppLogger.info("[ActiveSessionViewModel] deinit — vše vyčištěno.") }
     }
 
     // MARK: ═══════════════════════════════════════════════════════════════════
