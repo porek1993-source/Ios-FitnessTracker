@@ -33,7 +33,7 @@ struct GlobalErrorModifier: ViewModifier {
                     show(.noInternet)
                 }
                 // Reconnect — skryjeme "offline" toast
-                else if case .noInternet = error?.id {
+                else if error?.message == AppToastError.noInternet.message {
                     // Nic — uživatel ví, že je zpět online
                 }
             }

@@ -285,7 +285,7 @@ struct PlanFallbackCard: View {
                         .foregroundStyle(.white.opacity(0.28))
                         .kerning(0.8)
 
-                    Text("„\(motivationalQuote)"")
+                    Text("„\(motivationalQuote)“")
                         .font(.system(size: 13, weight: .medium))
                         .foregroundStyle(.white.opacity(0.72))
                         .lineSpacing(3)

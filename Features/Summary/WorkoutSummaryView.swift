@@ -22,7 +22,7 @@ struct WorkoutSummaryView: View {
     let coachMessage: String
     let xpGains: [XPGain]
     let prEvents: [PREvent]
-    let hkResult: WorkoutWriteResult?
+    let hkResult: HealthKitWriteResult?
     let onDismiss: () -> Void
 
     // Animation phases
@@ -894,7 +894,7 @@ private struct EllipticalGlow: View {
         coachMessage: "Dneska jsi to fakt rozbil! +5 kg na bench je solidní progres a ten objem na nohách byl brutální. Dávej si pozor na regeneraci — zítra bude horent! 💪",
         xpGains: mockGains,
         prEvents: mockPRs,
-        hkResult: WorkoutWriteResult(success: true, hkWorkoutID: UUID(), caloriesWritten: 420, error: nil),
+        hkResult: HealthKitWriteResult(success: true, hkWorkoutID: UUID(), caloriesWritten: 420, error: nil),
         onDismiss: {}
     )
 }

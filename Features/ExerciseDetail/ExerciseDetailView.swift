@@ -135,7 +135,7 @@ struct ExerciseDetailView: View {
                 .shimmer()
             } else {
                 if let equip = vm.equipment {
-                    TagChip(text: equip, icon: "dumbbell.fill", tint: .appPrimaryAccent)
+                    TagChip(text: equip, icon: "dumbbell.fill", tint: .blue)
                 }
                 if !vm.muscles.isEmpty {
                     FlowLayout(spacing: 8) {
@@ -143,7 +143,7 @@ struct ExerciseDetailView: View {
                             TagChip(
                                 text: muscle,
                                 icon: "figure.strengthtraining.traditional",
-                                tint: .appGreenBadge
+                                tint: .green
                             )
                         }
                     }
@@ -335,4 +335,26 @@ enum GIFLibrary {
             .navigationTitle("Detail cviku")
     }
     .preferredColorScheme(.dark)
+}
+
+// MARK: - Pomocné komponenty
+
+struct TagChip: View {
+    let text: String
+    let icon: String
+    let tint: Color
+
+    var body: some View {
+        HStack(spacing: 4) {
+            Image(systemName: icon)
+                .font(.system(size: 10, weight: .semibold))
+            Text(text)
+                .font(.system(size: 12, weight: .semibold))
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 6)
+        .background(tint.opacity(0.15))
+        .foregroundStyle(tint)
+        .clipShape(Capsule())
+    }
 }

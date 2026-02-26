@@ -140,8 +140,7 @@ final class ActiveSessionViewModel: ObservableObject {
             // V produkci: let tip = try await aiService.generateCoachTip(for: exercise)
             try? await Task.sleep(nanoseconds: 100_000_000)  // 0.1s debounce
 
-            guard !Task.isCancelled else { return }  // ⚠️ Znovu po každém await
-            guard let self else { return }            // ⚠️ Znovu po každém await
+    
 
             // ✅ Bezpečné: @MainActor třída zajišťuje, že jsme na main threadu
             self.coachMessage = self.exercises[safe: self.currentExerciseIndex]?.coachTip
@@ -359,8 +358,7 @@ final class ActiveSessionViewModel: ObservableObject {
     }
 
     private func saveSessionToSwiftData(session: WorkoutSession, context: ModelContext) {
-        session.endedAt = .now
-        session.status  = .completed
+        session.finishedAt = .now
         do {
             try context.save()
             AppLogger.info("[ActiveSession] Session uložena do SwiftData.")

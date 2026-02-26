@@ -316,9 +316,9 @@ enum WorkoutCache {
 
     // MARK: - Cache Key
 
-    private static func cacheKey(for date: Date, plannedDayID: UUID) -> String {
+    private static func cacheKey(for date: Date, plannedDayID: PersistentIdentifier) -> String {
         let dateStr = ISO8601DateFormatter().string(from: date).prefix(10)  // "2025-01-15"
-        return "\(keyPrefix)\(dateStr)_\(plannedDayID.uuidString)"
+        return "\(keyPrefix)\(dateStr)_\(plannedDayID.hashValue)"
     }
 
     // MARK: - Load
@@ -328,7 +328,7 @@ enum WorkoutCache {
     ///   - date: Datum tréninku (typicky .now)
     ///   - plannedDayID: ID PlannedWorkoutDay (různé pro Push/Pull/Legs)
     ///   - context: ModelContext (nepoužit, zachován pro budoucí SwiftData implementaci)
-    static func load(for date: Date, plannedDayID: UUID, context: ModelContext) -> TrainerResponse? {
+    static func load(for date: Date, plannedDayID: PersistentIdentifier, context: ModelContext) -> TrainerResponse? {
         let key = cacheKey(for: date, plannedDayID: plannedDayID)
 
         guard
@@ -346,7 +346,7 @@ enum WorkoutCache {
     // MARK: - Save
 
     @MainActor
-    static func save(response: TrainerResponse, for date: Date, plannedDayID: UUID, context: ModelContext) {
+    static func save(response: TrainerResponse, for date: Date, plannedDayID: PersistentIdentifier, context: ModelContext) {
         let key   = cacheKey(for: date, plannedDayID: plannedDayID)
         let entry = CacheEntry(response: response, cachedAt: .now, ttl: ttlSeconds)
 
@@ -361,7 +361,7 @@ enum WorkoutCache {
 
     // MARK: - Invalidate (pro manuální vynucení regenerace)
 
-    static func invalidate(for date: Date, plannedDayID: UUID) {
+    static func invalidate(for date: Date, plannedDayID: PersistentIdentifier) {
         let key = cacheKey(for: date, plannedDayID: plannedDayID)
         defaults.removeObject(forKey: key)
         AppLogger.info("[WorkoutCache] Cache invalidována: \(key)")

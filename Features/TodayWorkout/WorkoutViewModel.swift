@@ -13,7 +13,7 @@ final class WorkoutViewModel: ObservableObject {
     @Published var totalRestSeconds = 90
     @Published var elapsedSeconds = 0
     @Published var audioEnabled = false
-    @Published var hkWriteResult: WorkoutWriteResult?
+    @Published var hkWriteResult: HealthKitWriteResult?
 
     private var restTimer: Timer?
     private var elapsedTimer: Timer?
