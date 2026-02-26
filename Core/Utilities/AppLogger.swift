@@ -5,7 +5,7 @@ import SwiftUI
 /// Jednoduchý logger, který ukládá zprávy i do paměti pro zobrazení v UI (pro debugování na Windows)
 @MainActor
 final class AppLogger: ObservableObject {
-    static let shared = AppLogger()
+    nonisolated(unsafe) static let shared = AppLogger()
     
     @Published var logs: [LogEntry] = []
     private let maxLogs = 100
@@ -31,10 +31,10 @@ final class AppLogger: ObservableObject {
     }
     
     // Static helpers for easier access
-    static func info(_ message: String) { shared.log(message, type: .info) }
-    static func error(_ message: String) { shared.log(message, type: .error) }
-    static func success(_ message: String) { shared.log(message, type: .success) }
-    static func warning(_ message: String) { shared.log(message, type: .warning) }
+    nonisolated static func info(_ message: String) { shared.log(message, type: .info) }
+    nonisolated static func error(_ message: String) { shared.log(message, type: .error) }
+    nonisolated static func success(_ message: String) { shared.log(message, type: .success) }
+    nonisolated static func warning(_ message: String) { shared.log(message, type: .warning) }
 }
 
 /// Překryvná vrstva pro zobrazení logů přímo v aplikaci
