@@ -183,7 +183,7 @@ final class OnboardingAIManager: ObservableObject {
     // MARK: - Private
     private let apiKey: String
     private let session: URLSession
-    private let model   = "gemini-2.5-flash-lite"
+    private let model   = "gemini-2.5-flash"
     private lazy var endpoint: URL = {
         URL(string:
             "https://generativelanguage.googleapis.com/v1beta/models/\(model):streamGenerateContent?alt=sse&key=\(apiKey)"
