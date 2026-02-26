@@ -62,9 +62,11 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: com.agilefitness.trainer
         INFOPLIST_FILE: Resources/Info.plist
         CODE_SIGN_ENTITLEMENTS: Resources/AgileTrainer.entitlements
-        PRODUCT_BUNDLE_IDENTIFIER: com.agilefitness.trainer
-        INFOPLIST_FILE: Resources/Info.plist
-        CODE_SIGN_ENTITLEMENTS: Resources/AgileTrainer.entitlements
+
+    info:
+      properties:
+        NSHealthShareUsageDescription: "Agilní trenér potřebuje číst tvůj spánek a HRV, aby ti Jakub mohl na míru upravit dnešní trénink a předešel zranění."
+        NSHealthUpdateUsageDescription: "Potřebujeme přístup k zápisu, abychom tvé odjeté tréninky a spálené kalorie uložili do aplikace Zdraví."
 
     entitlements:
       path: Resources/AgileTrainer.entitlements
@@ -72,10 +74,7 @@ targets:
         com.apple.security.application-groups:
           - group.com.agilefitness.shared
         com.apple.developer.healthkit: true
-        com.apple.developer.healthkit.access:
-          - HKQuantityTypeIdentifierHeartRate
-          - HKQuantityTypeIdentifierRestingHeartRate
-          - HKCategoryTypeIdentifierSleepAnalysis
+        com.apple.developer.healthkit.access: []
 
     preBuildScripts:
       - name: "SwiftLint (optional)"
