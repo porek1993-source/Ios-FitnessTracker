@@ -246,7 +246,7 @@ struct AppProgressView: View {
                     }
                     let exCount = session.exercises.count > 0 ? session.exercises.count : (session.plannedDay?.plannedExercises.count ?? 0)
                     if exCount > 0 && sessionVolume == 0 {
-                        Label("\(exCount) cviků", systemImage: "dumbbell.fill")
+                        Label("\(exCount) cviků", systemImage: "scalemass.fill")
                             .font(.system(size: 12)).foregroundStyle(.white.opacity(0.6))
                     }
                 }

@@ -338,13 +338,7 @@ struct TrainerDashboardView: View {
 
             // Quick settings avatar
             Circle()
-                .fill(
-                    LinearGradient(
-                        colors: [Color(red:0.25, green:0.55, blue:1.0),
-                                 Color(red:0.10, green:0.38, blue:0.88)],
-                        startPoint: .topLeading, endPoint: .bottomTrailing
-                    )
-                )
+                .fill(AppColors.accentGradient)
                 .frame(width: 44, height: 44)
                 .overlay(
                     Text(String(profile.name.prefix(1)).uppercased())
@@ -360,12 +354,12 @@ struct TrainerDashboardView: View {
 private struct DashboardBackground: View {
     var body: some View {
         ZStack {
-            Color(red: 0.055, green: 0.055, blue: 0.08)
+            AppColors.background
                 .ignoresSafeArea()
 
             // Top atmospheric glow
             RadialGradient(
-                colors: [Color(red:0.12, green:0.28, blue:0.65).opacity(0.30), .clear],
+                colors: [AppColors.primaryAccent.opacity(0.20), .clear],
                 center: .init(x: 0.75, y: 0.0),
                 startRadius: 0, endRadius: 380
             )
@@ -383,9 +377,9 @@ struct ReadinessCardView: View {
 
     private var levelColor: Color {
         switch vm.readinessLevel {
-        case "green":  return Color(red: 0.15, green: 0.85, blue: 0.45)
-        case "orange": return Color(red: 0.95, green: 0.60, blue: 0.10)
-        default:       return Color(red: 0.95, green: 0.25, blue: 0.30)
+        case "green":  return AppColors.success
+        case "orange": return AppColors.warning
+        default:       return AppColors.error
         }
     }
 
@@ -405,7 +399,7 @@ struct ReadinessCardView: View {
                     LinearGradient(
                         colors: [
                             levelColor.opacity(0.18),
-                            Color(red:0.10, green:0.10, blue:0.16)
+                            AppColors.secondaryBg
                         ],
                         startPoint: .topLeading,
                         endPoint:   .bottomTrailing
@@ -666,8 +660,8 @@ private struct DayDot: View {
 
     private var fillColor: Color {
         switch state {
-        case .done:     return Color(red: 0.15, green: 0.80, blue: 0.45)
-        case .today:    return Color(red: 0.25, green: 0.55, blue: 1.0)
+        case .done:     return AppColors.success
+        case .today:    return AppColors.primaryAccent
         case .upcoming: return Color.white.opacity(0.10)
         case .future:   return Color.white.opacity(0.05)
         }
@@ -690,10 +684,10 @@ private struct BodyMapPreviewCard: View {
             ZStack {
                 // Background
                 RoundedRectangle(cornerRadius: 20)
-                    .fill(Color(red: 0.10, green: 0.10, blue: 0.15))
+                    .fill(AppColors.secondaryBg)
                     .overlay(
                         RoundedRectangle(cornerRadius: 20)
-                            .stroke(Color.white.opacity(0.07), lineWidth: 1)
+                            .stroke(AppColors.border, lineWidth: 1)
                     )
 
                 HStack(spacing: 0) {
@@ -856,16 +850,16 @@ private struct TodayPlanCard: View {
         ZStack {
             // Layered background
             RoundedRectangle(cornerRadius: 24)
-                .fill(Color(red: 0.10, green: 0.10, blue: 0.15))
+                .fill(AppColors.secondaryBg)
 
             RoundedRectangle(cornerRadius: 24)
-                .stroke(Color.white.opacity(0.07), lineWidth: 1)
+                .stroke(AppColors.border, lineWidth: 1)
 
             // Accent glow at top-left
             RoundedRectangle(cornerRadius: 24)
                 .fill(
                     LinearGradient(
-                        colors: [Color(red:0.15, green:0.45, blue:1.0).opacity(0.15), .clear],
+                        colors: [AppColors.primaryAccent.opacity(0.15), .clear],
                         startPoint: .topLeading,
                         endPoint:   .center
                     )
@@ -910,7 +904,7 @@ private struct TodayPlanCard: View {
                         .background(Color.white.opacity(0.1))
 
                     PlanStatItem(
-                        icon: "dumbbell.fill",
+                        icon: "scalemass.fill",
                         value: "\(vm.exerciseCount)",
                         unit: "cviků",
                         color: .purple
@@ -940,14 +934,14 @@ private struct TodayPlanCard: View {
                             .fill(
                                 LinearGradient(
                                     colors: [
-                                        Color(red: 0.20, green: 0.52, blue: 1.0),
-                                        Color(red: 0.08, green: 0.35, blue: 0.85)
+                                        AppColors.primaryAccent,
+                                        AppColors.secondaryAccent
                                     ],
                                     startPoint: .topLeading,
                                     endPoint:   .bottomTrailing
                                 )
                             )
-                            .shadow(color: Color.blue.opacity(0.45), radius: 18, y: 6)
+                            .shadow(color: AppColors.primaryAccent.opacity(0.45), radius: 18, y: 6)
 
                         HStack(spacing: 10) {
                             Image(systemName: "play.fill")
@@ -998,9 +992,9 @@ private struct TodayPlanCard: View {
         .padding(20)
         .background(
             RoundedRectangle(cornerRadius: 20)
-                .fill(Color(red: 0.10, green: 0.10, blue: 0.15))
+                .fill(AppColors.secondaryBg)
                 .overlay(RoundedRectangle(cornerRadius: 20)
-                    .stroke(Color.white.opacity(0.06), lineWidth: 1))
+                    .stroke(AppColors.border, lineWidth: 1))
         )
     }
 
@@ -1057,9 +1051,9 @@ private struct ReadinessInfluenceBadge: View {
 
     private var dotColor: Color {
         switch level {
-        case "green":  return Color(red: 0.15, green: 0.85, blue: 0.45)
-        case "orange": return Color(red: 0.95, green: 0.60, blue: 0.10)
-        default:       return Color(red: 0.95, green: 0.25, blue: 0.30)
+        case "green":  return AppColors.success
+        case "orange": return AppColors.warning
+        default:       return AppColors.error
         }
     }
 
@@ -1136,7 +1130,7 @@ struct TodayWorkoutLaunchWrapper: View {
 
     var body: some View {
         ZStack {
-            Color(red: 0.05, green: 0.05, blue: 0.08).ignoresSafeArea()
+            AppColors.background.ignoresSafeArea()
             if let errorMessage {
                 VStack(spacing: 24) {
                     Image(systemName: "moon.zzz.fill")

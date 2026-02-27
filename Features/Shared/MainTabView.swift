@@ -45,7 +45,7 @@ struct MainTabView: View {
                 ExerciseLibraryView()
             }
             .tabItem {
-                Label("Cviky", systemImage: "dumbbell.fill")
+                Label("Cviky", systemImage: "scalemass.fill")
             }
             .tag(2)
 

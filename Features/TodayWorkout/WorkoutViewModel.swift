@@ -81,6 +81,10 @@ final class WorkoutViewModel: ObservableObject {
                     }
 
                     state.exercise = exerciseRef
+                    // ✅ Předej videoURL z Exercise DB modelu do session state
+                    if let videoURL = exerciseRef?.videoURL {
+                        state.videoUrl = videoURL
+                    }
 
                     // Warmup pouze pro první working cvik v celém tréninku (ne warmup bloky)
                     if states.filter({ !$0.isWarmupOnly }).isEmpty, index == 0 {
@@ -542,9 +546,10 @@ struct SessionExerciseState: Identifiable {
     let restSeconds: Int
     var sets: [SetState]
     var isWarmupOnly: Bool
-    var exercise: Exercise? // Reference na DB model (pokud existuje)
+    var exercise: Exercise?        // Reference na DB model (pokud existuje)
+    var videoUrl: String?          // ✅ URL videa z muscle_wiki_data_full (Supabase Storage)
 
-    init(id: UUID = UUID(), name: String, slug: String, coachTip: String? = nil, tempo: String? = nil, restSeconds: Int = 60, sets: [SetState] = [], isWarmupOnly: Bool = false, exercise: Exercise? = nil) {
+    init(id: UUID = UUID(), name: String, slug: String, coachTip: String? = nil, tempo: String? = nil, restSeconds: Int = 60, sets: [SetState] = [], isWarmupOnly: Bool = false, exercise: Exercise? = nil, videoUrl: String? = nil) {
         self.id = id
         self.name = name
         self.slug = slug
@@ -554,6 +559,7 @@ struct SessionExerciseState: Identifiable {
         self.sets = sets
         self.isWarmupOnly = isWarmupOnly
         self.exercise = exercise
+        self.videoUrl = videoUrl ?? exercise?.videoURL
     }
 
     var nextIncompleteSetIndex: Int? {
@@ -584,7 +590,8 @@ struct SessionExerciseState: Identifiable {
     init(from response: ResponseExercise) {
         self.id          = UUID()
         self.name        = response.name
-        self.slug        = response.slug
+        // ✅ Normalizuj slug pro správné napárování videoUrl z muscle_wiki_data_full
+        self.slug        = FallbackWorkoutGenerator.normalizedSlug(response.slug)
         self.coachTip    = response.coachTip
         self.tempo       = response.tempo
         self.restSeconds = response.restSeconds

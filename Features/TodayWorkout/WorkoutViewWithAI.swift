@@ -239,7 +239,7 @@ struct PreWorkoutFiltersView: View {
 
         var icon: String {
             switch self {
-            case .fullGym:    return "dumbbell.fill"
+            case .fullGym:    return "scalemass.fill"
             case .dumbbells:  return "dumbbell"
             case .bodyweight: return "figure.walk"
             case .hotel:      return "building.2"

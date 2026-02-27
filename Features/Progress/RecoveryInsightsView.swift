@@ -1,5 +1,5 @@
 // RecoveryInsightsView.swift
-// Agilní Fitness Trenér — Přehled zotavení a HealthKit metrik
+// Agilní Fitness Trenér — Prémiový přehled zotavení a HealthKit metrik
 
 import SwiftUI
 import SwiftData
@@ -11,9 +11,8 @@ struct RecoveryInsightsView: View {
     @Query(sort: \HealthMetricsSnapshot.date, order: .reverse) private var allSnapshots: [HealthMetricsSnapshot]
     @State private var isSyncing = false
     
-    // Načteme jen 7 posledních dnů pro grafy
     private var last7Days: [HealthMetricsSnapshot] {
-        Array(allSnapshots.prefix(7).reversed()) // Od nejstaršího po nejnovější pro graf
+        Array(allSnapshots.prefix(7).reversed())
     }
     
     @State private var weeklyReport: WeeklyReportResult?
@@ -22,16 +21,16 @@ struct RecoveryInsightsView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                Color(red: 0.05, green: 0.05, blue: 0.08).ignoresSafeArea()
+                AppColors.background.ignoresSafeArea()
                 
                 ScrollView {
-                    VStack(spacing: 24) {
+                    VStack(spacing: 20) {
                         
                         // 1. Dnešní AI Insight
                         if let today = last7Days.last {
                             DailyInsightCard(snapshot: today)
                         } else {
-                            DailyInsightCard(snapshot: nil) // Prázdný stav
+                            DailyInsightCard(snapshot: nil)
                         }
                         
                         // 2. Graf Spánku
@@ -52,25 +51,25 @@ struct RecoveryInsightsView: View {
                         
                         Spacer().frame(height: 40)
                     }
-                    .padding(.horizontal)
+                    .padding(.horizontal, 16)
                     .padding(.top, 10)
                 }
                 
-                // Loading overlay při syncu
+                // Loading overlay
                 if isSyncing {
                     VStack {
                         Spacer()
                         HStack(spacing: 10) {
-                            ProgressView().tint(.blue)
+                            ProgressView().tint(AppColors.primaryAccent)
                             Text("Synchronizuji Health data...")
-                                .font(.system(size: 13, weight: .medium))
-                                .foregroundStyle(.white.opacity(0.6))
+                                .font(AppTypography.callout)
+                                .foregroundStyle(AppColors.textSecondary)
                         }
                         .padding(.horizontal, 20)
                         .padding(.vertical, 12)
                         .background(
-                            Capsule().fill(Color(red: 0.12, green: 0.12, blue: 0.18))
-                                .shadow(color: .black.opacity(0.3), radius: 10)
+                            Capsule().fill(AppColors.secondaryBg)
+                                .shadow(color: .black.opacity(0.4), radius: 12)
                         )
                         .padding(.bottom, 30)
                     }
@@ -81,7 +80,6 @@ struct RecoveryInsightsView: View {
             .toolbarColorScheme(.dark, for: .navigationBar)
             .toolbarBackground(.visible, for: .navigationBar)
             .task {
-                // Okamžitý sync při otevření, aby byly grafy aktuální
                 withAnimation { isSyncing = true }
                 await HealthBackgroundManager.shared.performForegroundSync(healthKit: healthKit)
                 withAnimation { isSyncing = false }
@@ -101,7 +99,6 @@ struct RecoveryInsightsView: View {
                 self.weeklyReport = result
             } catch {
                 AppLogger.error("RecoveryInsightsView: Chyba generování reportu: \(error)")
-                // Místo alertu jen tisk do konzole pro zjednodušení v prototypu
             }
             isGeneratingReport = false
         }
@@ -127,42 +124,36 @@ struct DailyInsightCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
-                Image(systemName: "sparkles")
-                    .foregroundStyle(.yellow)
-                Text("AI Daily Insight")
-                    .font(.headline)
-                    .foregroundStyle(.white)
+                HStack(spacing: 8) {
+                    Image(systemName: "sparkles")
+                        .foregroundStyle(AppColors.primaryAccent)
+                        .font(.system(size: 16))
+                    Text("AI Daily Insight")
+                        .font(AppTypography.headline)
+                        .foregroundStyle(AppColors.textPrimary)
+                }
                 Spacer()
                 if isLoading {
-                    ProgressView().tint(.yellow).scaleEffect(0.7)
+                    ProgressView().tint(AppColors.primaryAccent).scaleEffect(0.7)
                 } else if let score = snapshot?.readinessScore {
                     Text("\(Int(score))/100")
-                        .font(.subheadline.bold())
+                        .font(.system(size: 13, weight: .bold, design: .rounded))
                         .foregroundStyle(scoreColor(score))
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 4)
-                        .background(scoreColor(score).opacity(0.2))
-                        .clipShape(RoundedRectangle(cornerRadius: 8))
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 5)
+                        .background(scoreColor(score).opacity(0.15))
+                        .clipShape(Capsule())
                 }
             }
             
             Text(insightText)
-                .font(.subheadline)
-                .foregroundStyle(.white.opacity(0.8))
+                .font(AppTypography.body)
+                .foregroundStyle(AppColors.textSecondary)
                 .lineLimit(5)
                 .fixedSize(horizontal: false, vertical: true)
         }
-        .padding()
-        .background(
-            RoundedRectangle(cornerRadius: 16)
-                .fill(Color.white.opacity(0.05))
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 16)
-                .stroke(Color.white.opacity(0.1), lineWidth: 1)
-        )
+        .glassCardStyle()
         .task {
-            // Použij cache pokud je dnešní
             if cachedDate == todayKey && !cachedInsight.isEmpty {
                 insightText = cachedInsight
                 return
@@ -197,9 +188,43 @@ struct DailyInsightCard: View {
     }
     
     private func scoreColor(_ score: Double) -> Color {
-        if score >= 75 { return .green }
-        if score >= 50 { return .orange }
-        return .red
+        if score >= 75 { return AppColors.success }
+        if score >= 50 { return AppColors.warning }
+        return AppColors.error
+    }
+}
+
+// MARK: - Empty State Fallback
+
+private struct ChartEmptyState: View {
+    let icon: String
+    let title: String
+    let subtitle: String
+    let iconColor: Color
+    
+    var body: some View {
+        VStack(spacing: 14) {
+            ZStack {
+                Circle()
+                    .fill(iconColor.opacity(0.10))
+                    .frame(width: 64, height: 64)
+                Image(systemName: icon)
+                    .font(.system(size: 26))
+                    .foregroundStyle(iconColor.opacity(0.6))
+            }
+            
+            Text(title)
+                .font(AppTypography.callout)
+                .foregroundStyle(AppColors.textSecondary)
+            
+            Text(subtitle)
+                .font(AppTypography.footnote)
+                .foregroundStyle(AppColors.textTertiary)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 20)
+        }
+        .frame(height: 180)
+        .frame(maxWidth: .infinity)
     }
 }
 
@@ -209,99 +234,172 @@ struct SleepChartCard: View {
     let data: [HealthMetricsSnapshot]
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Text("Spánek (Posledních 7 dní)")
-                .font(.headline)
-                .foregroundStyle(.white)
+        VStack(alignment: .leading, spacing: 14) {
+            HStack {
+                Label("Spánek", systemImage: "moon.fill")
+                    .font(AppTypography.headline)
+                    .foregroundStyle(AppColors.textPrimary)
+                Spacer()
+                if let latest = data.last?.sleepDurationHours {
+                    Text(String(format: "%.1fh", latest))
+                        .font(.system(size: 13, weight: .bold, design: .rounded))
+                        .foregroundStyle(.indigo)
+                }
+            }
             
-            if data.isEmpty {
-                Text("Žádná data")
-                    .foregroundStyle(.gray)
-                    .frame(height: 150)
+            Text("Posledních 7 dní")
+                .font(AppTypography.caption)
+                .foregroundStyle(AppColors.textTertiary)
+            
+            if data.isEmpty || data.allSatisfy({ $0.sleepDurationHours == nil }) {
+                ChartEmptyState(
+                    icon: "moon.zzz.fill",
+                    title: "Žádná data o spánku",
+                    subtitle: "Připoj Apple Watch nebo zadej spánek v Zdraví pro sledování kvality odpočinku.",
+                    iconColor: .indigo
+                )
             } else {
                 Chart(data) { item in
-                    BarMark(
+                    AreaMark(
                         x: .value("Den", item.date, unit: .day),
                         y: .value("Hodin", item.sleepDurationHours ?? 0)
                     )
-                    .foregroundStyle(Color.indigo.gradient)
-                    .cornerRadius(4)
+                    .interpolationMethod(.catmullRom)
+                    .foregroundStyle(
+                        LinearGradient(
+                            colors: [Color.indigo.opacity(0.35), Color.indigo.opacity(0.05)],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
+                    )
+                    
+                    LineMark(
+                        x: .value("Den", item.date, unit: .day),
+                        y: .value("Hodin", item.sleepDurationHours ?? 0)
+                    )
+                    .interpolationMethod(.catmullRom)
+                    .foregroundStyle(Color.indigo)
+                    .lineStyle(StrokeStyle(lineWidth: 2.5, lineCap: .round))
+                    
+                    PointMark(
+                        x: .value("Den", item.date, unit: .day),
+                        y: .value("Hodin", item.sleepDurationHours ?? 0)
+                    )
+                    .foregroundStyle(Color.indigo)
+                    .symbolSize(20)
                 }
-                .frame(height: 180)
+                .frame(height: 160)
                 .chartXAxis {
                     AxisMarks(values: .stride(by: .day)) { value in
-                        AxisGridLine().foregroundStyle(.white.opacity(0.1))
+                        AxisGridLine().foregroundStyle(AppColors.border)
                         AxisValueLabel(format: .dateTime.weekday(.abbreviated), centered: true)
-                            .foregroundStyle(.white.opacity(0.6))
+                            .foregroundStyle(AppColors.textTertiary)
                     }
                 }
                 .chartYAxis {
                     AxisMarks(position: .leading) { _ in
-                        AxisGridLine().foregroundStyle(.white.opacity(0.1))
-                        AxisValueLabel().foregroundStyle(.white.opacity(0.6))
+                        AxisGridLine().foregroundStyle(AppColors.border)
+                        AxisValueLabel().foregroundStyle(AppColors.textTertiary)
                     }
+                }
+                
+                // Doporučená zóna
+                HStack(spacing: 6) {
+                    Circle().fill(Color.indigo.opacity(0.5)).frame(width: 6, height: 6)
+                    Text("Doporučeno: 7–9 hodin")
+                        .font(AppTypography.caption)
+                        .foregroundStyle(AppColors.textTertiary)
                 }
             }
         }
-        .padding()
-        .background(Color.white.opacity(0.05))
-        .cornerRadius(16)
+        .glassCardStyle()
     }
 }
 
 struct HRVChartCard: View {
     let data: [HealthMetricsSnapshot]
     
+    private let chartColor = Color(red: 0.30, green: 0.78, blue: 0.95) // Cyan-blue
+    
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Text("Variabilita srdeční frekvence (HRV)")
-                .font(.headline)
-                .foregroundStyle(.white)
+        VStack(alignment: .leading, spacing: 14) {
+            HStack {
+                Label("HRV", systemImage: "waveform.path.ecg")
+                    .font(AppTypography.headline)
+                    .foregroundStyle(AppColors.textPrimary)
+                Spacer()
+                if let latest = data.last?.heartRateVariabilityMs {
+                    Text("\(Int(latest)) ms")
+                        .font(.system(size: 13, weight: .bold, design: .rounded))
+                        .foregroundStyle(chartColor)
+                }
+            }
             
-            if data.isEmpty {
-                Text("Žádná data")
-                    .foregroundStyle(.gray)
-                    .frame(height: 150)
+            Text("Variabilita srdeční frekvence · 7 dní")
+                .font(AppTypography.caption)
+                .foregroundStyle(AppColors.textTertiary)
+            
+            if data.isEmpty || data.allSatisfy({ $0.heartRateVariabilityMs == nil }) {
+                ChartEmptyState(
+                    icon: "waveform.path.ecg",
+                    title: "Žádná HRV data",
+                    subtitle: "HRV měří tvoji schopnost zotavení. Nos Apple Watch přes noc pro automatické měření.",
+                    iconColor: chartColor
+                )
             } else {
                 Chart(data) { item in
-                    LineMark(
-                        x: .value("Den", item.date, unit: .day),
-                        y: .value("HRV (ms)", item.heartRateVariabilityMs ?? 0)
-                    )
-                    .interpolationMethod(.catmullRom)
-                    .foregroundStyle(Color.red.gradient)
-                    .symbol(Circle())
-                    
                     AreaMark(
                         x: .value("Den", item.date, unit: .day),
-                        y: .value("HRV (ms)", item.heartRateVariabilityMs ?? 0)
+                        y: .value("HRV", item.heartRateVariabilityMs ?? 0)
                     )
                     .interpolationMethod(.catmullRom)
-                    .foregroundStyle(LinearGradient(
-                        colors: [.red.opacity(0.3), .clear],
-                        startPoint: .top,
-                        endPoint: .bottom
-                    ))
+                    .foregroundStyle(
+                        LinearGradient(
+                            colors: [chartColor.opacity(0.30), chartColor.opacity(0.03)],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
+                    )
+                    
+                    LineMark(
+                        x: .value("Den", item.date, unit: .day),
+                        y: .value("HRV", item.heartRateVariabilityMs ?? 0)
+                    )
+                    .interpolationMethod(.catmullRom)
+                    .foregroundStyle(chartColor)
+                    .lineStyle(StrokeStyle(lineWidth: 2.5, lineCap: .round))
+                    
+                    PointMark(
+                        x: .value("Den", item.date, unit: .day),
+                        y: .value("HRV", item.heartRateVariabilityMs ?? 0)
+                    )
+                    .foregroundStyle(chartColor)
+                    .symbolSize(20)
                 }
-                .frame(height: 180)
+                .frame(height: 160)
                 .chartXAxis {
                     AxisMarks(values: .stride(by: .day)) { _ in
-                        AxisGridLine().foregroundStyle(.white.opacity(0.1))
+                        AxisGridLine().foregroundStyle(AppColors.border)
                         AxisValueLabel(format: .dateTime.weekday(.abbreviated), centered: true)
-                            .foregroundStyle(.white.opacity(0.6))
+                            .foregroundStyle(AppColors.textTertiary)
                     }
                 }
                 .chartYAxis {
                     AxisMarks(position: .leading) { _ in
-                        AxisGridLine().foregroundStyle(.white.opacity(0.1))
-                        AxisValueLabel().foregroundStyle(.white.opacity(0.6))
+                        AxisGridLine().foregroundStyle(AppColors.border)
+                        AxisValueLabel().foregroundStyle(AppColors.textTertiary)
                     }
+                }
+                
+                HStack(spacing: 6) {
+                    Circle().fill(chartColor.opacity(0.5)).frame(width: 6, height: 6)
+                    Text("Vyšší HRV = lepší zotavení")
+                        .font(AppTypography.caption)
+                        .foregroundStyle(AppColors.textTertiary)
                 }
             }
         }
-        .padding()
-        .background(Color.white.opacity(0.05))
-        .cornerRadius(16)
+        .glassCardStyle()
     }
 }
 
@@ -310,58 +408,94 @@ struct HRVChartCard: View {
 struct RestingHRChartCard: View {
     let data: [HealthMetricsSnapshot]
     
+    private let chartColor = Color(red: 0.92, green: 0.35, blue: 0.52) // Rose pink
+    
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Text("Klidový tep (Posledních 7 dní)")
-                .font(.headline)
-                .foregroundStyle(.white)
+        VStack(alignment: .leading, spacing: 14) {
+            HStack {
+                Label("Klidový tep", systemImage: "heart.fill")
+                    .font(AppTypography.headline)
+                    .foregroundStyle(AppColors.textPrimary)
+                Spacer()
+                if let latest = data.last?.restingHeartRate {
+                    Text("\(Int(latest)) BPM")
+                        .font(.system(size: 13, weight: .bold, design: .rounded))
+                        .foregroundStyle(chartColor)
+                }
+            }
+            
+            Text("Posledních 7 dní")
+                .font(AppTypography.caption)
+                .foregroundStyle(AppColors.textTertiary)
             
             if data.isEmpty || data.allSatisfy({ $0.restingHeartRate == nil }) {
-                Text("Žádná data")
-                    .foregroundStyle(.gray)
-                    .frame(height: 150)
+                ChartEmptyState(
+                    icon: "heart.slash.fill",
+                    title: "Žádná data o klidovém tepu",
+                    subtitle: "Klidový tep ukazuje kardiovaskulární zdatnost. Apple Watch ho měří automaticky.",
+                    iconColor: chartColor
+                )
             } else {
                 Chart(data) { item in
                     if let rhr = item.restingHeartRate {
+                        AreaMark(
+                            x: .value("Den", item.date, unit: .day),
+                            y: .value("BPM", rhr)
+                        )
+                        .interpolationMethod(.catmullRom)
+                        .foregroundStyle(
+                            LinearGradient(
+                                colors: [chartColor.opacity(0.25), chartColor.opacity(0.03)],
+                                startPoint: .top,
+                                endPoint: .bottom
+                            )
+                        )
+                        
                         LineMark(
                             x: .value("Den", item.date, unit: .day),
                             y: .value("BPM", rhr)
                         )
                         .interpolationMethod(.catmullRom)
-                        .foregroundStyle(Color.pink.gradient)
-                        .symbol(Circle())
+                        .foregroundStyle(chartColor)
+                        .lineStyle(StrokeStyle(lineWidth: 2.5, lineCap: .round))
                         
                         PointMark(
                             x: .value("Den", item.date, unit: .day),
                             y: .value("BPM", rhr)
                         )
-                        .foregroundStyle(.pink)
-                        .annotation(position: .top, spacing: 4) {
+                        .foregroundStyle(chartColor)
+                        .symbolSize(24)
+                        .annotation(position: .top, spacing: 6) {
                             Text("\(Int(rhr))")
-                                .font(.system(size: 9, weight: .semibold))
-                                .foregroundStyle(.white.opacity(0.6))
+                                .font(.system(size: 9, weight: .bold, design: .rounded))
+                                .foregroundStyle(AppColors.textTertiary)
                         }
                     }
                 }
-                .frame(height: 180)
+                .frame(height: 160)
                 .chartXAxis {
                     AxisMarks(values: .stride(by: .day)) { _ in
-                        AxisGridLine().foregroundStyle(.white.opacity(0.1))
+                        AxisGridLine().foregroundStyle(AppColors.border)
                         AxisValueLabel(format: .dateTime.weekday(.abbreviated), centered: true)
-                            .foregroundStyle(.white.opacity(0.6))
+                            .foregroundStyle(AppColors.textTertiary)
                     }
                 }
                 .chartYAxis {
                     AxisMarks(position: .leading) { _ in
-                        AxisGridLine().foregroundStyle(.white.opacity(0.1))
-                        AxisValueLabel().foregroundStyle(.white.opacity(0.6))
+                        AxisGridLine().foregroundStyle(AppColors.border)
+                        AxisValueLabel().foregroundStyle(AppColors.textTertiary)
                     }
+                }
+                
+                HStack(spacing: 6) {
+                    Circle().fill(chartColor.opacity(0.5)).frame(width: 6, height: 6)
+                    Text("Nižší klidový tep = lepší kondice")
+                        .font(AppTypography.caption)
+                        .foregroundStyle(AppColors.textTertiary)
                 }
             }
         }
-        .padding()
-        .background(Color.white.opacity(0.05))
-        .cornerRadius(16)
+        .glassCardStyle()
     }
 }
 
@@ -375,22 +509,22 @@ struct WeeklyReportCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             HStack {
-                Text("Jakubovo týdenní zhodnocení")
-                    .font(.headline)
-                    .foregroundStyle(.white)
+                Label("Jakubovo týdenní zhodnocení", systemImage: "doc.text.magnifyingglass")
+                    .font(AppTypography.headline)
+                    .foregroundStyle(AppColors.textPrimary)
                 Spacer()
                 if isLoading {
-                    ProgressView()
-                        .tint(.blue)
+                    ProgressView().tint(AppColors.primaryAccent)
                 } else if report == nil {
                     Button(action: onGenerate) {
                         Text("Generovat")
-                            .font(.subheadline.bold())
+                            .font(.system(size: 13, weight: .bold))
                             .foregroundStyle(.white)
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 6)
-                            .background(Color.blue)
-                            .cornerRadius(8)
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 8)
+                            .background(
+                                Capsule().fill(AppColors.accentGradient)
+                            )
                     }
                 }
             }
@@ -398,27 +532,20 @@ struct WeeklyReportCard: View {
             if let r = report {
                 VStack(alignment: .leading, spacing: 12) {
                     Text(r.summary)
-                        .font(.subheadline)
-                        .foregroundStyle(.white.opacity(0.9))
+                        .font(AppTypography.body)
+                        .foregroundStyle(AppColors.textSecondary)
                     
-                    ReportSection(title: "Co se povedlo", text: r.praise, icon: "hand.thumbsup.fill", color: .green)
-                    ReportSection(title: "Kde přidat", text: r.mistakes, icon: "exclamationmark.triangle.fill", color: .orange)
-                    ReportSection(title: "Motivace do dalšího týdne", text: r.motivation, icon: "flame.fill", color: .red)
-
+                    ReportSection(title: "Co se povedlo", text: r.praise, icon: "hand.thumbsup.fill", color: AppColors.success)
+                    ReportSection(title: "Kde přidat", text: r.mistakes, icon: "exclamationmark.triangle.fill", color: AppColors.warning)
+                    ReportSection(title: "Motivace do dalšího týdne", text: r.motivation, icon: "flame.fill", color: AppColors.error)
                 }
             } else if !isLoading {
                 Text("Získej detailní AI rozbor svých tréninků, spánku a progresu od trenéra.")
-                    .font(.subheadline)
-                    .foregroundStyle(.gray)
+                    .font(AppTypography.body)
+                    .foregroundStyle(AppColors.textTertiary)
             }
         }
-        .padding()
-        .background(Color.white.opacity(0.05))
-        .cornerRadius(16)
-        .overlay(
-            RoundedRectangle(cornerRadius: 16)
-                .stroke(Color.white.opacity(0.1), lineWidth: 1)
-        )
+        .glassCardStyle()
     }
 }
 
@@ -433,14 +560,15 @@ struct ReportSection: View {
             HStack(spacing: 6) {
                 Image(systemName: icon)
                     .foregroundStyle(color)
-                    .font(.caption)
+                    .font(.system(size: 11))
                 Text(title.uppercased())
-                    .font(.caption.bold())
+                    .font(AppTypography.caption)
                     .foregroundStyle(color)
+                    .kerning(0.5)
             }
             Text(text)
-                .font(.subheadline)
-                .foregroundStyle(.white.opacity(0.8))
+                .font(AppTypography.body)
+                .foregroundStyle(AppColors.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)
         }
         .padding(.top, 4)

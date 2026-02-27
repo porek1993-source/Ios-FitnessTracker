@@ -15,7 +15,8 @@ struct HeatmapView: View {
 
                 ScrollView(showsIndicators: false) {
                     VStack(spacing: 32) {
-                        BodyFigureView(vm: vm) { area in
+                        // ✅ OPRAVENO: MuscleMapView (prémiová organická silueta) nahrazuje BodyFigureView
+                        MuscleMapView(vm: vm) { area in
                             vm.lastTappedArea = area
                             showConfirmation   = true
                         }

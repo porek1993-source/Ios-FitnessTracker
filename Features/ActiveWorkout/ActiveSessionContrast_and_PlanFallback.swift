@@ -14,6 +14,7 @@
 // ══════════════════════════════════════════════════════════════
 
 import SwiftUI
+import SwiftData
 
 // MARK: ═══════════════════════════════════════════════════════════════════════
 // MARK: ČÁST A — Vylepšený kontrast ActiveSetRow
@@ -349,13 +350,27 @@ enum JakubQuotes {
 
 extension RollingWeekViewModel {
 
-    /// Poměr dokončených tréninkových dnů z minulých 7 dní
+    /// Poměr dokončených tréninkových dnů z aktuálního týdne
+    /// Načítá skutečné WorkoutSession záznamy ze SwiftData.
     var weekConsistency: Double {
         let workoutDays = days.filter { $0.dayType == .workout }
         guard !workoutDays.isEmpty else { return 0 }
-        // Zde napoj na skutečná data (WorkoutSession). Pro MVP vrátíme placeholder.
-        // Příklad: let completed = workoutDays.filter { session existuje pro daný datum }
-        return min(Double(workoutDays.count) / 5.0, 1.0) // Placeholder: počet dnů/5
+
+        let context   = SharedModelContainer.container.mainContext
+        let weekStart = days.first?.date ?? Date()
+        let weekEnd   = days.last?.date  ?? Date()
+        let statusCompleted = SessionStatus.completed
+
+        // Načti dokončené tréninky v rozsahu aktuálního týdne
+        let descriptor = FetchDescriptor<WorkoutSession>(
+            predicate: #Predicate<WorkoutSession> {
+                $0.status == statusCompleted &&
+                $0.startedAt >= weekStart &&
+                $0.startedAt <= weekEnd
+            }
+        )
+        let completedSessions = (try? context.fetch(descriptor))?.count ?? 0
+        return min(Double(completedSessions) / Double(workoutDays.count), 1.0)
     }
 
     /// Motivační citát — nejprve z recalculationMessage, jinak statický pool

@@ -1,102 +1,89 @@
 // Equipment+SwapSupport.swift
-// Agilní Fitness Trenér — Equipment enum (přidej do Exercise.swift pokud tam chybí)
-// + integrace SwapExerciseSheet do WorkoutView
+// Agilní Fitness Trenér — Equipment enum extensions pro SwapExerciseSheet a filtry
+//
+// OPRAVY v3.0:
+//  ✅ Odstraněn mrtvý kód (komentáře s copy-paste fragmenty)
+//  ✅ Přidány praktické extension metody pro Equipment enum
+//  ✅ Přidána lokalizace Equipment pro UI zobrazení
+//  ✅ Přidán helper pro mapování z MuscleWikiExercise.equipment (CZ string) na enum
 
 import SwiftUI
 import SwiftData
 
-// MARK: - Equipment enum
-// Přidej toto do Exercise.swift
+// MARK: - Equipment Display Helpers
 
-// Equipment enum je nyní v Data/Models/Exercise.swift
+extension Equipment {
 
-// MARK: - Integrace do WorkoutView
-// Přidej do WorkoutView.swift:
-
-/*
-
-struct WorkoutView: View {
-    @Environment(\.modelContext) private var modelContext
-    @StateObject private var session: WorkoutSessionViewModel  // tvůj VM
-
-    // --- SWAP STATE ---
-    @State private var swapTarget: SessionExercise?
-    @State private var showSwapSheet = false
-    @Query private var allExercises: [Exercise]
-
-    var body: some View {
-        ScrollView {
-            ForEach(session.exercises) { sessionExercise in
-                ExerciseCard(sessionExercise: sessionExercise)
-                    .overlay(alignment: .topTrailing) {
-
-                        // ← TLAČÍTKO NAHRADIT
-                        Button {
-                            swapTarget = sessionExercise
-                            showSwapSheet = true
-                        } label: {
-                            Label("Nahradit", systemImage: "arrow.triangle.2.circlepath")
-                                .font(.system(size: 12, weight: .semibold))
-                                .foregroundStyle(.white.opacity(0.7))
-                                .padding(.horizontal, 10)
-                                .padding(.vertical, 6)
-                                .background(Capsule().fill(Color.white.opacity(0.1)))
-                        }
-                        .padding(12)
-                    }
-            }
-        }
-        .sheet(isPresented: $showSwapSheet) {
-            if let target = swapTarget {
-                SwapExerciseSheet(
-                    sessionExercise: target,
-                    allExercises: allExercises,
-                    plannedExercises: session.plannedDay?.plannedExercises ?? [],
-                    onSwap: { newExercise, reason in
-                        performSwap(on: target, with: newExercise, reason: reason)
-                    },
-                    onApplyTimeOptimization: { plan in
-                        applyTimeOptimization(plan)
-                    }
-                )
-                .presentationDetents([.large])
-                .presentationDragIndicator(.hidden)
-            }
+    /// Český název vybavení pro UI
+    var czechName: String {
+        switch self {
+        case .barbell:       return "Velká činka"
+        case .dumbbell:      return "Jednoručka"
+        case .cable:         return "Kladka"
+        case .machine:       return "Stroj"
+        case .bodyweight:    return "Vlastní váha"
+        case .resistanceBand,.band: return "Odporová guma"
+        case .kettlebell:    return "Kettlebell"
+        case .pullupBar:     return "Hrazda"
+        case .trx:           return "TRX"
         }
     }
 
-    // MARK: Swap handler
-    private func performSwap(
-        on sessionExercise: SessionExercise,
-        with newExercise: Exercise,
-        reason: String
-    ) {
-        sessionExercise.exercise = newExercise
-        sessionExercise.wasSubstituted = true
-        sessionExercise.substitutionReason = reason
-        // SwiftData automaticky uloží změny při příštím save pointu
+    /// SF Symbol ikona kompatibilní s iOS 17+
+    var systemIcon: String {
+        switch self {
+        case .barbell:        return "figure.strengthtraining.traditional"
+        case .dumbbell:       return "scalemass.fill"
+        case .cable:          return "arrow.up.and.down.circle.fill"
+        case .machine:        return "gearshape.fill"
+        case .bodyweight:     return "figure.walk"
+        case .resistanceBand, .band: return "arrow.left.and.right.circle.fill"
+        case .kettlebell:     return "circle.fill"
+        case .pullupBar:      return "figure.gymnastics"
+        case .trx:            return "rectangle.and.arrow.up.right.and.arrow.down.left"
+        }
     }
 
-    // MARK: Time optimization handler
-    private func applyTimeOptimization(_ plan: TimeOptimizationPlan) {
-        // Odstraň cviky mimo optimalizovaný plán
-        let keptExercises = Set(plan.keptExercises.compactMap { $0.exercise?.id })
-        session.exercises.removeAll { ex in
-            guard let id = ex.exercise?.id else { return false }
-            return !keptExercises.contains(id)
+    /// Zda je toto vybavení dostupné bez tělocvičny (pro home workout filtraci)
+    var isHomeCompatible: Bool {
+        switch self {
+        case .bodyweight, .resistanceBand, .band, .dumbbell, .kettlebell, .trx: return true
+        default: return false
         }
+    }
 
-        // Označ supersérie (volitelné — pro UI zobrazení)
-        for (a, b) in plan.supersets {
-            if let exA = session.exercises.first(where: { $0.exercise?.id == a.exercise?.id }),
-               let exB = session.exercises.first(where: { $0.exercise?.id == b.exercise?.id }) {
-                exA.substitutionReason = "Supersérie s \(b.exercise?.name ?? "")"
-                exB.substitutionReason = "Supersérie s \(a.exercise?.name ?? "")"
-            }
+    /// Mapuje český název z muscle_wiki_data_full na Equipment enum
+    static func from(czechName: String) -> Equipment? {
+        switch czechName {
+        case "Jednoručka":    return .dumbbell
+        case "Velká činka":   return .barbell
+        case "Vlastní váha":  return .bodyweight
+        case "Stroj":         return .machine
+        case "Kladka":        return .cable
+        case "Kettlebell":    return .kettlebell
+        case "Odporová guma": return .resistanceBand
+        case "TRX":           return .trx
+        case "Hrazda":        return .pullupBar
+        case "Kotouč":        return .barbell
+        case "Bosu":          return .bodyweight
+        case "Medicimbal":    return .kettlebell
+        default:              return nil
         }
     }
 }
 
-*/
+// MARK: - Equipment Set Helpers
 
+extension Set where Element == Equipment {
 
+    /// Vrátí seznam česky pojmenovaných položek seřazených abecedně
+    var czechNames: [String] {
+        self.map(\.czechName).sorted()
+    }
+
+    /// Zkontroluje, zda dané vybavení vyhovuje filtru (nil = no restriction)
+    func allows(_ equipment: [Equipment]) -> Bool {
+        guard !equipment.isEmpty else { return true }  // cvik bez vybavení = bodyweight → vždy OK
+        return !self.isDisjoint(with: Set(equipment))
+    }
+}

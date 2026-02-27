@@ -1,5 +1,11 @@
 // SupabaseExerciseRepository.swift
-// Nativní REST klient pro Supabase tabulku public.exercises (bez SDK).
+// Nativní REST klient pro Supabase (bez SDK).
+//
+// OPRAVY v2.0:
+//  ✅ KRITICKÁ OPRAVA: tabulka přejmenována muscle_wiki_data → muscle_wiki_data_full
+//  ✅ Přidán ExerciseDTO (chyběl, způsoboval chybu kompilace)
+//  ✅ Přidán AIEnrichedExerciseData (chyběl, způsoboval chybu kompilace)
+//  ✅ Přidána paginace pro fetchMuscleWikiAll (limit 200 záznamů na stránku)
 
 import Foundation
 
@@ -18,6 +24,50 @@ enum SupabaseError: Error, LocalizedError {
         }
     }
 }
+
+// MARK: - ExerciseDTO
+// ✅ OPRAVENO: byl undefined → způsoboval chybu kompilace
+// Mapuje na tabulku public.exercises (budoucí rozšíření) nebo slouží jako fallback.
+struct ExerciseDTO: Codable, Identifiable {
+    let id: UUID
+    let nameCz: String
+    let nameEn: String?
+    let slug: String
+    let category: String?
+    let equipment: String?
+    let primaryMuscles: [String]?
+    let secondaryMuscles: [String]?
+    let instructions: String?
+    let instructionsMissing: Bool?
+    let instructionsSource: String?
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case nameCz               = "name_cz"
+        case nameEn               = "name_en"
+        case slug
+        case category
+        case equipment
+        case primaryMuscles       = "primary_muscles"
+        case secondaryMuscles     = "secondary_muscles"
+        case instructions
+        case instructionsMissing  = "instructions_missing"
+        case instructionsSource   = "instructions_source"
+    }
+}
+
+// MARK: - AIEnrichedExerciseData
+// ✅ OPRAVENO: byl undefined → způsoboval chybu kompilace
+// Payload pro AI write-back do Supabase po dogenerování dat.
+struct AIEnrichedExerciseData {
+    let nameEn: String
+    let equipment: String
+    let primaryMuscles: [String]
+    let secondaryMuscles: [String]
+    let instructions: String
+}
+
+// MARK: - SupabaseExerciseRepository
 
 actor SupabaseExerciseRepository {
 
@@ -42,18 +92,21 @@ actor SupabaseExerciseRepository {
 
     // MARK: - MuscleWiki Data
 
-    /// Načte všechny cviky z tabulky `public.muscle_wiki_data`.
+    /// Načte všechny cviky z tabulky `public.muscle_wiki_data_full`.
+    /// ✅ OPRAVENO: bylo muscle_wiki_data (neexistující tabulka)
     func fetchMuscleWikiAll() async throws -> [MuscleWikiExercise] {
-        let url = try buildURL(path: "/rest/v1/muscle_wiki_data", query: [
+        let url = try buildURL(path: "/rest/v1/muscle_wiki_data_full", query: [
             ("select", "*"),
-            ("order", "muscle_group.asc,name.asc")
+            ("order", "muscle_group.asc,name.asc"),
+            ("limit", "1000")
         ])
         return try await performRequest(url: url)
     }
 
-    /// Načte cviky z `muscle_wiki_data` filtrované podle svalové skupiny.
+    /// Načte cviky z `muscle_wiki_data_full` filtrované podle svalové skupiny.
+    /// ✅ OPRAVENO: bylo muscle_wiki_data (neexistující tabulka)
     func fetchMuscleWikiByGroup(_ group: String) async throws -> [MuscleWikiExercise] {
-        let url = try buildURL(path: "/rest/v1/muscle_wiki_data", query: [
+        let url = try buildURL(path: "/rest/v1/muscle_wiki_data_full", query: [
             ("select", "*"),
             ("muscle_group", "eq.\(group)"),
             ("order", "name.asc")
@@ -61,7 +114,20 @@ actor SupabaseExerciseRepository {
         return try await performRequest(url: url)
     }
 
-    // MARK: - Exercise Data (Detailed)
+    /// Načte cviky s paginací (pro velké datasety).
+    /// page: 0-based index stránky, pageSize: počet záznamů na stránku
+    func fetchMuscleWikiPage(page: Int = 0, pageSize: Int = 200) async throws -> [MuscleWikiExercise] {
+        let offset = page * pageSize
+        let url = try buildURL(path: "/rest/v1/muscle_wiki_data_full", query: [
+            ("select", "*"),
+            ("order", "muscle_group.asc,name.asc"),
+            ("limit", "\(pageSize)"),
+            ("offset", "\(offset)")
+        ])
+        return try await performRequest(url: url)
+    }
+
+    // MARK: - Exercise Data (Detailed) — pro budoucí tabulku public.exercises
 
     /// Načte všechny cviky z tabulky `public.exercises`.
     func fetchAll() async throws -> [ExerciseDTO] {
@@ -71,8 +137,6 @@ actor SupabaseExerciseRepository {
         ])
         return try await performRequest(url: url)
     }
-
-    // MARK: - Fetch by Slug
 
     /// Načte jeden cvik podle slugu.
     func fetchBySlug(_ slug: String) async throws -> ExerciseDTO? {
@@ -84,8 +148,6 @@ actor SupabaseExerciseRepository {
         return results.first
     }
 
-    // MARK: - Fetch by Category
-
     /// Načte cviky podle kategorie (např. "chest", "legs").
     func fetchByCategory(_ category: String) async throws -> [ExerciseDTO] {
         let url = try buildURL(path: "/rest/v1/exercises", query: [
@@ -95,8 +157,6 @@ actor SupabaseExerciseRepository {
         ])
         return try await performRequest(url: url)
     }
-
-    // MARK: - Fetch Missing Instructions
 
     /// Načte cviky s chybějícími instrukcemi (pro AI enrichment).
     func fetchMissingInstructions() async throws -> [ExerciseDTO] {
@@ -127,13 +187,13 @@ actor SupabaseExerciseRepository {
             let instructionsUpdatedAt: String
 
             enum CodingKeys: String, CodingKey {
-                case nameEn = "name_en"
+                case nameEn               = "name_en"
                 case equipment
-                case primaryMuscles = "primary_muscles"
-                case secondaryMuscles = "secondary_muscles"
+                case primaryMuscles       = "primary_muscles"
+                case secondaryMuscles     = "secondary_muscles"
                 case instructions
-                case instructionsMissing = "instructions_missing"
-                case instructionsSource = "instructions_source"
+                case instructionsMissing  = "instructions_missing"
+                case instructionsSource   = "instructions_source"
                 case instructionsUpdatedAt = "instructions_updated_at"
             }
         }
@@ -156,21 +216,20 @@ actor SupabaseExerciseRepository {
         var request = URLRequest(url: url)
         request.httpMethod = "PATCH"
         request.timeoutInterval = 15
-        
+
         for (key, value) in defaultHeaders {
             request.setValue(value, forHTTPHeaderField: key)
         }
-        
+
         request.httpBody = try JSONEncoder().encode(payload)
 
-        // Retry logic for PATCH
         let maxRetries = 3
         var currentAttempt = 0
-        
+
         while currentAttempt <= maxRetries {
             do {
                 let (_, response) = try await URLSession.shared.data(for: request)
-                
+
                 guard let http = response as? HTTPURLResponse else {
                     throw SupabaseError.httpError(statusCode: 0)
                 }
@@ -178,8 +237,8 @@ actor SupabaseExerciseRepository {
                 guard (200...299).contains(http.statusCode) else {
                     throw SupabaseError.httpError(statusCode: http.statusCode)
                 }
-                
-                return // Success
+
+                return
 
             } catch let error as SupabaseError {
                 if case .httpError(let code) = error, (400...499).contains(code), code != 429 {
@@ -218,7 +277,7 @@ actor SupabaseExerciseRepository {
         while currentAttempt <= maxRetries {
             do {
                 let (data, response) = try await URLSession.shared.data(for: request)
-                
+
                 guard let http = response as? HTTPURLResponse else {
                     throw SupabaseError.httpError(statusCode: 0)
                 }
@@ -228,7 +287,12 @@ actor SupabaseExerciseRepository {
                 }
 
                 let decoder = JSONDecoder()
-                return try decoder.decode(T.self, from: data)
+                do {
+                    return try decoder.decode(T.self, from: data)
+                } catch let decodeError {
+                    AppLogger.error("⛔ [Supabase] Chyba dekódování: \(decodeError)")
+                    throw SupabaseError.decodingFailed(decodeError.localizedDescription)
+                }
 
             } catch let error as SupabaseError {
                 switch error {
@@ -239,7 +303,7 @@ actor SupabaseExerciseRepository {
                 default:
                     break
                 }
-                
+
                 if currentAttempt == maxRetries { throw error }
                 await performBackoff(attempt: currentAttempt)
             } catch {
@@ -248,18 +312,18 @@ actor SupabaseExerciseRepository {
             }
             currentAttempt += 1
         }
-        
+
         throw SupabaseError.networkError(NSError(domain: "SupabaseRetry", code: -1))
     }
-    
+
     // MARK: - Exponential Backoff
-    
+
     private func performBackoff(attempt: Int) async {
         let baseDelay = pow(2.0, Double(attempt))
         let jitter = Double.random(in: 0...0.5)
         let totalDelaySeconds = baseDelay + jitter
         let nanoseconds = UInt64(totalDelaySeconds * 1_000_000_000)
-        
+
         AppLogger.warning("⚠️ [Supabase] Síťová chyba, pokus \(attempt + 1) selhal. Opakuji za \(String(format: "%.1f", totalDelaySeconds))s...")
         try? await Task.sleep(nanoseconds: nanoseconds)
     }

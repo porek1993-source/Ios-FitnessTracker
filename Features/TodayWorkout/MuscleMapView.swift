@@ -103,9 +103,9 @@ struct MuscleMapView: View {
     private var silhouetteGradient: some ShapeStyle {
         LinearGradient(
             colors: [
-                Color.white.opacity(0.065),
-                Color.white.opacity(0.028),
-                Color.blue.opacity(0.018)
+                Color.white.opacity(0.07),
+                Color.white.opacity(0.03),
+                AppColors.primaryAccent.opacity(0.02)
             ],
             startPoint: .top,
             endPoint: .bottom
@@ -169,13 +169,13 @@ private struct OrganicMuscleZoneView: View {
     @State private var glowPulse: Bool = false
 
     private var rect: CGRect {
-        area.relativeRect(in: canvas).insetBy(dx: 2.5, dy: 2.5)
+        area.relativeRect(in: canvas).insetBy(dx: 2, dy: 2)
     }
 
-    // Dynamický radius: miniaturní oblasti (lýtka, ruce) = plná Capsule
+    // Dynamický radius: plná Capsule pro všechny svaly
     private var cornerRadius: CGFloat {
         let minDim = min(rect.width, rect.height)
-        return minDim * 0.48
+        return minDim * 0.50 // plná Capsule
     }
 
     var body: some View {
@@ -282,9 +282,9 @@ private struct OrganicMuscleZoneView: View {
     private var outlineColor: Color {
         switch state {
         case .healthy:   return .white.opacity(0.10)
-        case .sore:      return Color(red: 1.0, green: 0.55, blue: 0.12).opacity(0.70)
-        case .fatigued:  return Color(red: 0.95, green: 0.20, blue: 0.22).opacity(0.75)
-        case .jointPain: return Color(red: 1.0, green: 0.10, blue: 0.10)
+        case .sore:      return AppColors.warning.opacity(0.70)
+        case .fatigued:  return AppColors.error.opacity(0.75)
+        case .jointPain: return AppColors.error
         }
     }
 
@@ -495,7 +495,7 @@ struct PremiumBodySilhouette: Shape {
 
 #Preview("Svalová mapa — prémiová") {
     ZStack {
-        Color(hue: 0.62, saturation: 0.22, brightness: 0.07).ignoresSafeArea()
+        AppColors.background.ignoresSafeArea()
 
         ScrollView {
             VStack(spacing: 24) {

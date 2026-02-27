@@ -100,24 +100,97 @@ struct MuscleWikiDetailView: View {
                 .foregroundStyle(AppColors.textPrimary)
                 .fixedSize(horizontal: false, vertical: true)
 
-            // Badge svalové skupiny
-            HStack(spacing: AppSpacing.xs) {
-                Image(systemName: exercise.muscleGroupIcon)
-                    .font(.system(size: 14, weight: .semibold))
-                Text(exercise.localizedMuscleGroup)
-                    .font(AppTypography.callout)
-            }
-            .foregroundStyle(AppColors.primaryAccent)
-            .padding(.horizontal, 14)
-            .padding(.vertical, 7)
-            .background(
-                Capsule()
-                    .fill(AppColors.primaryAccent.opacity(0.12))
-                    .overlay(
+            // Badges: svalová skupina + vybavení
+            // FlexibleRow zajistí přetečení na nový řádek u dlouhých kombinací
+            FlexibleRow(spacing: AppSpacing.xs) {
+                // Badge svalové skupiny
+                HStack(spacing: 6) {
+                    Image(systemName: exercise.muscleGroupIcon)
+                        .font(.system(size: 14, weight: .semibold))
+                    Text(exercise.localizedMuscleGroup)
+                        .font(AppTypography.callout)
+                }
+                .foregroundStyle(AppColors.primaryAccent)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 7)
+                .background(
+                    Capsule()
+                        .fill(AppColors.primaryAccent.opacity(0.12))
+                        .overlay(
+                            Capsule()
+                                .stroke(AppColors.primaryAccent.opacity(0.2), lineWidth: 1)
+                        )
+                )
+
+                // Badge vybavení — zobrazuje se jen pokud je k dispozici
+                if let equipment = exercise.equipment {
+                    HStack(spacing: 5) {
+                        Image(systemName: "scalemass.fill")
+                            .font(.system(size: 12, weight: .semibold))
+                        Text(equipment)
+                            .font(AppTypography.callout)
+                    }
+                    .foregroundStyle(Color.indigo)
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 7)
+                    .background(
                         Capsule()
-                            .stroke(AppColors.primaryAccent.opacity(0.2), lineWidth: 1)
+                            .fill(Color.indigo.opacity(0.12))
+                            .overlay(
+                                Capsule()
+                                    .stroke(Color.indigo.opacity(0.2), lineWidth: 1)
+                            )
                     )
-            )
+                }
+            }
+        }
+    }
+
+    // MARK: - FlexibleRow helper (wrap badges na nový řádek)
+
+    struct FlexibleRow: Layout {
+        var spacing: CGFloat = 8
+
+        func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+            let maxWidth = proposal.width ?? .infinity
+            var currentX: CGFloat = 0
+            var currentRowHeight: CGFloat = 0
+            var totalHeight: CGFloat = 0
+            var rowHeights: [CGFloat] = []
+
+            for subview in subviews {
+                let size = subview.sizeThatFits(.unspecified)
+                if currentX + size.width > maxWidth && currentX > 0 {
+                    rowHeights.append(currentRowHeight)
+                    totalHeight += currentRowHeight + spacing
+                    currentX = 0
+                    currentRowHeight = 0
+                }
+                currentX += size.width + spacing
+                currentRowHeight = max(currentRowHeight, size.height)
+            }
+            rowHeights.append(currentRowHeight)
+            totalHeight += currentRowHeight
+
+            return CGSize(width: maxWidth, height: totalHeight)
+        }
+
+        func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+            var currentX = bounds.minX
+            var currentY = bounds.minY
+            var currentRowHeight: CGFloat = 0
+
+            for subview in subviews {
+                let size = subview.sizeThatFits(.unspecified)
+                if currentX + size.width > bounds.maxX && currentX > bounds.minX {
+                    currentY += currentRowHeight + spacing
+                    currentX = bounds.minX
+                    currentRowHeight = 0
+                }
+                subview.place(at: CGPoint(x: currentX, y: currentY), proposal: ProposedViewSize(size))
+                currentX += size.width + spacing
+                currentRowHeight = max(currentRowHeight, size.height)
+            }
         }
     }
 

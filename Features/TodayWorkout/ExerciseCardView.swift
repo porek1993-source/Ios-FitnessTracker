@@ -1,5 +1,6 @@
 // ExerciseCardView.swift
 import SwiftUI
+import AVFoundation
 
 struct ExerciseCardView: View {
     let exercise: SessionExerciseState
@@ -13,7 +14,8 @@ struct ExerciseCardView: View {
                 ExerciseAnimationView(
                     slug: exercise.slug,
                     nameCz: exercise.name,
-                    nameEn: exercise.exercise?.nameEN
+                    nameEn: exercise.exercise?.nameEN,
+                    videoUrl: exercise.videoUrl   // ✅ Předáváme videoUrl z muscle_wiki_data_full
                 )
                 .frame(height: 260)
 
@@ -135,91 +137,147 @@ struct ExerciseAnimationView: View {
     let slug: String
     let nameCz: String
     let nameEn: String?
+    var videoUrl: String? = nil   // ✅ Video z muscle_wiki_data_full (Supabase Storage)
 
     @Environment(\.openURL) private var openURL
 
+    // Video state — lazy init jen pokud máme URL
+    @State private var videoPlayer: AVQueuePlayer?
+    @State private var playerLooper: AVPlayerLooper?
+
     var body: some View {
         ZStack {
-            LinearGradient(
-                colors: [Color(white: 0.08), Color.black],
-                startPoint: .top, endPoint: .bottom
-            )
-            VStack(spacing: 16) {
-                Spacer()
+            if let player = videoPlayer {
+                // ── REÁLNÉ VIDEO z Supabase Storage ───────────────────────
                 ZStack(alignment: .bottomTrailing) {
-                    Circle()
-                        .fill(exerciseColor(slug).opacity(0.12))
-                        .frame(width: 130, height: 130)
-                    Circle()
-                        .stroke(exerciseColor(slug).opacity(0.2), lineWidth: 1)
-                        .frame(width: 130, height: 130)
-                        if #available(iOS 18.0, *) {
-                            Image(systemName: exerciseIcon(slug))
-                                .font(.system(size: 58, weight: .light))
-                                .foregroundStyle(
-                                    LinearGradient(
-                                        colors: [exerciseColor(slug), exerciseColor(slug).opacity(0.6)],
-                                        startPoint: .topLeading, endPoint: .bottomTrailing
-                                    )
-                                )
-                                .symbolEffect(.bounce, options: .repeating)
-                        } else {
-                            Image(systemName: exerciseIcon(slug))
-                                .font(.system(size: 58, weight: .light))
-                                .foregroundStyle(
-                                    LinearGradient(
-                                        colors: [exerciseColor(slug), exerciseColor(slug).opacity(0.6)],
-                                        startPoint: .topLeading, endPoint: .bottomTrailing
-                                    )
-                                )
-                                 .symbolEffect(.pulse) // Safe fallback for iOS 17
-                         }
-                 }
+                    LoopingVideoPlayer(player: player)
+                        .clipped()
 
-                VStack(spacing: 4) {
-                    Text(exerciseCategoryLabel(slug))
-                        .font(.system(size: 11, weight: .semibold))
-                        .foregroundStyle(exerciseColor(slug).opacity(0.6))
-                        .kerning(1.5)
-                        .textCase(.uppercase)
+                    LinearGradient(
+                        colors: [.clear, .black.opacity(0.6)],
+                        startPoint: .init(x: 0.5, y: 0.5), endPoint: .bottom
+                    )
+                    .allowsHitTesting(false)
 
+                    // YouTube button jako fallback / doplněk
                     Button {
                         HapticManager.shared.playMediumClick()
                         let url = YouTubeLinkGenerator.searchURL(nameEn: nameEn, nameCz: nameCz)
                         openURL(url)
                     } label: {
-                        HStack(spacing: 6) {
+                        HStack(spacing: 5) {
                             Image(systemName: "play.rectangle.fill")
-                                .font(.system(size: 12))
+                                .font(.system(size: 11))
                             Text("Technika")
-                                .font(.system(size: 13, weight: .bold))
+                                .font(.system(size: 12, weight: .bold))
                         }
-                        .foregroundStyle(.white)
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 6)
+                        .foregroundStyle(.white.opacity(0.75))
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 5)
                         .background(
                             Capsule()
-                                .fill(Color.red.opacity(0.8))
-                                .shadow(color: .red.opacity(0.3), radius: 4, y: 2)
+                                .fill(Color.black.opacity(0.5))
+                                .overlay(Capsule().stroke(.white.opacity(0.15), lineWidth: 1))
                         )
                     }
-                    .padding(.top, 4)
+                    .padding(.bottom, 10)
+                    .padding(.trailing, 12)
                 }
+            } else {
+                // ── SF SYMBOL FALLBACK (bez video URL) ────────────────────
+                LinearGradient(
+                    colors: [Color(white: 0.08), Color.black],
+                    startPoint: .top, endPoint: .bottom
+                )
+                VStack(spacing: 16) {
+                    Spacer()
+                    ZStack(alignment: .bottomTrailing) {
+                        Circle()
+                            .fill(exerciseColor(slug).opacity(0.12))
+                            .frame(width: 130, height: 130)
+                        Circle()
+                            .stroke(exerciseColor(slug).opacity(0.2), lineWidth: 1)
+                            .frame(width: 130, height: 130)
+                        Image(systemName: exerciseIcon(slug))
+                            .font(.system(size: 58, weight: .light))
+                            .foregroundStyle(
+                                LinearGradient(
+                                    colors: [exerciseColor(slug), exerciseColor(slug).opacity(0.6)],
+                                    startPoint: .topLeading, endPoint: .bottomTrailing
+                                )
+                            )
+                            .symbolEffect(.pulse)
+                    }
 
-                 Spacer()
-             }
-             LinearGradient(
-                 colors: [.clear, .black],
-                 startPoint: .init(x: 0.5, y: 0.55), endPoint: .bottom
-             )
-         }
-     }
+                    VStack(spacing: 4) {
+                        Text(exerciseCategoryLabel(slug))
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundStyle(exerciseColor(slug).opacity(0.6))
+                            .kerning(1.5)
+                            .textCase(.uppercase)
+
+                        Button {
+                            HapticManager.shared.playMediumClick()
+                            let url = YouTubeLinkGenerator.searchURL(nameEn: nameEn, nameCz: nameCz)
+                            openURL(url)
+                        } label: {
+                            HStack(spacing: 6) {
+                                Image(systemName: "play.rectangle.fill")
+                                    .font(.system(size: 12))
+                                Text("Technika")
+                                    .font(.system(size: 13, weight: .bold))
+                            }
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 6)
+                            .background(
+                                Capsule()
+                                    .fill(Color.red.opacity(0.8))
+                                    .shadow(color: .red.opacity(0.3), radius: 4, y: 2)
+                            )
+                        }
+                        .padding(.top, 4)
+                    }
+
+                    Spacer()
+                }
+                LinearGradient(
+                    colors: [.clear, .black],
+                    startPoint: .init(x: 0.5, y: 0.55), endPoint: .bottom
+                )
+            }
+        }
+        .onAppear { setupVideo() }
+        .onDisappear {
+            videoPlayer?.pause()
+            playerLooper = nil
+            videoPlayer = nil
+        }
+        .onChange(of: videoUrl) { setupVideo() }
+    }
+
+    // MARK: Video Setup
+
+    private func setupVideo() {
+        videoPlayer?.pause()
+        playerLooper = nil
+        videoPlayer = nil
+
+        guard let urlString = videoUrl, let url = URL(string: urlString) else { return }
+        let item = AVPlayerItem(url: url)
+        let player = AVQueuePlayer(playerItem: item)
+        playerLooper = AVPlayerLooper(player: player, templateItem: item)
+        player.isMuted = true
+        player.play()
+        videoPlayer = player
+    }
 
     private func exerciseIcon(_ slug: String) -> String {
         let s = slug.lowercased()
-        if s.contains("bench") || s.contains("chest") || s.contains("fly") { return "dumbbell.fill" }
+        // POZOR: "dumbbell.fill" existuje jen v iOS 18+ → nepoužíváme
+        if s.contains("bench") || s.contains("chest") || s.contains("fly") { return "figure.strengthtraining.traditional" }
         if s.contains("press") && (s.contains("shoulder") || s.contains("overhead") || s.contains("ohp")) { return "figure.arms.open" }
-        if s.contains("press") { return "dumbbell.fill" }
+        if s.contains("press") { return "figure.strengthtraining.traditional" }
         if s.contains("squat") { return "figure.strengthtraining.traditional" }
         if s.contains("leg-press") || s.contains("leg_press") { return "figure.strengthtraining.traditional" }
         if s.contains("deadlift") || s.contains("rdl") || s.contains("hip-thrust") { return "figure.strengthtraining.functional" }

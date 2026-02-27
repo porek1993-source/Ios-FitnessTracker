@@ -6,6 +6,7 @@
 
 import SwiftUI
 import SwiftData
+import AVFoundation
 
 // MARK: ═══════════════════════════════════════════════════════════════════════
 // MARK: ActiveSessionView — Root Container
@@ -30,7 +31,7 @@ struct ActiveSessionView: View {
         ZStack(alignment: .bottom) {
 
             // ── Static background
-            Color(hue: 0.62, saturation: 0.18, brightness: 0.07).ignoresSafeArea()
+            AppColors.background.ignoresSafeArea()
 
             // ── Paged exercise cards
             TabView(selection: $vm.currentExerciseIndex) {
@@ -78,7 +79,7 @@ struct ActiveSessionView: View {
                 }
                 .presentationDetents([.medium, .large])
                 .presentationDragIndicator(.hidden)
-                .presentationBackground(Color(hue: 0.62, saturation: 0.18, brightness: 0.09))
+                .presentationBackground(AppColors.secondaryBg)
             }
         }
         .confirmationDialog("Dokončit trénink?", isPresented: $showFinishDlg, titleVisibility: .visible) {
@@ -228,6 +229,8 @@ private struct ExerciseHero: View {
     let onSwap:   () -> Void
 
     @State private var glowPulse = false
+    @State private var videoPlayer: AVQueuePlayer?
+    @State private var playerLooper: AVPlayerLooper?
 
     private var completedSets: Int { exercise.sets.filter(\.isCompleted).count }
     private var totalSets: Int     { exercise.sets.count }
@@ -236,8 +239,8 @@ private struct ExerciseHero: View {
     var body: some View {
         ZStack(alignment: .bottom) {
             LinearGradient(
-                colors: [Color(hue: 0.62, saturation: 0.30, brightness: 0.16),
-                         Color(hue: 0.62, saturation: 0.18, brightness: 0.07)],
+                colors: [AppColors.tertiaryBg,
+                         AppColors.background],
                 startPoint: .top, endPoint: .bottom
             )
             .frame(height: 230)
@@ -251,28 +254,45 @@ private struct ExerciseHero: View {
                 .animation(.easeInOut(duration: 2.6).repeatForever(autoreverses: true), value: glowPulse)
                 .offset(y: -30)
 
-            // Icon placeholder (swap for AVPlayer / GIF in production)
+            // Video / ikona cviku — používá videoUrl z muscle_wiki_data_full pokud je k dispozici
             VStack(spacing: 0) {
-                Image(systemName: iconForSlug(exercise.slug))
-                    .font(.system(size: 64))
-                    .foregroundStyle(
-                        LinearGradient(
-                            colors: [.blue, .cyan.opacity(0.75)],
-                            startPoint: .topLeading, endPoint: .bottomTrailing
+                if let player = videoPlayer {
+                    // ✅ Reálné video z Supabase Storage (muscle_wiki_data_full.video_url)
+                    LoopingVideoPlayer(player: player)
+                        .frame(height: 230)
+                        .clipped()
+                        .overlay(
+                            LinearGradient(
+                                colors: [Color.black.opacity(0.3), Color.clear, Color.clear],
+                                startPoint: .top, endPoint: .bottom
+                            )
                         )
-                    )
-                    .symbolEffect(.pulse.wholeSymbol, options: .repeating)
-                    .padding(.top, 28)
+                } else {
+                    // Fallback ikona pokud video URL není k dispozici
+                    Image(systemName: iconForSlug(exercise.slug))
+                        .font(.system(size: 64))
+                        .foregroundStyle(
+                            LinearGradient(
+                                colors: [.blue, .cyan.opacity(0.75)],
+                                startPoint: .topLeading, endPoint: .bottomTrailing
+                            )
+                        )
+                        .symbolEffect(.pulse.wholeSymbol, options: .repeating)
+                        .padding(.top, 28)
 
-                Text("VIDEO TECHNIKY · BRZY")
-                    .font(.system(size: 8, weight: .black))
-                    .foregroundStyle(.white.opacity(0.16))
-                    .kerning(1.0)
-                    .padding(.top, 10)
+                    Text("VIDEO TECHNIKY")
+                        .font(.system(size: 8, weight: .black))
+                        .foregroundStyle(.white.opacity(0.16))
+                        .kerning(1.0)
+                        .padding(.top, 10)
 
-                Spacer()
+                    Spacer()
+                }
             }
             .frame(height: 230)
+            .onAppear { setupVideoPlayer() }
+            .onDisappear { videoPlayer?.pause() }
+            .onChange(of: exercise.id) { setupVideoPlayer() }
 
             // Bottom: name + progress + swap button
             VStack(spacing: 0) {
@@ -316,23 +336,23 @@ private struct ExerciseHero: View {
                         .frame(width: 54, height: 50)
                         .background(
                             RoundedRectangle(cornerRadius: 14, style: .continuous)
-                                .fill(.white.opacity(0.09))
+                                .fill(AppColors.glassBg)
                                 .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous)
-                                    .stroke(.white.opacity(0.13), lineWidth: 1))
+                                    .stroke(AppColors.border, lineWidth: 1))
                         )
                     }
                     .buttonStyle(.plain)
                 }
                 .padding(.horizontal, 20)
                 .padding(.bottom, 14)
-                .background(Color(hue: 0.62, saturation: 0.18, brightness: 0.07))
+                .background(AppColors.background)
 
                 // Progress bar
                 ZStack(alignment: .leading) {
                     Rectangle().fill(.white.opacity(0.05))
                     Rectangle()
                         .fill(LinearGradient(
-                            colors: [Color.blue, Color.cyan.opacity(0.8)],
+                            colors: [AppColors.primaryAccent, AppColors.accentCyan.opacity(0.8)],
                             startPoint: .leading, endPoint: .trailing
                         ))
                         .frame(width: UIScreen.main.bounds.width * progress)
@@ -344,9 +364,26 @@ private struct ExerciseHero: View {
         .onAppear { glowPulse = true }
     }
 
+    private func setupVideoPlayer() {
+        // Zastavit předchozí přehrávání
+        videoPlayer?.pause()
+        playerLooper = nil
+        videoPlayer = nil
+
+        guard let urlString = exercise.videoUrl,
+              let url = URL(string: urlString) else { return }
+
+        let item = AVPlayerItem(url: url)
+        let player = AVQueuePlayer(playerItem: item)
+        playerLooper = AVPlayerLooper(player: player, templateItem: item)
+        player.isMuted = true   // Video jako vizuální reference — bez zvuku
+        player.play()
+        videoPlayer = player
+    }
+
     private func iconForSlug(_ slug: String) -> String {
-        if slug.contains("bench") || slug.contains("chest") { return "dumbbell.fill" }
-        if slug.contains("press") && !slug.contains("leg")  { return "dumbbell.fill" }
+        if slug.contains("bench") || slug.contains("chest") { return "scalemass.fill" }
+        if slug.contains("press") && !slug.contains("leg")  { return "scalemass.fill" }
         if slug.contains("squat") || slug.contains("leg")   { return "figure.strengthtraining.traditional" }
         if slug.contains("pull")  || slug.contains("row")   { return "figure.gymnastics" }
         if slug.contains("curl")  || slug.contains("bicep") { return "figure.arms.open" }
@@ -652,7 +689,7 @@ struct ActiveSetRow: View {
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 9)
-        .background(rowBG)
+        .background(enhancedRowBackground)
         .opacity(rowOpacity)
         .animation(.easeInOut(duration: 0.18), value: isActive)
         .animation(.easeInOut(duration: 0.18), value: currentSet.isCompleted)
@@ -681,17 +718,33 @@ struct ActiveSetRow: View {
         onComplete()
     }
 
+    // ✅ OPRAVENO: Vylepšený kontrast pro fitness studio (nahrazuje původní rowBG)
+    // Aktuální série: výraznější rámeček v akcentní barvě, lépe čitelné pod přímým světlem
     private var rowBG: some View {
         RoundedRectangle(cornerRadius: 14, style: .continuous)
             .fill(isActive
-                  ? Color(hue: 0.62, saturation: 0.22, brightness: 0.15)
-                  : Color.clear)
-            .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .stroke(isActive ? Color.blue.opacity(0.20) : Color.clear, lineWidth: 1))
+                   ? Color(red: 0.14, green: 0.14, blue: 0.20)   // světlejší než AppColors.tertiaryBg
+                   : Color.clear)
+            .overlay(
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .stroke(
+                        isActive
+                            ? AppColors.primaryAccent.opacity(0.6)  // výraznější akcent
+                            : Color.clear,
+                        lineWidth: isActive ? 1.5 : 0
+                    )
+            )
+            .shadow(
+                color: isActive ? AppColors.primaryAccent.opacity(0.15) : .clear,
+                radius: 8, x: 0, y: 0
+            )
     }
 
     private var rowOpacity: Double {
-        currentSet.isCompleted ? 0.50 : (isActive ? 1.0 : 0.45)
+        // Dokončená série: enhancedRowBackground zobrazuje zelené pozadí — nefadovat
+        // Neaktivní nedokončená: 45% průhlednost pro focus na aktivní sérii
+        if currentSet.isCompleted { return 0.85 }
+        return isActive ? 1.0 : 0.45
     }
 }
 
@@ -760,7 +813,7 @@ private struct InlineField: View {
                 }
             }
         }
-        .frame(height: 42)
+        .frame(height: 52)
     }
 
     private var fieldBg: Color {
@@ -794,7 +847,7 @@ private struct RPECell: View {
                     .foregroundStyle(.white.opacity(isActive ? 0.30 : 0.13))
             }
         }
-        .frame(height: 42)
+        .frame(height: 52)
         .contentShape(Rectangle())
     }
 
@@ -831,11 +884,11 @@ private struct CompleteButton: View {
 
     private var btnFill: Color {
         if isCompleted             { return .clear }
-        if isActive && canComplete { return Color(red:0.12, green:0.80, blue:0.43).opacity(0.88) }
+        if isActive && canComplete { return AppColors.success.opacity(0.88) }
         return .white.opacity(0.07)
     }
     private var btnIcon: Color {
-        if isCompleted             { return Color(red:0.13, green:0.80, blue:0.43) }
+        if isCompleted             { return AppColors.success }
         if isActive && canComplete { return .white }
         return .white.opacity(0.18)
     }
@@ -882,7 +935,7 @@ private struct RPEPickerView: View {
             }
             .padding(.horizontal, 16).padding(.bottom, 20)
         }
-        .background(Color(hue: 0.62, saturation: 0.18, brightness: 0.10).ignoresSafeArea())
+        .background(AppColors.secondaryBg.ignoresSafeArea())
         .preferredColorScheme(.dark)
     }
 
@@ -1349,7 +1402,7 @@ struct WorkoutSwapCandidate: Identifiable {
 
     var equipIcon: String {
         switch equipment {
-        case "Jednoručky":  return "dumbbell.fill"
+        case "Jednoručky":  return "scalemass.fill"
         case "Bodyweight":  return "figure.strengthtraining.functional"
         case "Kabelák":     return "arrow.up.and.down.circle"
         case "Stroj":       return "gearshape.fill"

@@ -233,9 +233,20 @@ private struct ExerciseSearchRow: View {
                         .foregroundStyle(.white)
                         .lineLimit(1)
 
-                    Text(exercise.localizedMuscleGroup)
-                        .font(.system(size: 11))
-                        .foregroundStyle(.white.opacity(0.4))
+                    HStack(spacing: 6) {
+                        Text(exercise.localizedMuscleGroup)
+                            .font(.system(size: 11))
+                            .foregroundStyle(.white.opacity(0.4))
+
+                        if let equipment = exercise.equipment {
+                            Text("•")
+                                .font(.system(size: 11))
+                                .foregroundStyle(.white.opacity(0.25))
+                            Text(equipment)
+                                .font(.system(size: 11))
+                                .foregroundStyle(.white.opacity(0.35))
+                        }
+                    }
                 }
 
                 Spacer()

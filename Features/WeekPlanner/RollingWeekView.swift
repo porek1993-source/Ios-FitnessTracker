@@ -18,7 +18,7 @@ enum DayType: String, CaseIterable, Identifiable {
 
     var icon: String {
         switch self {
-        case .workout: return "dumbbell.fill"
+        case .workout: return "scalemass.fill"
         case .rest:    return "bed.double.fill"
         case .sport:   return "sportscourt.fill"
         case .cardio:  return "figure.run"
@@ -276,6 +276,14 @@ struct RollingWeekView: View {
                     }
                 )
                 .transition(.move(edge: .bottom).combined(with: .opacity))
+            } else {
+                // ✅ OPRAVENO: PlanFallbackCard používá vm.weekConsistency a vm.motivationalQuote
+                // z RollingWeekViewModel extension (ActiveSessionContrast_and_PlanFallback.swift)
+                PlanFallbackCard(
+                    weekConsistency: vm.weekConsistency,
+                    motivationalQuote: vm.motivationalQuote
+                )
+                .transition(.opacity.combined(with: .move(edge: .bottom)))
             }
         }
         .padding(20)
