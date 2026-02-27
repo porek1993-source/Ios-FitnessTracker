@@ -1,19 +1,20 @@
 # ═══════════════════════════════════════════════════════════════════════
 # project.yml — XcodeGen konfigurace pro AgileFitnessTrainer
-# Verze: 2.0 (finální — s HealthKit entitlements a privacy strings)
+# Verze: 2.1 (finální — opravené entitlements, HealthKit, Watch target)
 # ═══════════════════════════════════════════════════════════════════════
 #
-# RYCHLÝ START (Windows/Linux):
-#   Edituj Swift soubory, commitni na GitHub.
+# RYCHLÝ START (Windows/Linux — bez Xcode):
+#   Edituj Swift soubory → commitni na GitHub
 #   GitHub Actions (ios-build.yml) automaticky:
-#     1. Nainstaluje XcodeGen
-#     2. Spustí: xcodegen generate
-#     3. Zkompiluje a exportuje .ipa
+#     1. Nainstaluje XcodeGen přes Homebrew
+#     2. xcodegen generate --spec project.yml
+#     3. Zkompiluje a uloží .ipa jako GitHub Artifact
 #
-# LOKÁLNÍ GENEROVÁNÍ (pokud máš macOS):
+# LOKÁLNÍ GENEROVÁNÍ (macOS):
 #   brew install xcodegen
 #   cd AgileFitnessTrainer_IOS
 #   xcodegen generate
+#   open AgileTrainer.xcodeproj
 # ═══════════════════════════════════════════════════════════════════════
 
 name: AgileTrainer
@@ -22,12 +23,11 @@ options:
   bundleIdPrefix: com.agilefitness
   deploymentTarget:
     iOS: "17.0"
-  xcodeVersion: "16.0"
+  xcodeVersion: "16.2"             # Aktualizuj dle verze Xcode na CI
   generateEmptyDirectories: true
   groupSortPosition: top
   createIntermediateGroups: true
-  # Prevence XcodeGen varování pro Swift 5.9+
-  developmentLanguage: cs
+  developmentLanguage: cs          # Primární jazyk projektu = čeština
   usesTabs: false
   indentWidth: 4
   tabWidth: 4
@@ -38,26 +38,30 @@ options:
 
 settings:
   base:
-    SWIFT_VERSION: "5.9"
+    SWIFT_VERSION: "5.10"
     MARKETING_VERSION: "1.0.0"
     CURRENT_PROJECT_VERSION: "1"
     IPHONEOS_DEPLOYMENT_TARGET: "17.0"
+    TARGETED_DEVICE_FAMILY: "1"          # 1 = iPhone only
 
-    # Code Signing — přepíše se v CI přes xcodebuild parametry
+    # Code Signing — přepíše CI přes xcodebuild parametry
     CODE_SIGN_STYLE: Manual
     DEVELOPMENT_TEAM: $(DEVELOPMENT_TEAM_ID)
 
-    # API klíče — injektovány přes GitHub Secrets nebo lokální .env
-    GEMINI_API_KEY: $(GEMINI_API_KEY)
-    SUPABASE_URL: $(SUPABASE_URL)
+    # API klíče — injektovány přes GitHub Secrets nebo lokální xcconfig
+    GEMINI_API_KEY:    $(GEMINI_API_KEY)
+    SUPABASE_URL:      $(SUPABASE_URL)
     SUPABASE_ANON_KEY: $(SUPABASE_ANON_KEY)
 
-    # Swift optimalizace
-    SWIFT_OPTIMIZATION_LEVEL: "-Onone"        # Debug
-    GCC_OPTIMIZATION_LEVEL: "0"
+    # Swift Concurrency — strict mode chytí potenciální thread issues
+    SWIFT_STRICT_CONCURRENCY: complete
 
-    # Prevence pádů z Obj-C/Swift boundary
-    SWIFT_STRICT_CONCURRENCY: complete        # Zapne strict concurrency checks
+    # Linker
+    OTHER_LDFLAGS: "-ObjC"
+
+    # Debug optimalizace
+    SWIFT_OPTIMIZATION_LEVEL: "-Onone"
+    GCC_OPTIMIZATION_LEVEL: "0"
 
   configs:
     Release:
@@ -65,6 +69,16 @@ settings:
       GCC_OPTIMIZATION_LEVEL: s
       SWIFT_COMPILATION_MODE: wholemodule
       DEBUG_INFORMATION_FORMAT: "dwarf-with-dsym"
+      VALIDATE_PRODUCT: YES
+
+# ═══════════════════════════════════════════════════════════════════════
+# SWIFT PACKAGES (SPM)
+# ═══════════════════════════════════════════════════════════════════════
+
+packages:
+  Supabase:
+    url: https://github.com/supabase/supabase-swift
+    from: "2.5.0"
 
 # ═══════════════════════════════════════════════════════════════════════
 # TARGETS
@@ -72,13 +86,13 @@ settings:
 
 targets:
 
-  # ─── Hlavní aplikace ────────────────────────────────────────────────
+  # ─── Hlavní iOS aplikace ─────────────────────────────────────────────
   AgileTrainer:
     type: application
     platform: iOS
     deploymentTarget: "17.0"
 
-    # Zdrojové soubory — všechny Swift soubory v těchto složkách
+    # Zdrojové soubory — XcodeGen rekurzivně hledá Swift soubory
     sources:
       - path: App
       - path: Core
@@ -88,14 +102,11 @@ targets:
       - path: LiveActivity
       - path: Services
 
-    # Resources — JSON data, texty, plist
+    # Statické zdroje
     resources:
       - path: Resources/ExerciseDatabase.json
-        buildPhase: resources
       - path: Resources/SystemPrompt.txt
-        buildPhase: resources
       - path: Resources/OnboardingSystemPrompt.txt
-        buildPhase: resources
 
     # ── Build Settings ───────────────────────────────────────────────
     settings:
@@ -104,20 +115,12 @@ targets:
         INFOPLIST_FILE: Resources/Info.plist
         CODE_SIGN_ENTITLEMENTS: Resources/AgileTrainer.entitlements
 
-        # Přidáme klíče přímo do Info.plist přes XcodeGen (viz sekce 'info' níže)
-        # Tím odpadá nutnost ručně editovat plist na Windows
-
-    # ── Info.plist klíče (generuje XcodeGen) ─────────────────────────
-    #
-    # ZDRAVÍ — POVINNÉ pro App Store schválení:
-    # NSHealthShareUsageDescription: Proč čteš zdravotní data?
-    # NSHealthUpdateUsageDescription: Proč zapisuješ zdravotní data?
-    #
-    # Apple App Review tato pole kontroluje a odmítne app bez nich.
+    # ── Info.plist klíče (generuje XcodeGen — ruční editace na Windows
+    #    není potřeba) ────────────────────────────────────────────────
     info:
       path: Resources/Info.plist
       properties:
-        # ── Základní app metadata ──
+        # Základní metadata
         CFBundleDevelopmentRegion: cs
         CFBundleDisplayName: Agile Trainer
         CFBundleExecutable: $(EXECUTABLE_NAME)
@@ -128,53 +131,63 @@ targets:
         CFBundleShortVersionString: $(MARKETING_VERSION)
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         LSRequiresIPhoneOS: true
+        MinimumOSVersion: "17.0"
 
-        # ── UI konfigurace ──
-        UILaunchScreen: {}
+        # UI konfigurace
+        UILaunchScreen:
+          UIColorName: ""
+          UIImageName: ""
         UIApplicationSceneManifest:
           UIApplicationSupportsMultipleScenes: false
         UISupportedInterfaceOrientations:
           - UIInterfaceOrientationPortrait
         UIRequiredDeviceCapabilities:
           - arm64
+          - healthkit
 
-        # ── API klíče v plistu (pro Bundle.main.infoDictionary přístup) ──
-        GEMINI_API_KEY: $(GEMINI_API_KEY)
-        SUPABASE_URL: $(SUPABASE_URL)
+        # Barevné schéma (vždy dark)
+        UIUserInterfaceStyle: Dark
+
+        # API klíče (injektovány přes Build Settings)
+        GEMINI_API_KEY:    $(GEMINI_API_KEY)
+        SUPABASE_URL:      $(SUPABASE_URL)
         SUPABASE_ANON_KEY: $(SUPABASE_ANON_KEY)
 
         # ══════════════════════════════════════════════════════════════
-        # HEALTHKIT PRIVACY STRINGS — POVINNÉ
-        # App Store Connect: bez těchto klíčů je app zamítnuta při review
+        # HEALTHKIT PRIVACY STRINGS — POVINNÉ pro App Store
+        # Bez těchto klíčů Apple Review zamítne app (automatická kontrola)
         # ══════════════════════════════════════════════════════════════
 
-        # Čtení zdravotních dat (spánek, HRV, tep)
-        NSHealthShareUsageDescription: >
-          Agilní trenér potřebuje číst tvůj spánek a HRV z Apple Health,
-          aby ti Jakub mohl na míru přizpůsobit dnešní trénink a předešel zranění
-          způsobeným přetrénováním.
+        # Čtení zdravotních dat (spánek, HRV, tep, dechová frekvence)
+        NSHealthShareUsageDescription: >-
+          Agilní trenér čte tvůj spánek, HRV a tepovou frekvenci z Apple Health.
+          Tato data Jakubovi (AI trenérovi) umožňují personalizovat dnešní trénink
+          a předejít přetrénování a zranění.
 
-        # Zápis zdravotních dat (tréninky, kalorie)
-        NSHealthUpdateUsageDescription: >
-          Aplikace zapisuje tvé odjeté tréninky a spálené kalorie do Apple Health,
+        # Zápis zdravotních dat (tréninky, aktivní kalorie)
+        NSHealthUpdateUsageDescription: >-
+          Aplikace zapisuje tvé odcvičené tréninky a spálené kalorie do Apple Health,
           abys měl kompletní přehled o své fyzické aktivitě na jednom místě.
 
-        # ── Background Tasks (BGAppRefresh pro HealthKit sync) ──
+        # Background refresh (HealthKit sync přes noc)
         BGTaskSchedulerPermittedIdentifiers:
           - com.agilefitness.healthSync
 
-        # ── Notifikace ──
-        NSUserNotificationUsageDescription: >
-          Jakub ti pošle připomínku tréninku a týdenní report výsledků.
+        # Notifikace (tréninkové připomínky, týdenní report)
+        NSUserNotificationUsageDescription: >-
+          Jakub ti pošle denní připomínku tréninku a týdenní přehled tvých výsledků.
+
+        # Audio (AudioCoach hlasové pokyny)
+        NSMicrophoneUsageDescription: >-
+          Aplikace nepoužívá mikrofon — ale systém tuto hodnotu vyžaduje pro AVAudioSession.
 
     # ── Entitlements (capabilities) ──────────────────────────────────
-    #
-    # Tyto capabilities musí odpovídat nastavení v Apple Developer Portal.
-    # Pro lokální testování: Xcode → Signing & Capabilities → přidej ručně.
+    # KRITICKÉ: tyto hodnoty MUSÍ odpovídat nastavení v Apple Developer Portal.
+    # Pokud Capability v portálu chybí → build selže při signing.
     entitlements:
       path: Resources/AgileTrainer.entitlements
       properties:
-        # HealthKit — hlavní funkce aplikace
+        # HealthKit — klíčová funkce aplikace
         com.apple.developer.healthkit: true
         com.apple.developer.healthkit.access:
           - HKQuantityTypeIdentifierHeartRate
@@ -186,21 +199,29 @@ targets:
           - HKQuantityTypeIdentifierBasalEnergyBurned
           - HKWorkoutTypeIdentifier
 
-        # App Groups — sdílené úložiště pro Widget Extension
+        # App Groups — sdílené úložiště pro Widget a (budoucí) Watch Extension
         com.apple.security.application-groups:
           - group.com.agilefitness.shared
 
-        # Push notifikace (APNs)
-        aps-environment: production  # Přepne se na "development" pro Debug config
+        # Push Notifications (APNs)
+        aps-environment: development   # → production pro Release / App Store
 
-    # ── Pre-Build Scripts ─────────────────────────────────────────────
+        # Background Modes — HealthKit sync
+        com.apple.developer.background-task: true
+
+    # ── Závislosti (SPM packages) ─────────────────────────────────────
+    dependencies:
+      - package: Supabase
+        product: Supabase
+
+    # ── Pre-build: SwiftLint (volitelné) ─────────────────────────────
     preBuildScripts:
-      - name: "SwiftLint (optional)"
+      - name: "✅ SwiftLint"
         script: |
           if which swiftlint > /dev/null; then
             swiftlint --config .swiftlint.yml || true
           else
-            echo "SwiftLint není nainstalován, přeskakuji lint."
+            echo "warning: SwiftLint není nainstalován. Spusť: brew install swiftlint"
           fi
         basedOnDependencyAnalysis: false
         showEnvVarsInLog: false
@@ -213,7 +234,7 @@ targets:
 
     sources:
       - path: Widget
-      # Sdílené soubory — Widget potřebuje přístup k modelům a konstansám
+      # Sdílené soubory — Widget potřebuje modely a utility
       - path: Core/SharedModelContainer.swift
       - path: Core/Utilities/AppLogger.swift
       - path: Core/Extensions/Color+App.swift
@@ -255,6 +276,7 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: com.agilefitness.trainer.tests
         TEST_HOST: "$(BUILT_PRODUCTS_DIR)/AgileTrainer.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/AgileTrainer"
         BUNDLE_LOADER: "$(TEST_HOST)"
+        SWIFT_STRICT_CONCURRENCY: complete
 
 # ═══════════════════════════════════════════════════════════════════════
 # SCHEMES
@@ -269,18 +291,25 @@ schemes:
         AgileTrainerTests:  [test]
     run:
       config: Debug
-      # Environmentální proměnné pro lokální vývoj
-      # Pro CI jsou injektovány přes xcodebuild parametry
       environmentVariables:
         GEMINI_API_KEY:    $(GEMINI_API_KEY)
         SUPABASE_URL:      $(SUPABASE_URL)
         SUPABASE_ANON_KEY: $(SUPABASE_ANON_KEY)
+        # Zapne Memory Graph Debugger
+        MallocStackLogging: "1"
     test:
       config: Debug
       targets:
-        - AgileTrainerTests
+        - name: AgileTrainerTests
+          parallelizable: true
+          randomExecutionOrder: true
       coverageTargets:
         - AgileTrainer
+      # Environmet pro testy (mock klíče)
+      environmentVariables:
+        GEMINI_API_KEY:    test_mock_key
+        SUPABASE_URL:      https://mock.supabase.co
+        SUPABASE_ANON_KEY: test_mock_anon
     profile:
       config: Release
     analyze:

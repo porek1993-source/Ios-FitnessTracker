@@ -1,20 +1,19 @@
 // AITrainerService.swift
-// Agilní Fitness Trenér — AI Trenér se smart cache vrstvou
+// Agilní Fitness Trenér — AI Trenér se smart cache a bezpečnou souběžností
 //
-// ✅ WorkoutCache: pokud je trénink pro dnešní den již vygenerován,
-//    API se NEVOLÁ — response se načte ze SwiftData lokálně
-// ✅ System prompt optimalizován pro minimální počet výstupních tokenů
-// ✅ @MainActor zajišťuje thread-safe @Published updates
-// ✅ ExerciseCountValidator ověřuje 6-8 cviků
+// OPRAVY a VYLEPŠENÍ v2.1:
+//  ✅ WorkoutCache: UserDefaults s TTL 24h — Gemini se nevolá pokud cache platí
+//  ✅ System Prompt: striktní JSON-only instrukce, nulové Markdown, optimalizovaný
+//  ✅ @MainActor: všechny @Published updaty garantovaně na hlavním vlákně
+//  ✅ Task.detached pro cache save — neblokuje UI, s [weak self] safe capture
+//  ✅ ExerciseCountValidator: loguje varování bez pádu aplikace
+//  ✅ Timeout mechanism: 30s hard limit na Gemini volání (Task race)
+//  ✅ Fallback flow: graceful degradation → FallbackWorkoutGenerator
+//  ✅ JSON parser: stripuje Markdown fences i BOM před dekódováním
+//  ✅ persistAIMetadata: crashsafe guard + async na background
 
 import Foundation
 import SwiftData
-
-// MARK: ═══════════════════════════════════════════════════════════════════════
-// MARK: APITimeoutError
-// MARK: ═══════════════════════════════════════════════════════════════════════
-
-struct APITimeoutError: Error {}
 
 // MARK: ═══════════════════════════════════════════════════════════════════════
 // MARK: AITrainerService
@@ -23,134 +22,151 @@ struct APITimeoutError: Error {}
 @MainActor
 final class AITrainerService: ObservableObject {
 
-    // MARK: - Dependencies
+    // MARK: - Závislosti
+
     private let apiClient:      GeminiAPIClient
     private let contextBuilder: TrainerContextBuilder
     private let modelContext:   ModelContext
 
-    // MARK: - State
-    @Published var isLoading:      Bool = false
-    @Published var error:          AppError?
-    @Published var offlineMessage: String?
-    @Published var cacheHit:       Bool = false  // UI může zobrazit "Načteno z cache"
+    // MARK: - Publikovaný stav
 
-    // MARK: - Config
-    private let apiTimeoutSeconds: UInt64 = 30
+    @Published private(set) var isLoading:      Bool    = false
+    @Published private(set) var error:          AppError?
+    @Published private(set) var offlineMessage: String?
+    @Published private(set) var cacheHit:       Bool    = false
 
-    // MARK: - System Prompt (inline — minimalizovaný pro nízký token count)
+    // MARK: - Konfigurace
+
+    private let timeoutSeconds: UInt64 = 30
+
+    // MARK: - System Prompt (token-optimalizovaný)
     //
-    // OPTIMALIZACE TOKENŮ:
-    //  • Odstraněny příklady, opakování a vysvětlivky — pouze instrukce
-    //  • "Odpovídej POUZE JSON" zabraňuje generování prose před/po JSON bloku
-    //  • Temperature=0.3 v GeminiAPIClient snižuje variabilitu (méně tokenů na retry)
-    //  • maxOutputTokens=3000 dostatečné pro 6-8 cviků, prevence přetečení
+    // Klíčová optimalizační rozhodnutí:
+    //  • "Odpovídej POUZE JSON" → eliminuje prose před/po JSON bloku (~200 ušetřených tokenů)
+    //  • Bez příkladů, bez opakování → prompt je stručný
+    //  • temperature=0.3 v GeminiAPIClient → méně variabilních retry
+    //  • maxOutputTokens=3000 → dostatečné pro 6-8 cviků, zabraňuje přetečení
+    //  • Structured Output schema (viz níže) → Gemini vrací validní JSON BEZ obalů
 
-    private static let systemPrompt = """
-    Jsi Jakub, elitní AI fitness trenér. Odpovídej POUZE validním JSON — žádný text mimo JSON.
+    private static let systemPrompt: String = """
+    Jsi Jakub, elitní AI fitness trenér. Odpovídej VÝHRADNĚ validním JSON objektem — žádný text před ani po JSON, žádný markdown, žádné komentáře.
 
-    KRITICKÉ PRAVIDLO OBJEMU (VŽDY DODRŽET):
-    mainBlocks musí obsahovat CELKEM 6–8 cviků:
+    STRUKTURA TRÉNINKU (VŽDY DODRŽET):
+    mainBlocks celkem 6–8 cviků:
     • Blok A "Silový" — PŘESNĚ 2 vícekloubové cviky: série 3–5×3–8, pauza 120–180s, RIR 1–2, tempo povinné
     • Blok B "Izolace" — 4–6 izolovaných cviků: série 3–4×10–20, pauza 45–90s, RIR 0–1, tempo null
 
-    ADAPTACE:
-    • Readiness GREEN (HRV>65, spánek>7h) → 2+6 cviků, progresivní přetížení
-    • Readiness ORANGE (HRV 50–65, spánek 5–7h) → 2+4 cviky, váha -10%
-    • Readiness RED (HRV<50) → 2+4 cviky, lehčí verze, vynech postižené svaly
+    READINESS ADAPTACE:
+    • GREEN (HRV>65, spánek>7h) → 2+6 cviků, progresivní přetížení +2.5–5% váhy
+    • ORANGE (HRV 50–65, spánek 5–7h) → 2+4 cviky, váha −10%
+    • RED (HRV<50) → 2+4 cviky, lehčí varianta, vynech fatigued/jointPain svaly
 
     OMEZENÍ:
-    • Vynech cviky zatěžující oblasti označené jako fatigued/jointPain
-    • Váhy z progressiveOverload použij jako základ pro weightKg
+    • Vynech cviky zatěžující oblasti označené fatigued nebo jointPain
+    • Váhy z progressiveOverload jsou základ pro weightKg
 
-    VÝSTUPNÍ POŽADAVKY (striktní):
-    • Všechny stringy (coachMessage, coachTip, blockLabel) česky
-    • Slugy anglicky s pomlčkami: "barbell-bench-press"
-    • weightKg: null pro bodyweight nebo neznámá váha
-    • coachTip: vždy vyplněno, konkrétní technická rada
+    VÝSTUPNÍ FORMÁT (striktní):
+    • coachMessage, coachTip, blockLabel: česky
+    • name (cvik): česky, slug: anglicky s pomlčkami "barbell-bench-press"
+    • weightKg: null pro bodyweight nebo neznámou váhu
     • readinessLevel: pouze "green" | "orange" | "red"
-    • Odpověz JEDNÍM JSON objektem, bez markdown, bez komentářů
+    • Odpověz JEDNÍM JSON objektem. Bez textu mimo JSON.
     """
 
-    // MARK: - Init
+    // MARK: - Inicializace
 
     init(modelContext: ModelContext, healthKitService: HealthKitService) {
-        self.modelContext    = modelContext
-        self.apiClient       = GeminiAPIClient(apiKey: AppConstants.geminiAPIKey)
-        self.contextBuilder  = TrainerContextBuilder(
+        self.modelContext   = modelContext
+        self.apiClient      = GeminiAPIClient(apiKey: AppConstants.geminiAPIKey)
+        self.contextBuilder = TrainerContextBuilder(
             modelContext: modelContext,
             healthKitService: healthKitService
         )
     }
 
     // MARK: ═══════════════════════════════════════════════════════════════════
-    // MARK: Public API — generateTodayWorkout
+    // MARK: generateTodayWorkout — hlavní veřejná funkce
     // MARK: ═══════════════════════════════════════════════════════════════════
 
+    /// Vygeneruje trénink na dnešní den.
+    /// - Pokud existuje platná cache pro daný den a plán → vrátí cache (Gemini se NEVOLÁ)
+    /// - Pokud cache neexistuje → volá Gemini API s 30s timeoutem
+    /// - Pokud Gemini selže → vrátí offline fallback
+    ///
+    /// - Throws: Nikdy → veškeré chyby jsou zpracovány interně (graceful degradation)
     func generateTodayWorkout(
         for date: Date = .now,
         profile: UserProfile,
         plannedDay: PlannedWorkoutDay,
         equipmentOverride: Set<Equipment>? = nil,
         timeLimitMinutes: Int? = nil
-    ) async throws -> TrainerResponse {
+    ) async -> TrainerResponse {
 
-        isLoading = true
+        // Reset stavu
+        isLoading      = true
         offlineMessage = nil
-        cacheHit = false
-        defer { isLoading = false }
+        cacheHit       = false
+        error          = nil
 
-        // ── KROK 1: Zkontroluj cache ─────────────────────────────────────
-        // Pokud pro dnešní den existuje vygenerovaný trénink v SwiftData,
-        // NEVOLÁME Gemini API a ušetříme latenci i náklady.
+        defer {
+            // Vždy garantujeme že isLoading = false při ukončení
+            isLoading = false
+        }
+
+        // ── KROK 1: Zkontroluj cache ─────────────────────────────────────────
+        // Cache hit = nenastane žádné síťové volání → nulové náklady, okamžitá odpověď
 
         if let cached = WorkoutCache.load(for: date, plannedDayID: plannedDay.id, context: modelContext) {
-            AppLogger.info("[AITrainer] ✅ Cache HIT pro \(date.formatted(date: .abbreviated, time: .omitted)) — Gemini se nevolá.")
+            AppLogger.info("✅ [AITrainer] Cache HIT → \(date.formatted(date: .abbreviated, time: .omitted)) — Gemini se nevolá.")
             cacheHit = true
             return cached
         }
 
-        AppLogger.info("[AITrainer] Cache MISS — volám Gemini API…")
+        AppLogger.info("ℹ️ [AITrainer] Cache MISS → volám Gemini API…")
 
-        // ── KROK 2: Zavolej Gemini s timeoutem ──────────────────────────
+        // ── KROK 2: Gemini API volání s timeoutem ────────────────────────────
 
         do {
-            let context = try await self.contextBuilder.buildContext(
-                for: date,
+            let response = try await callGeminiWithTimeout(
+                date: date,
                 profile: profile,
+                plannedDay: plannedDay,
                 equipmentOverride: equipmentOverride,
                 timeLimitMinutes: timeLimitMinutes
             )
-            let userMessage = try self.buildUserMessage(context: context)
-            let rawJSON = try await self.apiClient.generate(
-                systemPrompt:   Self.systemPrompt,
-                userMessage:    userMessage,
-                responseSchema: self.trainerResponseSchema
-            )
-            let response = try self.parseResponse(rawJSON: rawJSON)
 
-            // Validace počtu cviků
+            // Validace počtu cviků (nekritická — pouze warning)
             AIExerciseCountValidator.validate(response)
 
-            // ── KROK 3: Ulož do cache (fire-and-forget) ─────────────────
+            // ── KROK 3: Asynchronní uložení do cache (neblokuje UI) ──────────
+            let responseSnapshot = response
+            let dateSnapshot     = date
+            let planIDSnapshot   = plannedDay.id
+
+            // Použijeme Task.detached aby cache save neblokoval return response
+            // SharedModelContainer.container je nonisolated → bezpečné předání
             let container = SharedModelContainer.container
             Task.detached(priority: .utility) {
-                // Vytvoříme bezpečný background context pro asynchronní uložení
-                let backgroundContext = ModelContext(container)
-                
+                let bgContext = ModelContext(container)
                 await WorkoutCache.save(
-                    response: response,
-                    for: date,
-                    plannedDayID: plannedDay.id,
-                    context: backgroundContext
+                    response: responseSnapshot,
+                    for: dateSnapshot,
+                    plannedDayID: planIDSnapshot,
+                    context: bgContext
                 )
             }
 
-            await persistAIMetadata(response: response, date: date, profile: profile)
+            // Persistuj AI metadata na pozadí (neblokuje return)
+            Task { [weak self] in
+                guard let self else { return }
+                await self.persistAIMetadata(response: response, date: date, profile: profile)
+            }
+
             return response
 
         } catch {
-            // ── KROK 4: Graceful degradation → offline fallback ──────────
-            AppLogger.warning("[AITrainer] API selhalo: \(error). Aktivuji offline fallback.")
+            // ── KROK 4: Graceful degradation ────────────────────────────────
+            AppLogger.warning("⚠️ [AITrainer] API selhalo (\(error)) → aktivuji offline fallback.")
             HapticManager.shared.playWarning()
 
             let fallback = FallbackWorkoutGenerator.generateFallbackPlan(
@@ -164,42 +180,129 @@ final class AITrainerService: ObservableObject {
         }
     }
 
-    // MARK: ═══════════════════════════════════════════════════════════════════
-    // MARK: Private helpers
-    // MARK: ═══════════════════════════════════════════════════════════════════
+    // MARK: - Manuální invalidace cache
 
-    private func buildUserMessage(context: TrainerRequestContext) throws -> String {
+    /// Vymaže cache pro dnešní den a vynutí regeneraci při dalším volání.
+    func invalidateTodayCache(plannedDay: PlannedWorkoutDay) {
+        WorkoutCache.invalidate(for: .now, plannedDayID: plannedDay.id)
+        AppLogger.info("🗑️ [AITrainer] Cache dnešního tréninku vymazána (manuální).")
+    }
+
+    /// Vymaže celou cache (po změně profilu nebo tréninkového plánu).
+    func clearAllCache() {
+        WorkoutCache.clearAll()
+        AppLogger.info("🗑️ [AITrainer] Celá cache vymazána.")
+    }
+}
+
+// MARK: ═══════════════════════════════════════════════════════════════════════
+// MARK: Private helpers
+// MARK: ═══════════════════════════════════════════════════════════════════════
+
+private extension AITrainerService {
+
+    // MARK: Gemini volání s hard timeoutem
+
+    func callGeminiWithTimeout(
+        date: Date,
+        profile: UserProfile,
+        plannedDay: PlannedWorkoutDay,
+        equipmentOverride: Set<Equipment>?,
+        timeLimitMinutes: Int?
+    ) async throws -> TrainerResponse {
+
+        // Souběžné race: API call vs timeout task
+        return try await withThrowingTaskGroup(of: TrainerResponse.self) { [weak self] group in
+            guard let self else { throw AppError.internalError("AITrainerService byl dealokován") }
+
+            // Hlavní API task
+            group.addTask {
+                let ctx = try await self.contextBuilder.buildContext(
+                    for: date,
+                    profile: profile,
+                    equipmentOverride: equipmentOverride,
+                    timeLimitMinutes: timeLimitMinutes
+                )
+                let userMessage = try self.buildUserMessage(context: ctx)
+                let rawJSON = try await self.apiClient.generate(
+                    systemPrompt:   AITrainerService.systemPrompt,
+                    userMessage:    userMessage,
+                    responseSchema: self.trainerResponseSchema
+                )
+                return try self.parseAndValidateJSON(rawJSON: rawJSON)
+            }
+
+            // Timeout task
+            group.addTask {
+                try await Task.sleep(nanoseconds: self.timeoutSeconds * 1_000_000_000)
+                throw APITimeoutError()
+            }
+
+            // První hotový výsledek vyhraje, druhý task se zruší
+            guard let result = try await group.next() else {
+                throw AppError.internalError("Prázdný výsledek z task group")
+            }
+            group.cancelAll()
+            return result
+        }
+    }
+
+    // MARK: Sestavení user message (JSON kontext)
+
+    func buildUserMessage(context: TrainerRequestContext) throws -> String {
         let encoder = JSONEncoder()
-        encoder.outputFormatting     = [.prettyPrinted, .sortedKeys]
+        encoder.outputFormatting     = [.sortedKeys]   // Bez .prettyPrinted → méně tokenů
         encoder.dateEncodingStrategy = .iso8601
+
         let data = try encoder.encode(context)
         guard let json = String(data: data, encoding: .utf8) else {
             throw AppError.encodingFailed
         }
-        return """
-        Vygeneruj trénink pro tato data. Odpověz POUZE JSON:
-
-        \(json)
-        """
+        return "Vygeneruj trénink. Odpověz POUZE JSON:\n\(json)"
     }
 
-    private func parseResponse(rawJSON: String) throws -> TrainerResponse {
+    // MARK: Parsování a čistění JSON odpovědi
+
+    func parseAndValidateJSON(rawJSON: String) throws -> TrainerResponse {
+        // Agresivní čistění: stripujeme veškerý Markdown a BOM znaky
         let cleaned = rawJSON
             .replacingOccurrences(of: "```json", with: "")
             .replacingOccurrences(of: "```",     with: "")
+            .replacingOccurrences(of: "\u{FEFF}", with: "")  // BOM
             .trimmingCharacters(in: .whitespacesAndNewlines)
 
-        guard let data = cleaned.data(using: .utf8) else {
-            throw GeminiError.jsonParsingFailed("Nelze převést na Data")
+        // Ochrana před prázdnou odpovědí
+        guard !cleaned.isEmpty else {
+            throw GeminiError.emptyResponse
         }
-        return try JSONDecoder().decode(TrainerResponse.self, from: data)
+
+        // Najdi začátek JSON objektu (ochrana před prose před JSON)
+        let jsonStart = cleaned.firstIndex(of: "{") ?? cleaned.startIndex
+        let jsonSlice = String(cleaned[jsonStart...])
+
+        guard let data = jsonSlice.data(using: .utf8) else {
+            throw GeminiError.jsonParsingFailed("Nelze převést na Data — invalid encoding")
+        }
+
+        do {
+            return try JSONDecoder().decode(TrainerResponse.self, from: data)
+        } catch let decodingError as DecodingError {
+            AppLogger.error("❌ [AITrainer] JSON dekódování selhalo: \(decodingError)")
+            throw GeminiError.jsonParsingFailed("DecodingError: \(decodingError.localizedDescription)")
+        }
     }
 
-    private func persistAIMetadata(response: TrainerResponse, date: Date, profile: UserProfile) async {
+    // MARK: Persistování AI metadat do SwiftData
+
+    func persistAIMetadata(response: TrainerResponse, date: Date, profile: UserProfile) async {
+        // Guard: hledáme aktivní plán a session pro daný den
         guard
             let plan    = profile.workoutPlans.first(where: \.isActive),
             let session = plan.sessions.first(where: { $0.startedAt.isSameDay(as: date) })
-        else { return }
+        else {
+            AppLogger.info("ℹ️ [AITrainer] persistAIMetadata: session pro \(date.formatted()) nenalezena, přeskakuji.")
+            return
+        }
 
         session.aiAdaptationNote = response.adaptationReason
         session.readinessScore   = switch response.readinessLevel {
@@ -207,13 +310,17 @@ final class AITrainerService: ObservableObject {
         case "orange": 55.0
         default:       25.0
         }
+
+        // Uložení je spravováno SwiftData automaticky přes modelContext
     }
 
+    // MARK: ═══════════════════════════════════════════════════════════════════
+    // MARK: Gemini Structured Output Schema
+    // ═══════════════════════════════════════════════════════════════════════════
+    // Structured Output schema zaručuje, že Gemini vrátí vždy validní JSON
+    // odpovídající TrainerResponse — bez markdown, bez prose, bez obalů.
 
-
-    // MARK: - Response Schema (Gemini Structured Output)
-
-    private var trainerResponseSchema: [String: Any] {
+    var trainerResponseSchema: [String: Any] {
         [
             "type": "OBJECT",
             "properties": [
@@ -277,91 +384,114 @@ final class AITrainerService: ObservableObject {
                     ]
                 ]
             ],
-            "required": ["coachMessage", "sessionLabel", "readinessLevel",
-                         "estimatedDurationMinutes", "warmUp", "mainBlocks", "coolDown"]
+            "required": [
+                "coachMessage",
+                "sessionLabel",
+                "readinessLevel",
+                "estimatedDurationMinutes",
+                "warmUp",
+                "mainBlocks",
+                "coolDown"
+            ]
         ]
     }
 }
 
 // MARK: ═══════════════════════════════════════════════════════════════════════
-// MARK: WorkoutCache — SwiftData-backed cache pro denní tréninky
+// MARK: APITimeoutError
 // MARK: ═══════════════════════════════════════════════════════════════════════
 
-/// Cache vrstva zabraňující opakovanému volání Gemini API pro stejný den.
-///
-/// Strategie:
-/// - Klíč cache = datum (yyyy-MM-dd) + PlannedWorkoutDay.id
-/// - Uložení: TrainerResponse je Codable → JSON → UserDefaults (rychlé, bez SwiftData overhead)
-/// - TTL: 24 hodin (trénink generovaný ráno platí celý den)
-/// - Invalidace: manuální (uživatel může vynutit regeneraci long-pressem)
+struct APITimeoutError: Error, LocalizedError {
+    var errorDescription: String? { "Gemini API neodpovědělo do 30 sekund (timeout)." }
+}
+
+// MARK: ═══════════════════════════════════════════════════════════════════════
+// MARK: WorkoutCache — UserDefaults cache pro denní tréninky
+// MARK: ═══════════════════════════════════════════════════════════════════════
+//
+// Strategie cachování:
+//  • Klíč = datum (yyyy-MM-dd) + hash PlannedWorkoutDay.id
+//  • TTL = 24 hodin (trénink vygenerovaný ráno platí celý den)
+//  • Úložiště = UserDefaults.standard (rychlé, bez SwiftData overhead)
+//  • Invalidace: manuální (long-press na "Regenerovat" v UI) nebo změna plánu
 
 enum WorkoutCache {
 
-    nonisolated(unsafe) private static let defaults = UserDefaults.standard
-    private static let keyPrefix = "workout_cache_"
-    private static let ttlSeconds: TimeInterval = 24 * 60 * 60  // 24 hodin
+    // nonisolated(unsafe) — přistupujeme z Task.detached (bez MainActor)
+    nonisolated(unsafe) private static let defaults   = UserDefaults.standard
+    private static let keyPrefix:  String             = "wc_v1_"
+    private static let ttlSeconds: TimeInterval       = 24 * 60 * 60
 
-    // MARK: - Cache Key
+    // MARK: Klíč cache
 
-    private static func cacheKey(for date: Date, plannedDayID: PersistentIdentifier) -> String {
-        let dateStr = ISO8601DateFormatter().string(from: date).prefix(10)  // "2025-01-15"
+    nonisolated static func cacheKey(for date: Date, plannedDayID: PersistentIdentifier) -> String {
+        // Používáme pouze datum (10 znaků), ne čas → cache platí celý den
+        let dateStr = ISO8601DateFormatter().string(from: date).prefix(10)
         return "\(keyPrefix)\(dateStr)_\(plannedDayID.hashValue)"
     }
 
-    // MARK: - Load
+    // MARK: Load
 
-    /// Vrátí cached TrainerResponse pokud existuje a není expirovaný.
-    /// - Parameters:
-    ///   - date: Datum tréninku (typicky .now)
-    ///   - plannedDayID: ID PlannedWorkoutDay (různé pro Push/Pull/Legs)
-    ///   - context: ModelContext (nepoužit, zachován pro budoucí SwiftData implementaci)
-    static func load(for date: Date, plannedDayID: PersistentIdentifier, context: ModelContext) -> TrainerResponse? {
+    /// Vrátí cachovaný TrainerResponse, pokud existuje a není expirovaný.
+    /// Vrací `nil` pokud cache neexistuje, nebo byl překročen TTL.
+    static func load(
+        for date: Date,
+        plannedDayID: PersistentIdentifier,
+        context: ModelContext  // Zachován pro budoucí SwiftData implementaci
+    ) -> TrainerResponse? {
+
         let key = cacheKey(for: date, plannedDayID: plannedDayID)
 
         guard
-            let data      = defaults.data(forKey: key),
-            let entry     = try? JSONDecoder().decode(CacheEntry.self, from: data),
+            let data  = defaults.data(forKey: key),
+            let entry = try? JSONDecoder().decode(CacheEntry.self, from: data),
             !entry.isExpired
         else {
             return nil
         }
 
-        Task { @MainActor in AppLogger.info("[WorkoutCache] Cache HIT: \(key)") }
+        AppLogger.info("💾 [WorkoutCache] HIT: \(key) (uloženo \(entry.cachedAt.formatted(date: .omitted, time: .shortened)))")
         return entry.response
     }
 
-    // MARK: - Save
+    // MARK: Save
 
-    @MainActor
-    static func save(response: TrainerResponse, for date: Date, plannedDayID: PersistentIdentifier, context: ModelContext) {
+    /// Uloží TrainerResponse do cache.
+    /// Bezpečné volat z libovolného kontextu (nonisolated safe).
+    nonisolated static func save(
+        response: TrainerResponse,
+        for date: Date,
+        plannedDayID: PersistentIdentifier,
+        context: ModelContext
+    ) async {
         let key   = cacheKey(for: date, plannedDayID: plannedDayID)
         let entry = CacheEntry(response: response, cachedAt: .now, ttl: ttlSeconds)
 
         guard let data = try? JSONEncoder().encode(entry) else {
-            AppLogger.error("[WorkoutCache] Chyba při kódování cache entry.")
+            AppLogger.error("❌ [WorkoutCache] Chyba enkódování cache entry pro klíč: \(key)")
             return
         }
 
         defaults.set(data, forKey: key)
-        AppLogger.info("[WorkoutCache] Uloženo do cache: \(key)")
+        AppLogger.info("💾 [WorkoutCache] SAVE: \(key)")
     }
 
-    // MARK: - Invalidate (pro manuální vynucení regenerace)
+    // MARK: Invalidate
 
     static func invalidate(for date: Date, plannedDayID: PersistentIdentifier) {
         let key = cacheKey(for: date, plannedDayID: plannedDayID)
         defaults.removeObject(forKey: key)
-        Task { @MainActor in AppLogger.info("[WorkoutCache] Cache invalidována: \(key)") }
+        AppLogger.info("🗑️ [WorkoutCache] Invalidováno: \(key)")
     }
 
-    /// Vymaže všechny cachované tréninky (např. po změně profilu nebo splitu).
     static func clearAll() {
-        let allKeys = defaults.dictionaryRepresentation().keys
-        allKeys.filter { $0.hasPrefix(keyPrefix) }.forEach { defaults.removeObject(forKey: $0) }
-        Task { @MainActor in AppLogger.info("[WorkoutCache] Celá cache vymazána.") }
+        defaults.dictionaryRepresentation().keys
+            .filter { $0.hasPrefix(keyPrefix) }
+            .forEach { defaults.removeObject(forKey: $0) }
+        AppLogger.info("🗑️ [WorkoutCache] Celá cache vymazána (clearAll).")
     }
 
-    // MARK: - CacheEntry
+    // MARK: CacheEntry (privátní datový model)
 
     private struct CacheEntry: Codable {
         let response: TrainerResponse
@@ -379,19 +509,23 @@ enum WorkoutCache {
 // MARK: ═══════════════════════════════════════════════════════════════════════
 
 enum AIExerciseCountValidator {
+
     static let minimum = 6
     static let maximum = 8
 
+    /// Zkontroluje počet cviků v odpovědi a zaloguje varování.
+    /// NEKRITICKÁ — pouze loguje, nepadá aplikace.
     @discardableResult
     static func validate(_ response: TrainerResponse) -> TrainerResponse {
         let total = response.mainBlocks.reduce(0) { $0 + $1.exercises.count }
 
-        if total < minimum {
-            Task { @MainActor in AppLogger.warning("[Validator] ⚠️ Pouze \(total) cviků (min \(minimum)). AI nedodrželo pravidlo.") }
-        } else if total > maximum {
-            Task { @MainActor in AppLogger.warning("[Validator] ⚠️ \(total) cviků (max \(maximum)). Zvažte oříznutí.") }
-        } else {
-            Task { @MainActor in AppLogger.info("[Validator] ✅ \(total) cviků — v pořádku.") }
+        switch total {
+        case ..<minimum:
+            AppLogger.warning("⚠️ [Validator] Pouze \(total) cviků (min \(minimum)). AI nedodrželo pravidlo objemu.")
+        case (maximum + 1)...:
+            AppLogger.warning("⚠️ [Validator] \(total) cviků (max \(maximum)). Zvažte oříznutí posledních \(total - maximum) cviků.")
+        default:
+            AppLogger.info("✅ [Validator] \(total) cviků — v pořádku (\(minimum)–\(maximum)).")
         }
 
         return response
