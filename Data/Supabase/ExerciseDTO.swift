@@ -17,6 +17,7 @@ struct ExerciseDTO: Codable, Identifiable {
     let instructions: String?
     let instructionsMissing: Bool?
     let instructionsSource: String?
+    let gifUrl: String?
 
     enum CodingKeys: String, CodingKey {
         case id
@@ -30,6 +31,7 @@ struct ExerciseDTO: Codable, Identifiable {
         case instructions
         case instructionsMissing  = "instructions_missing"
         case instructionsSource   = "instructions_source"
+        case gifUrl               = "gif_url"
     }
 
     // MARK: - Helpers
