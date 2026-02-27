@@ -66,6 +66,7 @@ final class SessionExercise {
         self.exercise = exercise
         self.session = session
         self.completedSets = []
+    }
 }
 
 @Model
