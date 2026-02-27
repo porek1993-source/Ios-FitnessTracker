@@ -187,7 +187,7 @@ final class OnboardingAIManager: ObservableObject {
     private lazy var endpoint: URL = {
         URL(string:
             "https://generativelanguage.googleapis.com/v1beta/models/\(model):streamGenerateContent?alt=sse&key=\(apiKey)"
-        )!
+        ) ?? URL(fileURLWithPath: "/")
     }()
 
     private var systemPrompt: String = ""

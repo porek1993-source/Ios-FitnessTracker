@@ -25,7 +25,7 @@ final class WorkoutSession {
         plannedDay?.label ?? "Trénink"
     }
 
-    @Relationship(deleteRule: .cascade)
+    @Relationship(deleteRule: .cascade, inverse: \SessionExercise.session)
     var exercises: [SessionExercise]
 
     @Relationship(deleteRule: .nullify)
@@ -51,7 +51,7 @@ final class SessionExercise {
     var exercise: Exercise?
     var session: WorkoutSession?
 
-    @Relationship(deleteRule: .cascade)
+    @Relationship(deleteRule: .cascade, inverse: \CompletedSet.sessionExercise)
     var completedSets: [CompletedSet]
 
     var exerciseName: String {

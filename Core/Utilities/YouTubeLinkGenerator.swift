@@ -14,6 +14,6 @@ enum YouTubeLinkGenerator {
             .addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? searchTerm
 
         return URL(string: "https://www.youtube.com/results?search_query=\(query)")
-            ?? URL(string: "https://www.youtube.com")!
+            ?? URL(string: "https://www.youtube.com") ?? URL(fileURLWithPath: "/")
     }
 }

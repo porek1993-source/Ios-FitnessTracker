@@ -18,7 +18,7 @@ final class WorkoutPlan {
     @Relationship(inverse: \UserProfile.workoutPlans)
     var owner: UserProfile?
 
-    @Relationship(deleteRule: .cascade)
+    @Relationship(deleteRule: .cascade, inverse: \PlannedWorkoutDay.plan)
     var scheduledDays: [PlannedWorkoutDay]
 
     @Relationship(deleteRule: .cascade)
@@ -44,7 +44,7 @@ final class PlannedWorkoutDay {
 
     var plan: WorkoutPlan?
 
-    @Relationship(deleteRule: .cascade)
+    @Relationship(deleteRule: .cascade, inverse: \PlannedExercise.plannedDay)
     var plannedExercises: [PlannedExercise]
 
     init(dayOfWeek: Int, label: String, isRestDay: Bool = false) {
