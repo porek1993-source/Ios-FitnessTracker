@@ -423,6 +423,21 @@ final class WorkoutViewModel: ObservableObject {
         return (gains, prEvents)
     }
 
+    // MARK: - Cancel — smaže session bez uložení
+
+    func cancelWorkout(modelContext: ModelContext) {
+        restTimer?.invalidate()
+        elapsedTimer?.invalidate()
+        session.status = .skipped
+        modelContext.delete(session)
+        do {
+            try modelContext.save()
+        } catch {
+            AppLogger.error("WorkoutViewModel: Chyba při mazání session: \(error)")
+        }
+        Task { await LiveActivityManager.shared.endCurrentActivity() }
+    }
+
     private func detectPersonalRecords() -> [PREvent] {
         var prs: [PREvent] = []
         for ex in exercises {

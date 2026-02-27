@@ -1,28 +1,15 @@
 // MuscleMapView.swift
-// Agilní Fitness Trenér — Prémiová svalová mapa (kompletní refaktoring)
+// Agilní Fitness Trenér — Prémiová svalová mapa (kompletní refaktoring v2)
 //
-// ✅ Plně organická silueta (nulové ostré rohy, žádné obdélníkové "panáčky")
-// ✅ Prémiový look inspirovaný Apple Fitness+ / Whoop
-// ✅ Gradient pozadí siluety + per-sval glow animace
-// ✅ Smooth přepínání přední / zadní pohled
-// ✅ Drop-in náhrada — zachovává kompatibilitu s HeatmapViewModel a MuscleArea
-// ✅ @MainActor safe — veškeré UI updaty na hlavním vlákně
-// ✅ Žádné memory leaky — closure callbacks bez retain cycle
+// ✅ Anatomická silueta kreslená Bézierovými křivkami (žádné obdélníky)
+// ✅ Svaly mají organické tvary (ellipsy, klopené Capsule, zakřivené Path)
+// ✅ Prémiový "halo" neonový glow efekt při tapnutí nebo únavě
+// ✅ Gamifikační glow (modrý/cyan) pro trénované svaly
+// ✅ Drop-in náhrada — zachovává MuscleArea model z HeatmapView
 
 import SwiftUI
 
-// MARK: ═══════════════════════════════════════════════════════════════════════
-// MARK: MuscleMapView — veřejné API (použij všude místo BodyFigureView)
-// MARK: ═══════════════════════════════════════════════════════════════════════
-
 /// Prémiová svalová mapa jako drop-in náhrada za původní BodyFigureView.
-///
-/// **Použití:**
-/// ```swift
-/// MuscleMapView(vm: heatmapViewModel) { tappedArea in
-///     print("Klepnuto na: \(tappedArea.displayName)")
-/// }
-/// ```
 struct MuscleMapView: View {
 
     @ObservedObject var vm: HeatmapViewModel
@@ -41,43 +28,31 @@ struct MuscleMapView: View {
             GeometryReader { geo in
                 ZStack {
 
-                    // Prémiová organická silueta na pozadí
-                    PremiumBodySilhouette(isFront: showingFront)
+                    // Anatomická silueta na pozadí
+                    AnatomicalSilhouette(isFront: showingFront)
                         .fill(silhouetteGradient)
                         .overlay(
-                            PremiumBodySilhouette(isFront: showingFront)
-                                .stroke(
-                                    LinearGradient(
-                                        colors: [
-                                            Color.white.opacity(0.14),
-                                            Color.white.opacity(0.05)
-                                        ],
-                                        startPoint: .top,
-                                        endPoint: .bottom
-                                    ),
-                                    lineWidth: 1
-                                )
+                            AnatomicalSilhouette(isFront: showingFront)
+                                .stroke(Color.white.opacity(0.08), lineWidth: 0.8)
                         )
-                        .shadow(color: .blue.opacity(0.08), radius: 12, x: 0, y: 4)
+                        .scaleEffect(silhouetteAppeared ? 1 : 0.92)
                         .opacity(silhouetteAppeared ? 1 : 0)
-                        .scaleEffect(silhouetteAppeared ? 1 : 0.96)
                         .animation(.spring(response: 0.55, dampingFraction: 0.78), value: silhouetteAppeared)
 
                     // Organické svalové zóny
                     let areas = showingFront ? MuscleArea.frontAreas : MuscleArea.backAreas
                     ForEach(areas) { area in
-                        OrganicMuscleZoneView(
+                        AnatomicMuscleZone(
                             area:     area,
                             state:    vm.state(for: area),
                             progress: vm.muscleProgress(for: area),
                             canvas:   geo.size
                         )
-                        .transition(.opacity.combined(with: .scale(scale: 0.92)))
                     }
 
-                    // Transparentní tap vrstva (přesné hit-testování)
+                    // TapCatcher — přesný hit-test přes celý canvas
                     TapCatcherView(
-                        areas: showingFront ? MuscleArea.frontAreas : MuscleArea.backAreas,
+                        areas: areas,
                         canvasSize: geo.size,
                         onTap: { area in
                             HapticManager.shared.playSelection()
@@ -129,23 +104,29 @@ private struct ViewTogglePill: View {
         .background(
             Capsule()
                 .fill(Color.white.opacity(0.06))
-                .overlay(Capsule().stroke(Color.white.opacity(0.10), lineWidth: 1))
+                .overlay(Capsule().stroke(Color.white.opacity(0.08), lineWidth: 1))
         )
     }
 
     private func toggleButton(title: String, isActive: Bool, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
+        Button(action: {
+            withAnimation(.spring(response: 0.25, dampingFraction: 0.72)) {
+                action()
+            }
+        }) {
             Text(title)
-                .font(.system(size: 13, weight: .semibold))
-                .foregroundStyle(isActive ? .white : .white.opacity(0.38))
+                .font(.system(size: 13, weight: isActive ? .bold : .medium))
+                .foregroundStyle(isActive ? .white : .white.opacity(0.35))
                 .padding(.horizontal, 22)
-                .padding(.vertical, 8)
+                .padding(.vertical, 9)
                 .background(
                     Group {
                         if isActive {
                             Capsule()
-                                .fill(Color.white.opacity(0.13))
-                                .overlay(Capsule().stroke(Color.white.opacity(0.18), lineWidth: 0.8))
+                                .fill(Color.white.opacity(0.12))
+                                .overlay(
+                                    Capsule().stroke(Color.white.opacity(0.1), lineWidth: 1)
+                                )
                         }
                     }
                 )
@@ -156,10 +137,10 @@ private struct ViewTogglePill: View {
 }
 
 // MARK: ═══════════════════════════════════════════════════════════════════════
-// MARK: OrganicMuscleZoneView — jednotlivá svalová partie (prémiový look)
+// MARK: AnatomicMuscleZone — ORGANICKÝ tvar svalu s HALO efektem
 // MARK: ═══════════════════════════════════════════════════════════════════════
 
-private struct OrganicMuscleZoneView: View {
+private struct AnatomicMuscleZone: View {
 
     let area:     MuscleArea
     let state:    MuscleState
@@ -169,44 +150,66 @@ private struct OrganicMuscleZoneView: View {
     @State private var glowPulse: Bool = false
 
     private var rect: CGRect {
-        area.relativeRect(in: canvas).insetBy(dx: 2, dy: 2)
+        area.relativeRect(in: canvas).insetBy(dx: 1, dy: 1)
     }
 
-    // Dynamický radius: plná Capsule pro všechny svaly
-    private var cornerRadius: CGFloat {
-        let minDim = min(rect.width, rect.height)
-        return minDim * 0.50 // plná Capsule
+    // Anatomický tvar: Elipsa nebo organicky zkosená Capsule
+    private var musclePath: Path {
+        AnatomicMuscleShape.path(for: area, in: rect)
     }
 
     var body: some View {
         ZStack {
-
-            // Primární výplň (stav svalu)
-            RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+            // ─── Layer 1: Hlavní výplň svalu ───────────────────────
+            musclePath
                 .fill(primaryFill)
 
-            // Subtilní vnitřní světlo (highlight horní okraj)
-            RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+            // ─── Layer 2: Subtilní vnitřní světlo (horní okraj) ─────
+            musclePath
                 .fill(
                     LinearGradient(
-                        colors: [Color.white.opacity(0.06), Color.clear],
+                        colors: [Color.white.opacity(0.08), Color.clear],
                         startPoint: .top,
                         endPoint: .center
                     )
                 )
 
-            // Outline
-            RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+            // ─── Layer 3: Obrys svalu ───────────────────────────────
+            musclePath
                 .stroke(outlineColor, lineWidth: outlineWidth)
 
-            // Gamifikační glow (modrý/tyrkysový — když sval byl trénován)
-            if progress > 0.05 {
-                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+            // ─── Layer 4: HALO efekt (neonový glow) ─────────────────
+            // Aktivní při: tap (sore/fatigued/jointPain) NEBO gamifikace (progress > 0)
+            if state != .healthy || progress > 0.05 {
+                // Vnější halo — velký, rozmazaný
+                musclePath
+                    .fill(haloColor.opacity(0.35 * (glowPulse ? 1.0 : 0.6)))
+                    .blur(radius: 12)
+                    .scaleEffect(1.15)
+
+                // Střední halo — jemnější vrstva
+                musclePath
+                    .fill(haloColor.opacity(0.25 * (glowPulse ? 0.9 : 0.5)))
+                    .blur(radius: 6)
+                    .scaleEffect(1.08)
+
+                // Vnitřní neonový okraj
+                musclePath
+                    .stroke(
+                        haloColor.opacity(0.75 * (glowPulse ? 1.0 : 0.55)),
+                        lineWidth: state == .jointPain ? 2.5 : 1.8
+                    )
+                    .blur(radius: 2)
+            }
+
+            // ─── Layer 5: Gamifikace overlay (trénované svaly = modro-cyan glow) ──
+            if progress > 0.05 && state == .healthy {
+                musclePath
                     .fill(
                         RadialGradient(
                             colors: [
-                                Color.cyan.opacity(0.22 * progress),
-                                Color.blue.opacity(0.12 * progress),
+                                Color.cyan.opacity(0.25 * progress),
+                                Color.blue.opacity(0.15 * progress),
                                 Color.clear
                             ],
                             center: .center,
@@ -214,26 +217,33 @@ private struct OrganicMuscleZoneView: View {
                             endRadius: max(rect.width, rect.height) * 0.7
                         )
                     )
-                    .overlay(
-                        RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                            .stroke(Color.cyan.opacity(0.45 * progress * (glowPulse ? 1.0 : 0.65)), lineWidth: 1.2)
+
+                musclePath
+                    .stroke(
+                        Color.cyan.opacity(0.5 * progress * (glowPulse ? 1.0 : 0.6)),
+                        lineWidth: 1.2
                     )
             }
         }
-        .frame(width: rect.width, height: rect.height)
-        .position(x: rect.midX, y: rect.midY)
         .animation(.easeInOut(duration: 0.25), value: state)
         .animation(.spring(response: 0.5, dampingFraction: 0.7), value: progress)
         .onAppear {
-            if progress > 0.05 {
-                withAnimation(.easeInOut(duration: 1.8).repeatForever(autoreverses: true).delay(Double.random(in: 0...0.8))) {
+            if state != .healthy || progress > 0.05 {
+                withAnimation(.easeInOut(duration: 2.0).repeatForever(autoreverses: true).delay(Double.random(in: 0...0.8))) {
+                    glowPulse = true
+                }
+            }
+        }
+        .onChange(of: state) { _, newState in
+            if newState != .healthy && !glowPulse {
+                withAnimation(.easeInOut(duration: 2.0).repeatForever(autoreverses: true)) {
                     glowPulse = true
                 }
             }
         }
         .onChange(of: progress) { _, newVal in
             if newVal > 0.05 && !glowPulse {
-                withAnimation(.easeInOut(duration: 1.8).repeatForever(autoreverses: true)) {
+                withAnimation(.easeInOut(duration: 2.0).repeatForever(autoreverses: true)) {
                     glowPulse = true
                 }
             }
@@ -245,13 +255,13 @@ private struct OrganicMuscleZoneView: View {
     private var primaryFill: AnyShapeStyle {
         switch state {
         case .healthy:
-            return AnyShapeStyle(Color.white.opacity(0.072))
+            return AnyShapeStyle(Color.white.opacity(0.06))
         case .sore:
             return AnyShapeStyle(
                 LinearGradient(
                     colors: [
-                        Color(red: 1.0, green: 0.55, blue: 0.12).opacity(0.55),
-                        Color(red: 1.0, green: 0.40, blue: 0.10).opacity(0.30)
+                        Color(red: 1.0, green: 0.55, blue: 0.12).opacity(0.50),
+                        Color(red: 1.0, green: 0.40, blue: 0.10).opacity(0.28)
                     ],
                     startPoint: .top, endPoint: .bottom
                 )
@@ -260,8 +270,8 @@ private struct OrganicMuscleZoneView: View {
             return AnyShapeStyle(
                 LinearGradient(
                     colors: [
-                        Color(red: 0.95, green: 0.20, blue: 0.22).opacity(0.58),
-                        Color(red: 0.85, green: 0.15, blue: 0.18).opacity(0.34)
+                        Color(red: 0.95, green: 0.20, blue: 0.22).opacity(0.55),
+                        Color(red: 0.85, green: 0.15, blue: 0.18).opacity(0.32)
                     ],
                     startPoint: .top, endPoint: .bottom
                 )
@@ -270,8 +280,8 @@ private struct OrganicMuscleZoneView: View {
             return AnyShapeStyle(
                 LinearGradient(
                     colors: [
-                        Color(red: 1.0, green: 0.10, blue: 0.10).opacity(0.82),
-                        Color(red: 0.90, green: 0.08, blue: 0.08).opacity(0.60)
+                        Color(red: 1.0, green: 0.10, blue: 0.10).opacity(0.78),
+                        Color(red: 0.90, green: 0.08, blue: 0.08).opacity(0.55)
                     ],
                     startPoint: .top, endPoint: .bottom
                 )
@@ -281,25 +291,307 @@ private struct OrganicMuscleZoneView: View {
 
     private var outlineColor: Color {
         switch state {
-        case .healthy:   return .white.opacity(0.10)
-        case .sore:      return AppColors.warning.opacity(0.70)
-        case .fatigued:  return AppColors.error.opacity(0.75)
+        case .healthy:   return .white.opacity(0.08)
+        case .sore:      return AppColors.warning.opacity(0.60)
+        case .fatigued:  return AppColors.error.opacity(0.65)
         case .jointPain: return AppColors.error
         }
     }
 
     private var outlineWidth: CGFloat {
         switch state {
-        case .healthy:   return 0.8
-        case .sore:      return 1.2
-        case .fatigued:  return 1.5
-        case .jointPain: return 2.0
+        case .healthy:   return 0.6
+        case .sore:      return 1.0
+        case .fatigued:  return 1.3
+        case .jointPain: return 1.8
+        }
+    }
+
+    /// Barva halo závisí na stavu: oranžová pro sore, červená pro fatigued/jointPain,
+    /// cyan pro gamifikaci (trénovaný sval)
+    private var haloColor: Color {
+        switch state {
+        case .healthy:   return .cyan      // gamifikační glow
+        case .sore:      return .orange
+        case .fatigued:  return .red
+        case .jointPain: return Color(red: 1.0, green: 0.15, blue: 0.15)
         }
     }
 }
 
 // MARK: ═══════════════════════════════════════════════════════════════════════
-// MARK: TapCatcherView — transparentní hit-test vrstva (nejpřesnější přístup)
+// MARK: AnatomicMuscleShape — generátor organických Path tvarů pro každý sval
+// MARK: ═══════════════════════════════════════════════════════════════════════
+
+private enum AnatomicMuscleShape {
+    /// Vrátí organický Path pro danou svalovou zónu (elipsa, zakřivená capsule, atd.)
+    static func path(for area: MuscleArea, in rect: CGRect) -> Path {
+        let slug = area.slug
+
+        // Jednotlivé svaly podle slug → speciální anatomické tvary
+        switch slug {
+        // ── Hrudník (pecs): široká, mírně konvexní elipsa ──
+        case "pecs":
+            return pectoralPath(rect)
+
+        // ── Ramena (deltoidy): oválné kupole ──
+        case "left_delt", "right_delt":
+            return deltoidPath(rect, isLeft: slug.hasPrefix("left"))
+
+        // ── Bicepsy: vertikální elipsa s mírným zaoblením ──
+        case "left_bicep", "right_bicep":
+            return armMusclePath(rect)
+
+        // ── Tricepsy: podobné jako biceps ale subtilněji tvarované ──
+        case "left_tricep", "right_tricep":
+            return armMusclePath(rect)
+
+        // ── Břicho (abs): obrys přizpůsobený „sixpacku" ──
+        case "abs":
+            return absPath(rect)
+
+        // ── Kvadricepsy: kapkovitý tvar ──
+        case "left_quad", "right_quad":
+            return quadPath(rect, isLeft: slug.hasPrefix("left"))
+
+        // ── Hamstringy: vertikální elipsa ──
+        case "left_hamstring", "right_hamstring":
+            return hamstringPath(rect)
+
+        // ── Lýtka: kapkovitá elipsa (širší nahoře) ──
+        case "left_calf", "right_calf":
+            return calfPath(rect)
+
+        // ── Trapézy: šíjový lichoběžník ──
+        case "traps":
+            return trapeziusPath(rect)
+
+        // ── Záda (lats): široký V-tvar ──
+        case "lats_upper":
+            return latPath(rect)
+
+        // ── Spodní záda: mírně zaoblený obdélník ──
+        case "lower_back":
+            return lowerBackPath(rect)
+
+        // ── Hýždě (glutes): široká, plochá elipsa ──
+        case "glutes":
+            return glutePath(rect)
+
+        // Fallback: organická elipsa
+        default:
+            return Path(ellipseIn: rect)
+        }
+    }
+
+    // MARK: - Anatomické tvary
+
+    private static func pectoralPath(_ r: CGRect) -> Path {
+        // Široká konvexní elipsa s mírným zploštěním dole
+        var p = Path()
+        let cx = r.midX, cy = r.midY
+        let hw = r.width * 0.52, hh = r.height * 0.48
+        p.addEllipse(in: CGRect(x: cx - hw, y: cy - hh, width: hw * 2, height: hh * 2))
+        return p
+    }
+
+    private static func deltoidPath(_ r: CGRect, isLeft: Bool) -> Path {
+        // Kupolovitý tvar ramene
+        var p = Path()
+        let cx = r.midX, cy = r.midY
+        p.move(to: CGPoint(x: cx - r.width * 0.42, y: cy + r.height * 0.35))
+        p.addCurve(
+            to: CGPoint(x: cx + r.width * 0.42, y: cy + r.height * 0.35),
+            control1: CGPoint(x: cx - r.width * 0.50, y: cy - r.height * 0.55),
+            control2: CGPoint(x: cx + r.width * 0.50, y: cy - r.height * 0.55)
+        )
+        p.addCurve(
+            to: CGPoint(x: cx - r.width * 0.42, y: cy + r.height * 0.35),
+            control1: CGPoint(x: cx + r.width * 0.25, y: cy + r.height * 0.50),
+            control2: CGPoint(x: cx - r.width * 0.25, y: cy + r.height * 0.50)
+        )
+        p.closeSubpath()
+        return p
+    }
+
+    private static func armMusclePath(_ r: CGRect) -> Path {
+        // Vřetenovitý tvar (širší uprostřed, užší na koncích)
+        var p = Path()
+        let cx = r.midX, cy = r.midY
+        let hw = r.width * 0.44, hh = r.height * 0.50
+        p.move(to: CGPoint(x: cx, y: cy - hh))
+        p.addCurve(
+            to: CGPoint(x: cx, y: cy + hh),
+            control1: CGPoint(x: cx + hw * 1.4, y: cy - hh * 0.3),
+            control2: CGPoint(x: cx + hw * 1.4, y: cy + hh * 0.3)
+        )
+        p.addCurve(
+            to: CGPoint(x: cx, y: cy - hh),
+            control1: CGPoint(x: cx - hw * 1.4, y: cy + hh * 0.3),
+            control2: CGPoint(x: cx - hw * 1.4, y: cy - hh * 0.3)
+        )
+        p.closeSubpath()
+        return p
+    }
+
+    private static func absPath(_ r: CGRect) -> Path {
+        // Skupina zaoblených segmentů (připomíná sixpack)
+        var p = Path()
+        let segW = r.width * 0.40
+        let segH = r.height * 0.28
+        let gap:  CGFloat = 3
+        let cx = r.midX
+
+        for row in 0..<3 {
+            let y = r.minY + CGFloat(row) * (segH + gap)
+            // Levý segment
+            p.addRoundedRect(
+                in: CGRect(x: cx - segW - gap/2, y: y, width: segW, height: segH),
+                cornerSize: CGSize(width: 5, height: 5),
+                style: .continuous
+            )
+            // Pravý segment
+            p.addRoundedRect(
+                in: CGRect(x: cx + gap/2, y: y, width: segW, height: segH),
+                cornerSize: CGSize(width: 5, height: 5),
+                style: .continuous
+            )
+        }
+        return p
+    }
+
+    private static func quadPath(_ r: CGRect, isLeft: Bool) -> Path {
+        // Kapkovitý tvar: širší nahoře, užší u kolena
+        var p = Path()
+        let cx = r.midX, cy = r.midY
+        p.move(to: CGPoint(x: cx, y: r.minY))
+        p.addCurve(
+            to: CGPoint(x: cx + r.width * 0.35, y: r.maxY),
+            control1: CGPoint(x: cx + r.width * 0.55, y: cy - r.height * 0.15),
+            control2: CGPoint(x: cx + r.width * 0.48, y: cy + r.height * 0.2)
+        )
+        p.addCurve(
+            to: CGPoint(x: cx - r.width * 0.35, y: r.maxY),
+            control1: CGPoint(x: cx + r.width * 0.10, y: r.maxY + 4),
+            control2: CGPoint(x: cx - r.width * 0.10, y: r.maxY + 4)
+        )
+        p.addCurve(
+            to: CGPoint(x: cx, y: r.minY),
+            control1: CGPoint(x: cx - r.width * 0.48, y: cy + r.height * 0.2),
+            control2: CGPoint(x: cx - r.width * 0.55, y: cy - r.height * 0.15)
+        )
+        p.closeSubpath()
+        return p
+    }
+
+    private static func hamstringPath(_ r: CGRect) -> Path {
+        // Vertikální vřeteno
+        return armMusclePath(r) // Stejný tvar, jiný kontext
+    }
+
+    private static func calfPath(_ r: CGRect) -> Path {
+        // Kapkovitý tvar — širší nahoře
+        var p = Path()
+        let cx = r.midX
+        p.move(to: CGPoint(x: cx, y: r.minY))
+        p.addCurve(
+            to: CGPoint(x: cx + r.width * 0.25, y: r.maxY),
+            control1: CGPoint(x: cx + r.width * 0.55, y: r.minY + r.height * 0.2),
+            control2: CGPoint(x: cx + r.width * 0.40, y: r.midY)
+        )
+        p.addCurve(
+            to: CGPoint(x: cx - r.width * 0.25, y: r.maxY),
+            control1: CGPoint(x: cx + r.width * 0.08, y: r.maxY + 2),
+            control2: CGPoint(x: cx - r.width * 0.08, y: r.maxY + 2)
+        )
+        p.addCurve(
+            to: CGPoint(x: cx, y: r.minY),
+            control1: CGPoint(x: cx - r.width * 0.40, y: r.midY),
+            control2: CGPoint(x: cx - r.width * 0.55, y: r.minY + r.height * 0.2)
+        )
+        p.closeSubpath()
+        return p
+    }
+
+    private static func trapeziusPath(_ r: CGRect) -> Path {
+        // Lichoběžníkový tvar: široký nahoře, zúžený dole
+        var p = Path()
+        let insetX = r.width * 0.10
+        p.move(to: CGPoint(x: r.minX, y: r.minY))
+        p.addCurve(
+            to: CGPoint(x: r.maxX, y: r.minY),
+            control1: CGPoint(x: r.midX - r.width * 0.15, y: r.minY - r.height * 0.25),
+            control2: CGPoint(x: r.midX + r.width * 0.15, y: r.minY - r.height * 0.25)
+        )
+        p.addLine(to: CGPoint(x: r.maxX - insetX, y: r.maxY))
+        p.addCurve(
+            to: CGPoint(x: r.minX + insetX, y: r.maxY),
+            control1: CGPoint(x: r.midX + r.width * 0.1, y: r.maxY + r.height * 0.1),
+            control2: CGPoint(x: r.midX - r.width * 0.1, y: r.maxY + r.height * 0.1)
+        )
+        p.closeSubpath()
+        return p
+    }
+
+    private static func latPath(_ r: CGRect) -> Path {
+        // Široký V-tvar (latissimus dorsi)
+        var p = Path()
+        let cx = r.midX
+        p.move(to: CGPoint(x: cx, y: r.minY))
+        p.addCurve(
+            to: CGPoint(x: r.maxX, y: r.minY + r.height * 0.35),
+            control1: CGPoint(x: cx + r.width * 0.15, y: r.minY),
+            control2: CGPoint(x: r.maxX, y: r.minY + r.height * 0.1)
+        )
+        p.addCurve(
+            to: CGPoint(x: cx + r.width * 0.15, y: r.maxY),
+            control1: CGPoint(x: r.maxX, y: r.midY),
+            control2: CGPoint(x: cx + r.width * 0.35, y: r.maxY)
+        )
+        p.addCurve(
+            to: CGPoint(x: cx - r.width * 0.15, y: r.maxY),
+            control1: CGPoint(x: cx + r.width * 0.05, y: r.maxY + 3),
+            control2: CGPoint(x: cx - r.width * 0.05, y: r.maxY + 3)
+        )
+        p.addCurve(
+            to: CGPoint(x: r.minX, y: r.minY + r.height * 0.35),
+            control1: CGPoint(x: cx - r.width * 0.35, y: r.maxY),
+            control2: CGPoint(x: r.minX, y: r.midY)
+        )
+        p.addCurve(
+            to: CGPoint(x: cx, y: r.minY),
+            control1: CGPoint(x: r.minX, y: r.minY + r.height * 0.1),
+            control2: CGPoint(x: cx - r.width * 0.15, y: r.minY)
+        )
+        p.closeSubpath()
+        return p
+    }
+
+    private static func lowerBackPath(_ r: CGRect) -> Path {
+        var p = Path()
+        p.addRoundedRect(
+            in: r,
+            cornerSize: CGSize(width: r.width * 0.3, height: r.height * 0.4),
+            style: .continuous
+        )
+        return p
+    }
+
+    private static func glutePath(_ r: CGRect) -> Path {
+        // Dva překrývající se oválovité segmenty = realistické hýždě
+        var p = Path()
+        let gap = r.width * 0.03
+        let hw = (r.width - gap) / 2
+        // Levá
+        p.addEllipse(in: CGRect(x: r.minX, y: r.minY, width: hw, height: r.height))
+        // Pravá
+        p.addEllipse(in: CGRect(x: r.minX + hw + gap, y: r.minY, width: hw, height: r.height))
+        return p
+    }
+}
+
+// MARK: ═══════════════════════════════════════════════════════════════════════
+// MARK: TapCatcherView — transparentní hit-test vrstva
 // MARK: ═══════════════════════════════════════════════════════════════════════
 
 private struct TapCatcherView: View {
@@ -318,7 +610,6 @@ private struct TapCatcherView: View {
             )
     }
 
-    // Seřazení od nejmenší oblasti (přesnější výběr malých skupin)
     private func hitTest(at point: CGPoint) {
         let sorted = areas.sorted {
             let a0 = $0.relativeRect(in: canvasSize)
@@ -336,15 +627,10 @@ private struct TapCatcherView: View {
 }
 
 // MARK: ═══════════════════════════════════════════════════════════════════════
-// MARK: PremiumBodySilhouette — organická prémiová silueta bez ostrých rohů
+// MARK: AnatomicalSilhouette — Bézierová anatomická silueta (přední i zadní)
 // MARK: ═══════════════════════════════════════════════════════════════════════
-//
-// Silueta je postavena výhradně z překrývajících se Capsule-like tvarů.
-// Výsledek vypadá jako přirozená lidská figura, ne jako součet obdélníků.
-//
-// Souřadnicový systém: relativní (0…1) × velikost plátna.
 
-struct PremiumBodySilhouette: Shape {
+struct AnatomicalSilhouette: Shape {
 
     let isFront: Bool
 
@@ -352,124 +638,101 @@ struct PremiumBodySilhouette: Shape {
         var p = Path()
         let w = rect.width
         let h = rect.height
+        let cx = w * 0.5
 
-        // ── Hlava (elipsa) ───────────────────────────────────────────────────
+        // ── Hlava ──────────────────────────────────────────
         p.addEllipse(in: CGRect(
-            x: w * 0.352, y: h * 0.005,
-            width:  w * 0.296,
-            height: h * 0.132
+            x: cx - w * 0.148, y: h * 0.005,
+            width: w * 0.296, height: h * 0.125
         ))
 
-        // ── Krk ──────────────────────────────────────────────────────────────
-        addCapsule(&p,
-            cx: w * 0.500, cy: h * 0.147,
-            halfW: w * 0.068, halfH: h * 0.030)
+        // ── Krk ────────────────────────────────────────────
+        p.addEllipse(in: CGRect(
+            x: cx - w * 0.06, y: h * 0.12,
+            width: w * 0.12, height: h * 0.055
+        ))
 
-        // ── Trup (barrel shape) — dva overlapping rounded rects ──────────────
-        // Horní část (ramena → pás)
-        addRoundedRect(&p,
-            x: w * 0.196, y: h * 0.168,
-            width: w * 0.608, height: h * 0.200,
-            radius: 22)
+        // ── Torso: hlavní obrys pomocí Bézier ──────────────
+        var torso = Path()
+        // Horní obrys — ramena
+        torso.move(to: CGPoint(x: w * 0.14, y: h * 0.175))
+        torso.addCurve(
+            to: CGPoint(x: w * 0.86, y: h * 0.175),
+            control1: CGPoint(x: w * 0.28, y: h * 0.155),
+            control2: CGPoint(x: w * 0.72, y: h * 0.155)
+        )
+        // Pravá strana — od ramene po bok
+        torso.addCurve(
+            to: CGPoint(x: w * 0.76, y: h * 0.46),
+            control1: CGPoint(x: w * 0.88, y: h * 0.22),
+            control2: CGPoint(x: w * 0.82, y: h * 0.38)
+        )
+        // Spodek — přes boky
+        torso.addCurve(
+            to: CGPoint(x: w * 0.24, y: h * 0.46),
+            control1: CGPoint(x: w * 0.70, y: h * 0.48),
+            control2: CGPoint(x: w * 0.30, y: h * 0.48)
+        )
+        // Levá strana — od boku po rameno
+        torso.addCurve(
+            to: CGPoint(x: w * 0.14, y: h * 0.175),
+            control1: CGPoint(x: w * 0.18, y: h * 0.38),
+            control2: CGPoint(x: w * 0.12, y: h * 0.22)
+        )
+        torso.closeSubpath()
+        p.addPath(torso)
 
-        // Spodní část (pás → boky) — trochu užší
-        addRoundedRect(&p,
-            x: w * 0.220, y: h * 0.330,
-            width: w * 0.560, height: h * 0.130,
-            radius: 18)
+        // ── Ramena (oválné kupolky) ────────────────────────
+        addCapsule(&p, cx: w * 0.11, cy: h * 0.195,   halfW: w * 0.085, halfH: h * 0.050)
+        addCapsule(&p, cx: w * 0.89, cy: h * 0.195,   halfW: w * 0.085, halfH: h * 0.050)
 
-        // ── Levé rameno (deltoid) ─────────────────────────────────────────────
-        addCapsule(&p,
-            cx: w * 0.138, cy: h * 0.205,
-            halfW: w * 0.098, halfH: h * 0.058)
+        // ── Paže horní ─────────────────────────────────────
+        addCapsule(&p, cx: w * 0.065, cy: h * 0.295,  halfW: w * 0.062, halfH: h * 0.100)
+        addCapsule(&p, cx: w * 0.935, cy: h * 0.295,  halfW: w * 0.062, halfH: h * 0.100)
 
-        // ── Pravé rameno ──────────────────────────────────────────────────────
-        addCapsule(&p,
-            cx: w * 0.862, cy: h * 0.205,
-            halfW: w * 0.098, halfH: h * 0.058)
+        // ── Předloktí ──────────────────────────────────────
+        addCapsule(&p, cx: w * 0.055, cy: h * 0.430,  halfW: w * 0.050, halfH: h * 0.088)
+        addCapsule(&p, cx: w * 0.945, cy: h * 0.430,  halfW: w * 0.050, halfH: h * 0.088)
 
-        // ── Levá paže — horní (humerus) ───────────────────────────────────────
-        addCapsule(&p,
-            cx: w * 0.075, cy: h * 0.295,
-            halfW: w * 0.070, halfH: h * 0.108)
+        // ── Ruce ───────────────────────────────────────────
+        addCapsule(&p, cx: w * 0.050, cy: h * 0.545,  halfW: w * 0.042, halfH: h * 0.035)
+        addCapsule(&p, cx: w * 0.950, cy: h * 0.545,  halfW: w * 0.042, halfH: h * 0.035)
 
-        // ── Pravá paže — horní ────────────────────────────────────────────────
-        addCapsule(&p,
-            cx: w * 0.925, cy: h * 0.295,
-            halfW: w * 0.070, halfH: h * 0.108)
+        // ── Pánev / boky ───────────────────────────────────
+        var pelvis = Path()
+        pelvis.addRoundedRect(
+            in: CGRect(x: w * 0.20, y: h * 0.455, width: w * 0.60, height: h * 0.075),
+            cornerSize: CGSize(width: 18, height: 18),
+            style: .continuous
+        )
+        p.addPath(pelvis)
 
-        // ── Levé předloktí ────────────────────────────────────────────────────
-        addCapsule(&p,
-            cx: w * 0.060, cy: h * 0.436,
-            halfW: w * 0.058, halfH: h * 0.095)
+        // ── Stehna ─────────────────────────────────────────
+        addCapsule(&p, cx: w * 0.32, cy: h * 0.63,    halfW: w * 0.105, halfH: h * 0.120)
+        addCapsule(&p, cx: w * 0.68, cy: h * 0.63,    halfW: w * 0.105, halfH: h * 0.120)
 
-        // ── Pravé předloktí ───────────────────────────────────────────────────
-        addCapsule(&p,
-            cx: w * 0.940, cy: h * 0.436,
-            halfW: w * 0.058, halfH: h * 0.095)
+        // ── Kolena ─────────────────────────────────────────
+        addCapsule(&p, cx: w * 0.32, cy: h * 0.775,   halfW: w * 0.085, halfH: h * 0.035)
+        addCapsule(&p, cx: w * 0.68, cy: h * 0.775,   halfW: w * 0.085, halfH: h * 0.035)
 
-        // ── Levá ruka ─────────────────────────────────────────────────────────
-        addCapsule(&p,
-            cx: w * 0.055, cy: h * 0.550,
-            halfW: w * 0.050, halfH: h * 0.040)
+        // ── Lýtka ──────────────────────────────────────────
+        addCapsule(&p, cx: w * 0.315, cy: h * 0.855,  halfW: w * 0.075, halfH: h * 0.098)
+        addCapsule(&p, cx: w * 0.685, cy: h * 0.855,  halfW: w * 0.075, halfH: h * 0.098)
 
-        // ── Pravá ruka ────────────────────────────────────────────────────────
-        addCapsule(&p,
-            cx: w * 0.945, cy: h * 0.550,
-            halfW: w * 0.050, halfH: h * 0.040)
-
-        // ── Boky / pánev ──────────────────────────────────────────────────────
-        addRoundedRect(&p,
-            x: w * 0.196, y: h * 0.458,
-            width: w * 0.608, height: h * 0.080,
-            radius: 20)
-
-        // ── Levé stehno ───────────────────────────────────────────────────────
-        addCapsule(&p,
-            cx: w * 0.316, cy: h * 0.633,
-            halfW: w * 0.114, halfH: h * 0.128)
-
-        // ── Pravé stehno ──────────────────────────────────────────────────────
-        addCapsule(&p,
-            cx: w * 0.684, cy: h * 0.633,
-            halfW: w * 0.114, halfH: h * 0.128)
-
-        // ── Levé koleno (subtilní zaoblení) ───────────────────────────────────
-        addCapsule(&p,
-            cx: w * 0.314, cy: h * 0.775,
-            halfW: w * 0.094, halfH: h * 0.040)
-
-        // ── Pravé koleno ──────────────────────────────────────────────────────
-        addCapsule(&p,
-            cx: w * 0.686, cy: h * 0.775,
-            halfW: w * 0.094, halfH: h * 0.040)
-
-        // ── Levá holeň ────────────────────────────────────────────────────────
-        addCapsule(&p,
-            cx: w * 0.310, cy: h * 0.854,
-            halfW: w * 0.082, halfH: h * 0.106)
-
-        // ── Pravá holeň ───────────────────────────────────────────────────────
-        addCapsule(&p,
-            cx: w * 0.690, cy: h * 0.854,
-            halfW: w * 0.082, halfH: h * 0.106)
-
-        // ── Levé chodidlo ─────────────────────────────────────────────────────
-        addRoundedRect(&p,
-            x: w * 0.200, y: h * 0.954,
-            width: w * 0.220, height: h * 0.044,
-            radius: 11)
-
-        // ── Pravé chodidlo ────────────────────────────────────────────────────
-        addRoundedRect(&p,
-            x: w * 0.580, y: h * 0.954,
-            width: w * 0.220, height: h * 0.044,
-            radius: 11)
+        // ── Chodidla ───────────────────────────────────────
+        p.addRoundedRect(
+            in: CGRect(x: w * 0.21, y: h * 0.955, width: w * 0.21, height: h * 0.040),
+            cornerSize: CGSize(width: 10, height: 10),
+            style: .continuous
+        )
+        p.addRoundedRect(
+            in: CGRect(x: w * 0.58, y: h * 0.955, width: w * 0.21, height: h * 0.040),
+            cornerSize: CGSize(width: 10, height: 10),
+            style: .continuous
+        )
 
         return p
     }
-
-    // MARK: Pomocné kreslicí funkce
 
     private func addCapsule(_ p: inout Path, cx: CGFloat, cy: CGFloat, halfW: CGFloat, halfH: CGFloat) {
         let r = min(halfW, halfH)
@@ -479,21 +742,13 @@ struct PremiumBodySilhouette: Shape {
             style: .continuous
         )
     }
-
-    private func addRoundedRect(_ p: inout Path, x: CGFloat, y: CGFloat, width: CGFloat, height: CGFloat, radius: CGFloat) {
-        p.addRoundedRect(
-            in: CGRect(x: x, y: y, width: width, height: height),
-            cornerSize: CGSize(width: radius, height: radius),
-            style: .continuous
-        )
-    }
 }
 
 // MARK: ═══════════════════════════════════════════════════════════════════════
 // MARK: Preview
 // MARK: ═══════════════════════════════════════════════════════════════════════
 
-#Preview("Svalová mapa — prémiová") {
+#Preview("Svalová mapa — prémiová v2") {
     ZStack {
         AppColors.background.ignoresSafeArea()
 
@@ -505,7 +760,6 @@ struct PremiumBodySilhouette: Shape {
                     .foregroundStyle(.white)
                     .padding(.top, 32)
 
-                // Živá ukázka s mock daty
                 let vm: HeatmapViewModel = {
                     let m = HeatmapViewModel()
                     m.muscleProgressMap = [

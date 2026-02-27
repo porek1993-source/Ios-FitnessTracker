@@ -109,7 +109,8 @@ struct WorkoutSummaryView: View {
                     HStack(alignment: .top, spacing: 0) {
                         // Muscle figure (left)
                         GainsMuscleMapView(gains: topGains, animProgress: muscleAnimProgress)
-                            .frame(width: 160, height: 260)
+                            .frame(maxWidth: 170)
+                            .aspectRatio(0.58, contentMode: .fit)
 
                         // XP bars (right)
                         VStack(spacing: 10) {

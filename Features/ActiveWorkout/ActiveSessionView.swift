@@ -20,6 +20,7 @@ struct ActiveSessionView: View {
 
     @State private var showSwap       = false
     @State private var showFinishDlg  = false
+    @State private var showCancelDlg  = false
 
     init(session: WorkoutSession, plan: PlannedWorkoutDay, planLabel: String) {
         _vm = StateObject(wrappedValue: WorkoutViewModel(
@@ -54,7 +55,7 @@ struct ActiveSessionView: View {
 
             // ── Pinned header
             VStack {
-                SessionHeaderBar(vm: vm, onFinish: { showFinishDlg = true })
+                SessionHeaderBar(vm: vm, onFinish: { showFinishDlg = true }, onCancel: { showCancelDlg = true })
                 Spacer()
             }
 
@@ -88,6 +89,15 @@ struct ActiveSessionView: View {
         } message: {
             Text("Všechny zalogované série budou uloženy.")
         }
+        .alert("Zrušit trénink?", isPresented: $showCancelDlg) {
+            Button("Ano, zrušit", role: .destructive) {
+                vm.cancelWorkout(modelContext: modelContext)
+                dismiss()
+            }
+            Button("Ne, pokračovat", role: .cancel) {}
+        } message: {
+            Text("Žádné série nebudou uloženy. Trénink bude smazán.")
+        }
     }
 }
 
@@ -98,6 +108,7 @@ struct ActiveSessionView: View {
 private struct SessionHeaderBar: View {
     @ObservedObject var vm: WorkoutViewModel
     let onFinish: () -> Void
+    let onCancel: () -> Void
 
     var body: some View {
         HStack(spacing: 0) {
@@ -127,19 +138,36 @@ private struct SessionHeaderBar: View {
 
             Spacer()
 
-            Button(action: onFinish) {
-                Text("Hotovo")
-                    .font(.system(size: 13, weight: .bold))
-                    .foregroundStyle(.white.opacity(0.72))
-                    .padding(.horizontal, 13)
-                    .padding(.vertical, 8)
-                    .background(
-                        Capsule()
-                            .fill(.white.opacity(0.09))
-                            .overlay(Capsule().stroke(.white.opacity(0.11), lineWidth: 1))
-                    )
+            HStack(spacing: 8) {
+                // Zrušit trénink
+                Button(action: onCancel) {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundStyle(.red.opacity(0.75))
+                        .frame(width: 32, height: 32)
+                        .background(
+                            Circle()
+                                .fill(.red.opacity(0.12))
+                                .overlay(Circle().stroke(.red.opacity(0.20), lineWidth: 1))
+                        )
+                }
+                .buttonStyle(.plain)
+
+                // Hotovo
+                Button(action: onFinish) {
+                    Text("Hotovo")
+                        .font(.system(size: 13, weight: .bold))
+                        .foregroundStyle(.white.opacity(0.72))
+                        .padding(.horizontal, 13)
+                        .padding(.vertical, 8)
+                        .background(
+                            Capsule()
+                                .fill(.white.opacity(0.09))
+                                .overlay(Capsule().stroke(.white.opacity(0.11), lineWidth: 1))
+                        )
+                }
             }
-            .frame(width: 80, alignment: .trailing)
+            .frame(width: 120, alignment: .trailing)
         }
         .padding(.horizontal, 22)
         .padding(.top, 56)
@@ -244,6 +272,7 @@ private struct ExerciseHero: View {
                 startPoint: .top, endPoint: .bottom
             )
             .frame(height: 230)
+            .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
 
             // Ambient glow
             Circle()

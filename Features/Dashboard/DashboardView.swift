@@ -18,11 +18,12 @@ final class DashboardViewModel: ObservableObject {
     @Published var restingHR: Double?
 
     // Today's plan
-    @Published var todayPlanLabel: String     = ""
-    @Published var todayPlanSplit: String     = ""
-    @Published var estimatedMinutes: Int      = 60
-    @Published var exerciseCount: Int         = 0
-    @Published var hasPlanToday: Bool         = false
+    @Published var todayPlanLabel: String         = ""
+    @Published var todayPlanSplit: String         = ""
+    @Published var estimatedMinutes: Int          = 60
+    @Published var exerciseCount: Int             = 0
+    @Published var hasPlanToday: Bool             = false
+    @Published var todayPlannedExercises: [PlannedExercise] = []
 
     // State
     @Published var isLoadingReadiness: Bool   = true
@@ -158,14 +159,16 @@ final class DashboardViewModel: ObservableObject {
         let dayIndex = todayWeekday == 1 ? 7 : todayWeekday - 1
 
         if let day = activePlan.scheduledDays.first(where: { $0.dayOfWeek == dayIndex && !$0.isRestDay }) {
-            hasPlanToday        = true
-            todayPlanLabel      = day.label
-            exerciseCount       = day.plannedExercises.count
-            estimatedMinutes    = profile.sessionDurationMinutes
-            todayPlanSplit      = activePlan.splitType.displayName
+            hasPlanToday              = true
+            todayPlanLabel            = day.label
+            exerciseCount             = day.plannedExercises.count
+            estimatedMinutes          = profile.sessionDurationMinutes
+            todayPlanSplit            = activePlan.splitType.displayName
+            todayPlannedExercises     = day.plannedExercises.sorted { $0.order < $1.order }
         } else {
             hasPlanToday  = false
             todayPlanLabel = "Den odpočinku"
+            todayPlannedExercises = []
         }
     }
 
@@ -232,6 +235,7 @@ struct TrainerDashboardView: View {
 
     @State private var showHeatmap  = false
     @State private var showWorkout  = false
+    @State private var showPreview  = false
     @State private var appearedOnce = false
 
     var profile: UserProfile? { profiles.first }
@@ -281,15 +285,82 @@ struct TrainerDashboardView: View {
                         )
                         .padding(.horizontal, 18)
                         .padding(.top, 16)
-                        .padding(.bottom, 36)
+                        .padding(.bottom, 120) // Extra padding so content doesn't hide behind sticky CTA
                     }
                 }
             }
             .ignoresSafeArea()
             .preferredColorScheme(.dark)
             .navigationBarHidden(true)
+            // ── Sticky CTA buttons ─────────────────────────────────
+            .safeAreaInset(edge: .bottom) {
+                if vm.hasPlanToday {
+                    VStack(spacing: 10) {
+                        // Hlavní CTA — Začít trénink
+                        Button(action: {
+                            UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                            showWorkout = true
+                        }) {
+                            ZStack {
+                                RoundedRectangle(cornerRadius: 18)
+                                    .fill(
+                                        LinearGradient(
+                                            colors: [
+                                                AppColors.primaryAccent,
+                                                AppColors.secondaryAccent
+                                            ],
+                                            startPoint: .topLeading,
+                                            endPoint:   .bottomTrailing
+                                        )
+                                    )
+                                    .shadow(color: AppColors.primaryAccent.opacity(0.45), radius: 18, y: 6)
+
+                                HStack(spacing: 10) {
+                                    Image(systemName: "play.fill")
+                                        .font(.system(size: 15, weight: .bold))
+                                    Text("Začít trénink")
+                                        .font(.system(size: 17, weight: .bold))
+                                }
+                                .foregroundStyle(.white)
+                            }
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 56)
+                        }
+                        .buttonStyle(.plain)
+
+                        // Sekundární — Náhled plánu
+                        Button(action: {
+                            showPreview = true
+                        }) {
+                            HStack(spacing: 8) {
+                                Image(systemName: "list.bullet.rectangle")
+                                    .font(.system(size: 13, weight: .semibold))
+                                Text("Zobrazit náhled plánu")
+                                    .font(.system(size: 14, weight: .medium))
+                            }
+                            .foregroundStyle(.white.opacity(0.55))
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 36)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                    .padding(.horizontal, 18)
+                    .padding(.top, 12)
+                    .padding(.bottom, 8)
+                    .background(
+                        LinearGradient(
+                            colors: [AppColors.background, AppColors.background.opacity(0.95)],
+                            startPoint: .bottom, endPoint: .top
+                        )
+                        .ignoresSafeArea()
+                    )
+                }
+            }
             .sheet(isPresented: $showHeatmap) {
                 HeatmapView()
+            }
+            .sheet(isPresented: $showPreview) {
+                WorkoutPreviewView(vm: vm)
             }
             .fullScreenCover(isPresented: $showWorkout) {
                 TodayWorkoutLaunchWrapper(
@@ -924,45 +995,7 @@ private struct TodayPlanCard: View {
                 .padding(.top, 20)
                 .padding(.bottom, 22)
 
-                // CTA Button
-                Button(action: {
-                    UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-                    onStart()
-                }) {
-                    ZStack {
-                        RoundedRectangle(cornerRadius: 18)
-                            .fill(
-                                LinearGradient(
-                                    colors: [
-                                        AppColors.primaryAccent,
-                                        AppColors.secondaryAccent
-                                    ],
-                                    startPoint: .topLeading,
-                                    endPoint:   .bottomTrailing
-                                )
-                            )
-                            .shadow(color: AppColors.primaryAccent.opacity(0.45), radius: 18, y: 6)
-
-                        HStack(spacing: 10) {
-                            Image(systemName: "play.fill")
-                                .font(.system(size: 15, weight: .bold))
-                            Text("Začít trénink")
-                                .font(.system(size: 17, weight: .bold))
-                        }
-                        .foregroundStyle(.white)
-                    }
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 56)
-                }
-                .buttonStyle(.plain)
-                .scaleEffect(buttonPressed ? 0.97 : 1.0)
-                .animation(.spring(response: 0.2), value: buttonPressed)
-                .simultaneousGesture(DragGesture(minimumDistance: 0)
-                    .onChanged { _ in withAnimation(.spring(response: 0.15)) { buttonPressed = true } }
-                    .onEnded { _ in withAnimation(.spring(response: 0.15)) { buttonPressed = false } }
-                )
-                .padding(.horizontal, 16)
-                .padding(.bottom, 18)
+                // CTA odstraněno z karty → přesunuto do sticky overlay v DashboardView
             }
         }
     }
