@@ -2,15 +2,17 @@
 // DTO mapovaný na Supabase tabulku public.muscle_wiki_data
 
 import Foundation
+import SwiftUI
 
-struct MuscleWikiExercise: Codable, Identifiable, Hashable {
+struct MuscleWikiExercise: Codable, Identifiable, Hashable, Sendable {
+    let id: UUID
     let name: String
     let videoUrl: String
     let muscleGroup: String
     let instructions: [String]
-
-    /// Identifikátor — používáme `name` jako unikátní klíč.
-    var id: String { name }
+    let difficulty: String?
+    let exerciseType: String?
+    let grip: String?
 
     /// Parsované URL videa pro AVPlayer.
     var videoURL: URL? { URL(string: videoUrl) }
@@ -25,13 +27,72 @@ struct MuscleWikiExercise: Codable, Identifiable, Hashable {
         Self.muscleGroupIcons[muscleGroup.lowercased()] ?? "figure.strengthtraining.traditional"
     }
 
+    // MARK: - Chip Helpers
+
+    /// Všechny dostupné chipy pro detail view (pouze non-nil hodnoty).
+    var chips: [ExerciseChip] {
+        var result: [ExerciseChip] = []
+        if let difficulty {
+            result.append(ExerciseChip(
+                label: difficulty,
+                icon: Self.difficultyIcon(difficulty),
+                color: Self.difficultyColor(difficulty)
+            ))
+        }
+        if let exerciseType {
+            result.append(ExerciseChip(
+                label: exerciseType,
+                icon: "arrow.triangle.branch",
+                color: .cyan
+            ))
+        }
+        if let grip {
+            result.append(ExerciseChip(
+                label: grip,
+                icon: "hand.raised.fill",
+                color: .orange
+            ))
+        }
+        return result
+    }
+
+    struct ExerciseChip: Hashable, Sendable {
+        let label: String
+        let icon: String
+        let color: Color
+    }
+
     // MARK: - CodingKeys
 
     enum CodingKeys: String, CodingKey {
+        case id
         case name
-        case videoUrl    = "video_url"
-        case muscleGroup = "muscle_group"
+        case videoUrl     = "video_url"
+        case muscleGroup  = "muscle_group"
         case instructions
+        case difficulty
+        case exerciseType = "exercise_type"
+        case grip
+    }
+
+    // MARK: - Difficulty Mapping
+
+    private static func difficultyIcon(_ value: String) -> String {
+        switch value.lowercased() {
+        case "beginner", "začátečník":   return "leaf.fill"
+        case "intermediate", "pokročilý": return "flame.fill"
+        case "advanced", "expert":        return "bolt.fill"
+        default:                          return "star.fill"
+        }
+    }
+
+    private static func difficultyColor(_ value: String) -> Color {
+        switch value.lowercased() {
+        case "beginner", "začátečník":   return .green
+        case "intermediate", "pokročilý": return .yellow
+        case "advanced", "expert":        return .red
+        default:                          return .purple
+        }
     }
 
     // MARK: - Lokalizace svalových skupin
@@ -77,4 +138,13 @@ struct MuscleWikiExercise: Codable, Identifiable, Hashable {
         "lower back": "figure.walk",
         "upper back": "figure.walk"
     ]
+}
+
+// MARK: - Static Helpers
+
+extension MuscleWikiExercise {
+    /// Statický helper pro lokalizaci — použitelný i bez instance.
+    static func localizedName(for group: String) -> String {
+        muscleGroupNames[group.lowercased()] ?? group.capitalized
+    }
 }

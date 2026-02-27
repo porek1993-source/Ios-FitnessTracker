@@ -225,11 +225,4 @@ struct ExerciseLibraryView: View {
     }
 }
 
-// MARK: - MuscleWikiExercise Static Helpers
 
-extension MuscleWikiExercise {
-    /// Statický helper pro lokalizaci — použitelný i bez instance.
-    static func localizedName(for group: String) -> String {
-        muscleGroupNames[group.lowercased()] ?? group.capitalized
-    }
-}
