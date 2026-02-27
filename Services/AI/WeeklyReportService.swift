@@ -47,7 +47,7 @@ final class WeeklyReportService {
     /// Spustí generování týdenního hodnocení za posledních 7 dní
     func generateWeeklyReport(for profile: UserProfile) async throws -> WeeklyReportResult {
         let endDate = Date()
-        let startDate = Calendar.current.date(byAdding: .day, value: -7, to: endDate)!
+        let startDate = Calendar.current.date(byAdding: .day, value: -7, to: endDate) ?? endDate.addingTimeInterval(-7 * 24 * 3600)
         
         // 1. Získáme odjeté tréninky
         let sessionsDescriptor = FetchDescriptor<WorkoutSession>(

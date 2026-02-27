@@ -56,7 +56,12 @@ enum SharedModelContainer {
                 // Absolutní fallback - in-memory DB (ztráta dat, ale app nespadne)
                 AppLogger.error("SharedModelContainer: Reset selhal: \(error). Používám in-memory DB.")
                 let fallbackConfig = ModelConfiguration(schema: schema, isStoredInMemoryOnly: true)
-                return try! ModelContainer(for: schema, configurations: fallbackConfig)
+                do {
+                    return try ModelContainer(for: schema, configurations: fallbackConfig)
+                } catch {
+                    // Pokud selže i in-memory, něco je velmi špatně (pravděpodobně schéma)
+                    fatalError("Kritická chyba: Nelze vytvořit ani in-memory ModelContainer: \(error)")
+                }
             }
         }
     }()

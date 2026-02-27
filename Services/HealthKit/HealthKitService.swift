@@ -44,7 +44,10 @@ final class HealthKitService: ObservableObject {
     }
 
     func checkAuthorizationStatus() async {
-        let sleepType = HKObjectType.categoryType(forIdentifier: .sleepAnalysis)!
+        guard let sleepType = HKObjectType.categoryType(forIdentifier: .sleepAnalysis) else {
+            isAuthorized = false
+            return
+        }
         let status = store.authorizationStatus(for: sleepType)
         // .sharingAuthorized = uživatel povolil, .sharingDenied = zakázáno, .notDetermined = ještě nerozhodl
         isAuthorized = status != .notDetermined
@@ -125,9 +128,14 @@ final class HealthKitService: ObservableObject {
         let end   = date.startOfDay.addingTimeInterval(12 * 3600)  // 12:00 dneška
         let predicate = HKQuery.predicateForSamples(withStart: start, end: min(end, .now))
 
+        guard let sleepType = HKObjectType.categoryType(forIdentifier: .sleepAnalysis) else {
+            continuation.resume(returning: SleepResult(duration: 0, efficiency: 0, deepHours: 0, remHours: 0))
+            return
+        }
+        
         return try await withCheckedThrowingContinuation { continuation in
             let query = HKSampleQuery(
-                sampleType: HKObjectType.categoryType(forIdentifier: .sleepAnalysis)!,
+                sampleType: sleepType,
                 predicate: predicate,
                 limit: HKObjectQueryNoLimit,
                 sortDescriptors: nil

@@ -9,10 +9,9 @@ actor GeminiAPIClient {
     private let session: URLSession
 
     private var endpoint: URL {
-        URL(string:
-            "https://generativelanguage.googleapis.com/v1beta/models/"
+        let urlString = "https://generativelanguage.googleapis.com/v1beta/models/"
             + "\(model):generateContent?key=\(apiKey)"
-        )!
+        return URL(string: urlString) ?? URL(string: "http://localhost")! // Fallback that won't crash during construction
     }
 
     init(apiKey: String) {

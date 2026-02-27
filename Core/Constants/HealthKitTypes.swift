@@ -3,26 +3,42 @@
 import HealthKit
 
 enum HealthKitReadTypes {
-    static let all: Set<HKObjectType> = [
-        HKObjectType.categoryType(forIdentifier: .sleepAnalysis)!,
-        HKObjectType.quantityType(forIdentifier: .heartRate)!,
-        HKObjectType.quantityType(forIdentifier: .restingHeartRate)!,
-        HKObjectType.quantityType(forIdentifier: .heartRateVariabilitySDNN)!,
-        HKObjectType.quantityType(forIdentifier: .respiratoryRate)!,
-        HKObjectType.quantityType(forIdentifier: .oxygenSaturation)!,
-        HKObjectType.quantityType(forIdentifier: .activeEnergyBurned)!,
-        HKObjectType.quantityType(forIdentifier: .basalEnergyBurned)!,
-        HKObjectType.quantityType(forIdentifier: .stepCount)!,
-        HKObjectType.quantityType(forIdentifier: .appleExerciseTime)!,
-        HKObjectType.quantityType(forIdentifier: .appleStandTime)!,
-        HKObjectType.quantityType(forIdentifier: .bodyMass)!,
-        HKObjectType.workoutType()
-    ]
+    static let all: Set<HKObjectType> = {
+        let identifiers: [Any] = [
+            HKCategoryTypeIdentifier.sleepAnalysis,
+            HKQuantityTypeIdentifier.heartRate,
+            HKQuantityTypeIdentifier.restingHeartRate,
+            HKQuantityTypeIdentifier.heartRateVariabilitySDNN,
+            HKQuantityTypeIdentifier.respiratoryRate,
+            HKQuantityTypeIdentifier.oxygenSaturation,
+            HKQuantityTypeIdentifier.activeEnergyBurned,
+            HKQuantityTypeIdentifier.basalEnergyBurned,
+            HKQuantityTypeIdentifier.stepCount,
+            HKQuantityTypeIdentifier.appleExerciseTime,
+            HKQuantityTypeIdentifier.appleStandTime,
+            HKQuantityTypeIdentifier.bodyMass
+        ]
+        
+        var types: Set<HKObjectType> = []
+        for id in identifiers {
+            if let qId = id as? HKQuantityTypeIdentifier, let type = HKQuantityType.quantityType(forIdentifier: qId) {
+                types.insert(type)
+            } else if let cId = id as? HKCategoryTypeIdentifier, let type = HKObjectType.categoryType(forIdentifier: cId) {
+                types.insert(type)
+            }
+        }
+        types.insert(HKObjectType.workoutType())
+        return types
+    }()
 }
 
 enum HealthKitWriteTypes {
-    static let share: Set<HKSampleType> = [
-        HKObjectType.quantityType(forIdentifier: .activeEnergyBurned)!,
-        HKObjectType.workoutType()
-    ]
+    static let share: Set<HKSampleType> = {
+        var types: Set<HKSampleType> = []
+        if let type = HKQuantityType.quantityType(forIdentifier: .activeEnergyBurned) {
+            types.insert(type)
+        }
+        types.insert(HKObjectType.workoutType())
+        return types
+    }()
 }
