@@ -225,13 +225,13 @@ private extension AITrainerService {
                     equipmentOverride: equipmentOverride,
                     timeLimitMinutes: timeLimitMinutes
                 )
-                let userMessage = try self.buildUserMessage(context: ctx) // removed await since it's synchronous
+                let userMessage = try AITrainerService.buildUserMessage(context: ctx)
                 let rawJSON = try await self.apiClient.generate(
                     systemPrompt:   AITrainerService.systemPrompt,
                     userMessage:    userMessage,
                     responseSchema: schema
                 )
-                return try self.parseAndValidateJSON(rawJSON: rawJSON) // removed await
+                return try AITrainerService.parseAndValidateJSON(rawJSON: rawJSON)
             }
 
             // Timeout task
@@ -250,8 +250,8 @@ private extension AITrainerService {
     }
 
     // MARK: Sestavení user message (JSON kontext)
-
-    func buildUserMessage(context: TrainerRequestContext) throws -> String {
+    // static: nepotřebuje přístup k instance stavu, umožňuje volání odkudkoliv bez actor hoppingu
+    static func buildUserMessage(context: TrainerRequestContext) throws -> String {
         let encoder = JSONEncoder()
         encoder.outputFormatting     = [.sortedKeys]   // Bez .prettyPrinted → méně tokenů
         encoder.dateEncodingStrategy = .iso8601
@@ -264,8 +264,8 @@ private extension AITrainerService {
     }
 
     // MARK: Parsování a čistění JSON odpovědi
-
-    func parseAndValidateJSON(rawJSON: String) throws -> TrainerResponse {
+    // static: čistě výpočetní operace, umožňuje volání odkudkoliv bez actor hoppingu
+    static func parseAndValidateJSON(rawJSON: String) throws -> TrainerResponse {
         // Agresivní čistění: stripujeme veškerý Markdown a BOM znaky
         let cleaned = rawJSON
             .replacingOccurrences(of: "```json", with: "")
