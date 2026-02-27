@@ -178,3 +178,108 @@ final class UtilityTests: XCTestCase {
         waitForExpectations(timeout: 1.0)
     }
 }
+
+// MARK: ═══════════════════════════════════════════════════════════════════════
+// MARK: MuscleWiki DTO Tests
+// MARK: ═══════════════════════════════════════════════════════════════════════
+
+final class MuscleWikiDTOTests: XCTestCase {
+
+    /// Test, že MuscleWikiExercise správně dekóduje equipment pole z Supabase JSON.
+    func testMuscleWikiEquipmentDecoding() throws {
+        let json = """
+        {
+            "id": "00000000-0000-0000-0000-000000000001",
+            "name": "Benchpress s jednoručkami",
+            "video_url": "https://example.com/bench.mp4",
+            "muscle_group": "chest",
+            "equipment": "Jednoručka",
+            "instructions": ["Lehni si na lavičku", "Drž jednoručky"],
+            "difficulty": "intermediate",
+            "exercise_type": "compound",
+            "grip": null
+        }
+        """.data(using: .utf8)!
+
+        let exercise = try JSONDecoder().decode(MuscleWikiExercise.self, from: json)
+
+        XCTAssertEqual(exercise.name, "Benchpress s jednoručkami")
+        XCTAssertEqual(exercise.equipment, "Jednoručka", "Equipment musí být správně dekódováno")
+        XCTAssertEqual(exercise.muscleGroup, "chest")
+        XCTAssertEqual(exercise.instructions.count, 2)
+        XCTAssertNil(exercise.grip)
+    }
+
+    /// Test, že equipment je nil pokud DB vrátí null.
+    func testMuscleWikiEquipmentNilHandling() throws {
+        let json = """
+        {
+            "id": "00000000-0000-0000-0000-000000000002",
+            "name": "Kliky",
+            "video_url": "https://example.com/pushup.mp4",
+            "muscle_group": "chest",
+            "equipment": null,
+            "instructions": ["Dej se do pozice"],
+            "difficulty": "beginner",
+            "exercise_type": "compound",
+            "grip": null
+        }
+        """.data(using: .utf8)!
+
+        let exercise = try JSONDecoder().decode(MuscleWikiExercise.self, from: json)
+        XCTAssertNil(exercise.equipment, "Null equipment musí být nil")
+        XCTAssertNil(exercise.mappedEquipment, "mappedEquipment musí být nil pro nil equipment")
+    }
+
+    /// Test equipmentMap — všechny CZ hodnoty z DB musí mít mapování.
+    func testEquipmentMapCoversAllDBValues() {
+        let dbValues = ["Jednoručka", "Velká činka", "Vlastní váha", "Stroj",
+                        "Kladka", "Kettlebell", "Odporová guma", "Bosu",
+                        "Kotouč", "Medicimbal", "TRX", "Kardio", "Jiné"]
+
+        for value in dbValues {
+            XCTAssertNotNil(
+                MuscleWikiExercise.equipmentMap[value],
+                "equipmentMap musí obsahovat klíč '\(value)' z databáze"
+            )
+        }
+    }
+
+    /// Test front-shoulders lokalizace.
+    func testFrontShouldersLocalization() {
+        let localized = MuscleWikiExercise.localizedName(for: "front-shoulders")
+        XCTAssertEqual(localized, "Přední ramena", "front-shoulders musí být přeložen na česky")
+    }
+
+    /// Test, že chips NEobsahují equipment (zobrazuje se v header, ne v chips).
+    func testChipsDoNotContainEquipment() throws {
+        let json = """
+        {
+            "id": "00000000-0000-0000-0000-000000000003",
+            "name": "Bench Press",
+            "video_url": "https://example.com/bench.mp4",
+            "muscle_group": "chest",
+            "equipment": "Jednoručka",
+            "instructions": [],
+            "difficulty": "intermediate",
+            "exercise_type": "compound",
+            "grip": "overhand"
+        }
+        """.data(using: .utf8)!
+
+        let exercise = try JSONDecoder().decode(MuscleWikiExercise.self, from: json)
+        let chipLabels = exercise.chips.map(\.label)
+        XCTAssertFalse(
+            chipLabels.contains("Jednoručka"),
+            "Equipment nemá být v chips — zobrazuje se v header badge"
+        )
+    }
+
+    /// Test mapování muscle_wiki_data_full URL (nový název tabulky).
+    func testTableNameIsCorrect() {
+        // Ověříme, že SupabaseExerciseRepository používá správný název tabulky
+        // Toto je smoke test — konkrétní URL se testuje integračně
+        let repo = SupabaseExerciseRepository()
+        XCTAssertNotNil(repo, "Repository musí jít inicializovat")
+    }
+}

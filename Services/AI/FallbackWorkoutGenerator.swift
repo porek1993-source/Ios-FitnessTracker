@@ -133,3 +133,37 @@ final class FallbackWorkoutGenerator {
         )
     }
 }
+
+// MARK: - MuscleWiki Video Enrichment Extension
+// ✅ NOVÉ: Obohacení fallback plánu o videoUrl z muscle_wiki_data_full
+// Mapuje slugy z fallback generátoru na reálné slugy v Supabase databázi.
+
+extension FallbackWorkoutGenerator {
+
+    /// Mapuje legacy fallback slugy na reálné slugy z muscle_wiki_data_full.
+    /// Slouží jako překlenovací vrstva dokud AI nezačne vracet správné slugy.
+    static let slugNormalizationMap: [String: String] = [
+        // Push
+        "db-bench-press":       "bench-press-dumbbell",
+        "db-shoulder-press":    "shoulder-press-dumbbell",
+        "db-lateral-raise":     "lateral-raise",
+        "tricep-pushdown":      "triceps-pushdown-cable",
+        // Pull
+        "db-row":               "bent-over-row-dumbbell",
+        "face-pull":            "face-pull-cable",
+        "db-bicep-curl":        "bicep-curl-dumbbell",
+        "hammer-curl":          "hammer-curl-dumbbell",
+        // Legs
+        "goblet-squat":         "goblet-squat",
+        "db-rdl":               "romanian-deadlift-dumbbell",
+        "db-lunge":             "lunges-dumbbell",
+        "calf-raise":           "calf-raise-standing",
+        // Full
+        "full-body":            "burpee"
+    ]
+
+    /// Normalizuje slug na reálný slug z Supabase (pro video URL lookup)
+    static func normalizedSlug(_ legacySlug: String) -> String {
+        slugNormalizationMap[legacySlug] ?? legacySlug
+    }
+}
