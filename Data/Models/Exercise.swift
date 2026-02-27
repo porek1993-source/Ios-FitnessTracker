@@ -21,6 +21,12 @@ final class Exercise {
     @Relationship(deleteRule: .cascade)
     var weightHistory: [WeightEntry] = []
 
+    @Relationship(deleteRule: .nullify, inverse: \PlannedExercise.exercise)
+    var plannedExercises: [PlannedExercise] = []
+
+    @Relationship(deleteRule: .nullify, inverse: \SessionExercise.exercise)
+    var sessionExercises: [SessionExercise] = []
+
     // MARK: - Progressive Overload Memory
 
     var lastUsedWeight: Double? {

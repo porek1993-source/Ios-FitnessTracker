@@ -54,6 +54,9 @@ final class AppEnvironment: ObservableObject {
         self.exerciseRepository      = SupabaseExerciseRepository()
 
         AppLogger.info("🚀 [AppEnvironment] Inicializován.")
+        
+        // BGTaskScheduler.register musí být voláno synchronně při inicializaci applikace
+        self.healthBackgroundManager.registerBackgroundTasks()
     }
 
     // MARK: - Konfigurace SwiftData závislostí
@@ -88,8 +91,7 @@ final class AppEnvironment: ObservableObject {
         // 1. SwiftData závislosti
         configure(modelContext: modelContext)
 
-        // 2. BGTask registrace (musí být před jakýmkoliv schedulováním)
-        healthBackgroundManager.registerBackgroundTasks()
+        // 2. Naplánování BGTask (registrace proběhla synchronně v init)
         healthBackgroundManager.scheduleNextSync()
 
         // 3. Týdenní report notifikace (nonisolated — bezpečné z MainActor)

@@ -18,7 +18,10 @@ final class WorkoutSession {
     var userFeedbackDifficulty: Int?
     var userNotes: String?
 
+    @Relationship(inverse: \WorkoutPlan.sessions)
     var plan: WorkoutPlan?
+
+    @Relationship(inverse: \PlannedWorkoutDay.sessions)
     var plannedDay: PlannedWorkoutDay?
 
     var plannedDayName: String {
@@ -48,7 +51,10 @@ final class SessionExercise {
     var wasSubstituted: Bool
     var substitutionReason: String?
 
+    @Relationship(inverse: \Exercise.sessionExercises)
     var exercise: Exercise?
+
+    @Relationship(inverse: \WorkoutSession.exercises)
     var session: WorkoutSession?
 
     @Relationship(deleteRule: .cascade, inverse: \CompletedSet.sessionExercise)

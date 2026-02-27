@@ -21,7 +21,7 @@ final class WorkoutPlan {
     @Relationship(deleteRule: .cascade, inverse: \PlannedWorkoutDay.plan)
     var scheduledDays: [PlannedWorkoutDay]
 
-    @Relationship(deleteRule: .cascade)
+    @Relationship(deleteRule: .cascade, inverse: \WorkoutSession.plan)
     var sessions: [WorkoutSession]
 
     init(title: String, splitType: SplitType, durationWeeks: Int = 4) {
@@ -47,6 +47,9 @@ final class PlannedWorkoutDay {
     @Relationship(deleteRule: .cascade, inverse: \PlannedExercise.plannedDay)
     var plannedExercises: [PlannedExercise]
 
+    @Relationship(inverse: \WorkoutSession.plannedDay)
+    var sessions: [WorkoutSession] = []
+
     init(dayOfWeek: Int, label: String, isRestDay: Bool = false) {
         self.dayOfWeek = dayOfWeek
         self.label = label
@@ -64,7 +67,10 @@ final class PlannedExercise {
     var targetRIR: Int
     var restSeconds: Int
 
+    @Relationship(inverse: \Exercise.plannedExercises)
     var exercise: Exercise?
+
+    @Relationship(inverse: \PlannedWorkoutDay.plannedExercises)
     var plannedDay: PlannedWorkoutDay?
 
     init(

@@ -59,11 +59,10 @@ enum SharedModelContainer {
                 do {
                     return try ModelContainer(for: schema, configurations: fallbackConfig)
                 } catch {
-                    // Pokud selže i in-memory, vypíšeme chybu do konzole. 
-                    // V produkci by zde aplikace pravděpodobně spadla na nepoužitelném stavu.
-                    print("❌ KRITICKÁ CHYBA: Nelze vytvořit SwiftData kontejner: \(error)")
-                    // Poslední pokus - toto vyvolá crash, ale s jasnějším kontextem v logu
-                    return try! ModelContainer(for: schema, configurations: fallbackConfig)
+                    // Pokud selže i in-memory, vypíšeme chybu do konzole a ukončíme aplikaci s jasným hlášením.
+                    let failMsg = "❌ KRITICKÁ CHYBA: Nelze vytvořit SwiftData kontejner ani v paměti: \(error)"
+                    print(failMsg)
+                    fatalError(failMsg)
                 }
             }
         }
