@@ -36,7 +36,7 @@ struct AICoachChatView: View {
                     inputBar
                 }
             }
-            .navigationTitle("Trenér Jakub")
+            .navigationTitle("Trenér iKorba")
             .navigationBarTitleDisplayMode(.inline)
             .toolbarColorScheme(.dark, for: .navigationBar)
             .toolbarBackground(Color.appBackground, for: .navigationBar)
@@ -80,7 +80,7 @@ struct AICoachChatView: View {
                 // Avatar
                 ZStack {
                     Circle().fill(Color.blue.opacity(0.3)).frame(width: 32, height: 32)
-                    Text("J").font(.system(size: 14, weight: .bold)).foregroundStyle(.white)
+                    Text("iK").font(.system(size: 12, weight: .bold)).foregroundStyle(.white)
                 }
             }
 
@@ -177,7 +177,7 @@ struct AICoachChatView: View {
     // MARK: — Logic
 
     private func sendWelcome() {
-        let greeting = "Čau! Jsem Jakub, tvůj osobní trenér. 💪\n\nMůžeš mi říct, co tě trápí nebo co potřebuješ upravit v dnešním tréninku. Třeba: *\"Tahá mě pravé koleno\"* nebo *\"Mám jen 30 minut\"*."
+        let greeting = "Čau! Jsem iKorba, tvůj osobní trenér. 💪\n\nMůžeš mi říct, co tě trápí nebo co potřebuješ upravit v dnešním tréninku. Třeba: *\"Tahá mě pravé koleno\"* nebo *\"Mám jen 30 minut\"*."
         messages.append(AICoachChatMessage(text: greeting, isUser: false))
     }
 
@@ -189,7 +189,6 @@ struct AICoachChatView: View {
         inputText = ""
         isLoading = true
 
-        _ = UUID()
         messages.append(AICoachChatMessage(text: "", isUser: false, isLoading: true))
 
         Task {
@@ -219,7 +218,7 @@ struct AICoachChatView: View {
         } ?? ""
 
         let systemPrompt = """
-        Jsi Jakub, přátelský osobní fitness trenér. Komunikuješ vždy v češtině, přirozeně a lidsky.
+        Jsi iKorba, přátelský osobní fitness trenér. Komunikuješ vždy v češtině, přirozeně a lidsky.
         Jsi empatický, motivující a praktický. Nikdy nezní roboticky.
         
         \(profileContext)

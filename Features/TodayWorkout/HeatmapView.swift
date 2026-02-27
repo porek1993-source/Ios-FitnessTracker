@@ -350,7 +350,7 @@ struct FatigueConfirmationSheet: View {
                 if isJointPain {
                     HStack(spacing: 8) {
                         Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(.red)
-                        Text("Jakub cvik z dnešního tréninku vyjme")
+                        Text("iKorba cvik z dnešního tréninku vyjme")
                             .font(.system(size: 13)).foregroundStyle(.white.opacity(0.7))
                     }
                     .padding(.horizontal, 20).padding(.vertical, 10)
@@ -430,7 +430,7 @@ struct InstructionsBanner: View {
     var body: some View {
         HStack(spacing: 12) {
             Image(systemName: "hand.tap.fill").font(.system(size: 20)).foregroundStyle(.blue.opacity(0.7))
-            Text("Ťukni na část těla, která tě omezuje. Jakub trénink okamžitě přeskládá.")
+            Text("Ťukni na část těla, která tě omezuje. iKorba trénink okamžitě přeskládá.")
                 .font(.system(size: 13)).foregroundStyle(.white.opacity(0.45)).multilineTextAlignment(.leading)
         }
         .padding(16)

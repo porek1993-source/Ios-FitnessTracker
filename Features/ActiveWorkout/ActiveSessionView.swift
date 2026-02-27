@@ -410,13 +410,13 @@ private struct CoachTipCard: View {
                         startPoint: .topLeading, endPoint: .bottomTrailing
                     ))
                     .frame(width: 30, height: 30)
-                Text("J")
-                    .font(.system(size: 12, weight: .black, design: .rounded))
+                Text("iK")
+                    .font(.system(size: 10, weight: .black, design: .rounded))
                     .foregroundStyle(.white)
             }
 
             VStack(alignment: .leading, spacing: 3) {
-                Text("Jakub")
+                Text("iKorba")
                     .font(.system(size: 10, weight: .bold))
                     .foregroundStyle(.white.opacity(0.38))
                 Text(text)

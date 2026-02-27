@@ -508,7 +508,7 @@ struct WeekDayExerciseDetailView: View {
                         .font(.system(size: 10, weight: .black))
                         .foregroundStyle(Color.appPrimaryAccent)
                         .kerning(1.2)
-                    Text(exercises.isEmpty ? "Cviky vygeneruje Jakub při startu" : "\(exercises.count) cviků")
+                    Text(exercises.isEmpty ? "Cviky vygeneruje iKorba při startu" : "\(exercises.count) cviků")
                         .font(.system(size: 12))
                         .foregroundStyle(.white.opacity(0.4))
                 }
@@ -530,7 +530,7 @@ struct WeekDayExerciseDetailView: View {
                         Text("Plán čeká na AI")
                             .font(.system(size: 13, weight: .semibold))
                             .foregroundStyle(.white)
-                        Text("Klikni na „Začít trénink“ a Jakub sestaví personalizovaný workout.")
+                        Text("Klikni na „Začít trénink“ a iKorba sestaví personalizovaný workout.")
                             .font(.system(size: 11))
                             .foregroundStyle(.white.opacity(0.4))
                             .fixedSize(horizontal: false, vertical: true)

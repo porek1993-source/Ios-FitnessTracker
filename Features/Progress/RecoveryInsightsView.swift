@@ -509,7 +509,7 @@ struct WeeklyReportCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             HStack {
-                Label("Jakubovo týdenní zhodnocení", systemImage: "doc.text.magnifyingglass")
+                Label("iKorbovo týdenní zhodnocení", systemImage: "doc.text.magnifyingglass")
                     .font(AppTypography.headline)
                     .foregroundStyle(AppColors.textPrimary)
                 Spacer()

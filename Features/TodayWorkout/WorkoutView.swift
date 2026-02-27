@@ -16,7 +16,7 @@ struct WorkoutView: View {
     @State private var summaryXPGains: [XPGain] = []
     @State private var summaryPREvents: [PREvent] = []
     @State private var summaryCoachMsg = ""
-    @State private var showJakubChat = false
+    @State private var showKorbaChat = false
     @State private var showFinishConfirm = false
 
     init(
@@ -117,7 +117,7 @@ struct WorkoutView: View {
         } message: {
             Text("Všechny cviky máš za sebou. Skvělý výkon!")
         }
-        .sheet(isPresented: $showJakubChat) {
+        .sheet(isPresented: $showKorbaChat) {
             WorkoutChatView(vm: vm)
         }
         .fullScreenCover(isPresented: $showSummary) {
@@ -173,12 +173,12 @@ struct WorkoutView: View {
 
     private var bottomBar: some View {
         HStack(spacing: 12) {
-            // Jakub chat
-            Button { showJakubChat = true } label: {
+            // iKorba chat
+            Button { showKorbaChat = true } label: {
                 HStack(spacing: 6) {
                     Image(systemName: "bubble.left.and.bubble.right.fill")
                         .font(.system(size: 12))
-                    Text("Jakub")
+                    Text("iKorba")
                         .font(.system(size: 12, weight: .semibold))
                 }
                 .foregroundStyle(.white.opacity(0.7))
@@ -248,7 +248,7 @@ struct WorkoutView: View {
             Text("Načítám cviky...")
                 .font(.system(size: 18, weight: .semibold))
                 .foregroundStyle(.white)
-            Text("Jakub připravuje tvůj trénink")
+            Text("iKorba připravuje tvůj trénink")
                 .font(.system(size: 14))
                 .foregroundStyle(.white.opacity(0.4))
         }
@@ -334,7 +334,7 @@ struct WorkoutChatView: View {
                     }
 
                     HStack(spacing: 10) {
-                        TextField("Napiš Jakubovi...", text: $userInput)
+                        TextField("Napiš iKorbovi...", text: $userInput)
                             .font(.system(size: 15))
                             .foregroundStyle(.white)
                             .padding(.horizontal, 16).padding(.vertical, 11)
@@ -350,7 +350,7 @@ struct WorkoutChatView: View {
                     .background(Color(red: 0.07, green: 0.07, blue: 0.10))
                 }
             }
-            .navigationTitle("Jakub — AI trenér")
+            .navigationTitle("iKorba — AI trenér")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { ToolbarItem(placement: .topBarTrailing) { Button("Hotovo") { dismiss() }.foregroundStyle(.blue) } }
             .preferredColorScheme(.dark)
@@ -375,7 +375,7 @@ struct WorkoutChatView: View {
     private func fetchGeminiResponse(userText: String) async -> String {
         let client = GeminiAPIClient(apiKey: AppConstants.geminiAPIKey)
         let systemPrompt = """
-        Jsi Jakub, elitní, lehce drsný, ale motivující silový trenér (Agilní Fitness Trenér). 
+        Jsi iKorba, elitní, lehce drsný, ale motivující silový trenér (Agilní Fitness Trenér). 
         Uživatel má právě trénink a napsal ti do chatu. 
         Odpověz stručně, poraď s technikou, navrhni alternativu nebo ho namotivuj (max 2 věty). Mluv česky.
         Vrať JSON objekt s klíčem "reply".
@@ -425,7 +425,7 @@ private struct ChatBubble: View {
         HStack(alignment: .bottom, spacing: 8) {
             if !isUser {
                 Circle().fill(Color.blue.opacity(0.7)).frame(width: 28, height: 28)
-                    .overlay(Text("J").font(.system(size: 13, weight: .black)).foregroundStyle(.white))
+                    .overlay(Text("iK").font(.system(size: 11, weight: .black)).foregroundStyle(.white))
             }
             if isUser { Spacer(minLength: 40) }
             Text(text)

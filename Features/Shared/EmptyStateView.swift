@@ -157,7 +157,7 @@ extension EmptyStateView {
         EmptyStateView(
             icon:        "moon.stars.fill",
             title:       "Spánková data nejsou k dispozici",
-            message:     "Spi s Apple Watch nasazenými na zápěstí a Jakub bude moct přesněji dávkovat tvoji zátěž.",
+            message:     "Spi s Apple Watch nasazenými na zápěstí a iKorba bude moct přesněji dávkovat tvoji zátěž.",
             iconColor:   Color(red: 0.42, green: 0.30, blue: 0.92),
             actionLabel: onEnable != nil ? "Propojit Apple Health" : nil,
             action:      onEnable
@@ -179,7 +179,7 @@ extension EmptyStateView {
         EmptyStateView(
             icon:      "chart.bar.fill",
             title:     "Zatím žádný tréninkový objem",
-            message:   "Dokončit první trénink a Jakub začne sledovat tvůj týdenní objem a progres.",
+            message:   "Dokončit první trénink a iKorba začne sledovat tvůj týdenní objem a progres.",
             iconColor: Color(red: 0.25, green: 0.55, blue: 1.0)
         )
     }
@@ -189,7 +189,7 @@ extension EmptyStateView {
         EmptyStateView(
             icon:      "trophy.fill",
             title:     "Osobní rekordy se teprve plní",
-            message:   "Po prvním tréninku Jakub automaticky odhadne tvoje 1RM a nastaví optimální váhy.",
+            message:   "Po prvním tréninku iKorba automaticky odhadne tvoje 1RM a nastaví optimální váhy.",
             iconColor: Color(red: 1.0, green: 0.76, blue: 0.20)
         )
     }
@@ -199,7 +199,7 @@ extension EmptyStateView {
         EmptyStateView(
             icon:      "flame.fill",
             title:     "Série teprve začíná",
-            message:   "Dokončit alespoň jeden trénink a Jakub začne sledovat tvoji týdenní konzistenci.",
+            message:   "Dokončit alespoň jeden trénink a iKorba začne sledovat tvoji týdenní konzistenci.",
             iconColor: Color(red: 1.0, green: 0.44, blue: 0.20)
         )
     }
@@ -219,7 +219,7 @@ extension EmptyStateView {
         EmptyStateView(
             icon:        "figure.strengthtraining.traditional",
             title:       "Trénink na dnes není připraven",
-            message:     "Jakub ještě nevygeneroval dnešní plán. Klepni na tlačítko a spusť generování.",
+            message:     "iKorba ještě nevygeneroval dnešní plán. Klepni na tlačítko a spusť generování.",
             iconColor:   Color(red: 0.25, green: 0.70, blue: 1.0),
             actionLabel: onGenerate != nil ? "Vygenerovat trénink" : nil,
             action:      onGenerate

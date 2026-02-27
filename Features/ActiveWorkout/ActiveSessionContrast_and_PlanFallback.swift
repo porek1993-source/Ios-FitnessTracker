@@ -9,7 +9,7 @@
 //
 // ČÁST B: PlanFallbackCard — výplň prázdné plochy pod kalendářem
 //   ✅ Zobrazuje se, pokud není vybrán žádný tréninkový den
-//   ✅ Týdenní konzistence + motivační citát od Jakuba
+//   ✅ Týdenní konzistence + motivační citát od iKorby
 //   ✅ Elegantní kartička, drop-in do RollingWeekView
 // ══════════════════════════════════════════════════════════════
 
@@ -174,7 +174,7 @@ struct PlanFallbackCard: View {
     var motivationalQuote: String = "Konstantnost poráží motivaci. Každý trénink, i průměrný, tě posouvá dál."
 
     /// Autor citátu
-    var quoteAuthor: String = "Jakub, tvůj AI trenér"
+    var quoteAuthor: String = "iKorba, tvůj AI trenér"
 
     @State private var appeared  = false
     @State private var glowPulse = false
@@ -247,9 +247,9 @@ struct PlanFallbackCard: View {
             Divider()
                 .background(Color.white.opacity(0.07))
 
-            // ── Jakubův citát ─────────────────────────────────────────────────
+            // ── iKorbův citát ─────────────────────────────────────────────────
             HStack(alignment: .top, spacing: 12) {
-                // Jakubův avatar
+                // iKorbův avatar
                 ZStack {
                     Circle()
                         .fill(
@@ -275,7 +275,7 @@ struct PlanFallbackCard: View {
                             value: glowPulse
                         )
 
-                    Text("J")
+                    Text("iK")
                         .font(.system(size: 14, weight: .black, design: .rounded))
                         .foregroundStyle(.white)
                 }
@@ -328,15 +328,31 @@ struct PlanFallbackCard: View {
 
 // MARK: ─── Statický pool motivačních citátů (fallback bez AI) ────────────────
 
-enum JakubQuotes {
+enum iKorbaQuotes {
     static let pool: [String] = [
+        // Konzistence a mentalita
         "Konstantnost poráží motivaci. Každý trénink, i průměrný, tě posouvá dál.",
         "Progres není přímka. Jsou v tom výkyvy — ale směr je vždy nahoru.",
+        "Nejlepší trénink je ten, který jsi absolvoval. Dokonalý přijde časem.",
+        "Malé týdenní přírůstky vedou k obrovským ročním výsledkům.",
+        "Disciplína ti otevírá dveře, které motivace ani neumí najít.",
+        "Záleží na tom, co děláš, když se nechceš. To rozhoduje.",
+        "Průměrný trénink dvakrát týdně poráží dokonalý trénink jednou za měsíc.",
+        // Regenerace a tělo
         "Regenerace je součást tréninku, ne jeho opak.",
         "Tvoje tělo adaptuje na to, co po něm pravidelně chceš. Buď s tím záměrný.",
-        "Nejlepší trénink je ten, který jsi absolvoval. Dokonalý přijde časem.",
         "Síla se nebuduje v posilovně — buduje se ve spánku, jídle a konzistenci.",
-        "Malé týdenní přírůstky vedou k obrovským ročním výsledkům.",
+        "Spánek je levný doping. Využívej ho.",
+        "Únava je normální. Ignorování únavy je risk. Poznáš rozdíl.",
+        // Technické a progresivní přetížení
+        "Gram techniky má větší cenu než kilogram ega.",
+        "Přidávej váhu, až ti to tělo dovolí — ne ego.",
+        "Šest týdnů konzistentního tréninku změní víc než rok náhodného přístupu.",
+        // Mindset
+        "Porovnávej se jenom s tím, kým jsi byl minulý týden.",
+        "Nikdo nezačínal silný. Každý začínal a opakoval.",
+        "Tvoje limity jsou dočasné. Tvoje rutina je permanentní.",
+        "Zdravé tělo je dlouhodobý projekt, ne 30denní výzva.",
     ]
 
     static var random: String { pool.randomElement() ?? pool[0] }
@@ -375,7 +391,7 @@ extension RollingWeekViewModel {
 
     /// Motivační citát — nejprve z recalculationMessage, jinak statický pool
     var motivationalQuote: String {
-        JakubQuotes.random
+        iKorbaQuotes.random
     }
 }
 

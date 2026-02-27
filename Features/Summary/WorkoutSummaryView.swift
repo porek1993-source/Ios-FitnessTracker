@@ -30,14 +30,14 @@ struct WorkoutSummaryView: View {
     @State private var visiblePRs: Set<UUID> = []
     @State private var muscleAnimProgress: [MuscleGroup: Double] = [:]
     @State private var confettiActive = false
-    @State private var jakubTyping = true
+    @State private var korbaTyping = true
     @State private var displayedMessage = ""
     @State private var showStats = false
     @State private var showXPBars = false
     @State private var showCTA = false
 
     enum AnimationPhase: Int, Comparable {
-        case idle = 0, jakub = 1, figure = 2, xp = 3, pr = 4, cta = 5
+        case idle = 0, ikorba = 1, figure = 2, xp = 3, pr = 4, cta = 5
         static func < (l: Self, r: Self) -> Bool { l.rawValue < r.rawValue }
     }
 
@@ -77,14 +77,14 @@ struct WorkoutSummaryView: View {
                 VStack(spacing: 0) {
 
                     // ── 1. JAKUB MESSAGE ──────────────────────────
-                    JakubMessageCard(
+                    iKorbaMessageCard(
                         message: displayedMessage,
-                        isTyping: jakubTyping
+                        isTyping: korbaTyping
                     )
                     .padding(.horizontal, 20)
                     .padding(.top, 56)
-                    .opacity(phase.rawValue >= AnimationPhase.jakub.rawValue ? 1 : 0)
-                    .offset(y: phase.rawValue >= AnimationPhase.jakub.rawValue ? 0 : 20)
+                    .opacity(phase.rawValue >= AnimationPhase.ikorba.rawValue ? 1 : 0)
+                    .offset(y: phase.rawValue >= AnimationPhase.ikorba.rawValue ? 0 : 20)
 
                     // ── 2. STATS ROW ──────────────────────────────
                     StatsRow(
@@ -160,7 +160,7 @@ struct WorkoutSummaryView: View {
                         HStack(spacing: 10) {
                             Image(systemName: "checkmark.circle.fill")
                                 .font(.system(size: 18))
-                            Text("Hotovo, Jakube!")
+                            Text("Zavřít přehled  🚀")
                                 .font(.system(size: 17, weight: .bold))
                         }
                         .foregroundStyle(.black)
@@ -219,9 +219,9 @@ struct WorkoutSummaryView: View {
     }
 
     private func startAnimation() {
-        // Phase 1: Jakub message typewriter
+        // Phase 1: iKorba message typewriter
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-            withAnimation(.easeOut(duration: 0.5)) { phase = .jakub }
+            withAnimation(.easeOut(duration: 0.5)) { phase = .ikorba }
             typewriteMessage()
         }
 
@@ -229,7 +229,7 @@ struct WorkoutSummaryView: View {
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.8) {
             withAnimation(.spring(response: 0.5)) {
                 showStats = true
-                jakubTyping = false
+                korbaTyping = false
             }
         }
 
@@ -282,7 +282,7 @@ extension WorkoutSummaryView.AnimationPhase: RawRepresentable {
     init?(rawValue: Int) {
         switch rawValue {
         case 0: self = .idle
-        case 1: self = .jakub
+        case 1: self = .ikorba
         case 2: self = .figure
         case 3: self = .xp
         case 4: self = .pr
@@ -292,15 +292,15 @@ extension WorkoutSummaryView.AnimationPhase: RawRepresentable {
     }
     var rawValue: Int {
         switch self {
-        case .idle: return 0; case .jakub: return 1; case .figure: return 2
+        case .idle: return 0; case .ikorba: return 1; case .figure: return 2
         case .xp: return 3; case .pr: return 4; case .cta: return 5
         }
     }
 }
 
-// MARK: - Jakub Message Card
+// MARK: - iKorba Message Card
 
-private struct JakubMessageCard: View {
+private struct iKorbaMessageCard: View {
     let message: String
     let isTyping: Bool
 
@@ -315,13 +315,13 @@ private struct JakubMessageCard: View {
                             startPoint: .topLeading, endPoint: .bottomTrailing
                         ))
                         .frame(width: 44, height: 44)
-                    Text("J")
+                    Text("iK")
                         .font(.system(size: 20, weight: .black, design: .rounded))
                         .foregroundStyle(.white)
                 }
 
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("Jakub")
+                    Text("iKorba")
                         .font(.system(size: 14, weight: .bold))
                         .foregroundStyle(.white)
                     HStack(spacing: 4) {

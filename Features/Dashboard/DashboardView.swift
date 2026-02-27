@@ -735,7 +735,7 @@ private struct BodyMapPreviewCard: View {
                                 .font(.system(size: 13))
                                 .foregroundStyle(.white.opacity(0.45))
 
-                            Text("Jakub přizpůsobí trénink")
+                            Text("iKorba přizpůsobí trénink")
                                 .font(.system(size: 11))
                                 .foregroundStyle(.white.opacity(0.25))
                         }

@@ -153,15 +153,15 @@ struct LoadingWorkoutView: View {
                     .frame(width: 80, height: 80)
                     .shadow(color: .blue.opacity(0.4), radius: 20)
 
-                Text("J")
-                    .font(.system(size: 36, weight: .black, design: .rounded))
+                Text("iK")
+                    .font(.system(size: 30, weight: .black, design: .rounded))
                     .foregroundStyle(.white)
             }
             .scaleEffect(1.0 + sin(Double(phase) * 0.3) * 0.05)
             .animation(.easeInOut(duration: 1.5).repeatForever(autoreverses: true), value: phase)
 
             VStack(spacing: 12) {
-                Text("Jakub připravuje")
+                Text("iKorba připravuje")
                     .font(.system(size: 15, weight: .medium))
                     .foregroundStyle(.white.opacity(0.5))
 

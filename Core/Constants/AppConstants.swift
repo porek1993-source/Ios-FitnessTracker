@@ -20,7 +20,7 @@ enum AppConstants {
         return ""
     }()
 
-    static let fallbackSystemPrompt = "Jsi Jakub, elitní fitness trenér. Odpovídej vždy validním JSON."
+    static let fallbackSystemPrompt = "Jsi iKorba, elitní fitness trenér. Odpovídej vždy validním JSON."
 
     // MARK: - Supabase
     /// Supabase URL - načítá se z Info.plist nebo Environment Variables.

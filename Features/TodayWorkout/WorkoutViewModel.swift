@@ -208,11 +208,9 @@ final class WorkoutViewModel: ObservableObject {
         let exercise    = exercises[exerciseIndex]
         let restSeconds = exercise.restSeconds
 
-        // Audio coach — série hotova
+        // Audio coach — série hotova (pochvala)
         if audioEnabled {
-            let setNum = setIndex + 1
-            let totalSets = exercise.sets.filter { !$0.isWarmup }.count
-            audioCoach?.speak(.setStarting(setNum, totalSets))
+            audioCoach?.speak(.greatSet)
         }
 
         Task {
@@ -302,7 +300,7 @@ final class WorkoutViewModel: ObservableObject {
         guard currentExerciseIndex < exercises.count - 1 else {
             // Všechny cviky dokončeny — upozorni UI
             withAnimation { allExercisesDone = true }
-            if audioEnabled { audioCoach?.speak(.sessionStart) }  // sessionStart = "Skvělý trénink!" audio event
+            if audioEnabled { audioCoach?.speak(.greatSet) }  // trénink dokončen
             UINotificationFeedbackGenerator().notificationOccurred(.success)
             return
         }

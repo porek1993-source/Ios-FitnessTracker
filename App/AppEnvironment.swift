@@ -168,12 +168,12 @@ struct AppToastError: Identifiable, Equatable {
     // MARK: Předpřipravené stavy
 
     static let noInternet = AppToastError(
-        message:  "Žádné připojení k internetu — Jakub pracuje offline.",
+        message:  "Žádné připojení k internetu — iKorba pracuje offline.",
         icon:     "wifi.slash",
         severity: .warning
     )
     static let apiTimeout = AppToastError(
-        message:  "Jakub neodpovídá. Načítám záložní plán…",
+        message:  "iKorba neodpovídá. Načítám záložní plán…",
         icon:     "clock.badge.exclamationmark.fill",
         severity: .warning
     )
