@@ -212,16 +212,19 @@ private extension AITrainerService {
     ) async throws -> TrainerResponse {
 
         // Souběžné race: API call vs timeout task
+        let profileID = profile.persistentModelID // Přenášíme ID, ne objekt (SwiftData modely nejsou Sendable)
+        
         return try await withThrowingTaskGroup(of: TrainerResponse.self) { [weak self] group in
             guard let self else { throw AppError.internalError("AITrainerService byl dealokován") }
 
-            let schema = self.trainerResponseSchema // Přečteme z MaintActor kontextu bezpečně zde
+            let schema = self.trainerResponseSchema 
+            nonisolated(unsafe) let safeProfileID = profileID // Potlačení falešného varování u "sending" do tasku
 
-            // Hlavní API task
             group.addTask {
-                let ctx = try await self.contextBuilder.buildContext(
+                let contextBuilder = await self.contextBuilder
+                let ctx = try await contextBuilder.buildContext(
                     for: date,
-                    profile: profile,
+                    profileID: safeProfileID,
                     equipmentOverride: equipmentOverride,
                     timeLimitMinutes: timeLimitMinutes
                 )

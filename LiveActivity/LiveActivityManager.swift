@@ -7,7 +7,7 @@ import Foundation
 final class LiveActivityManager: ObservableObject {
 
     static let shared = LiveActivityManager()
-    nonisolated(unsafe) private var currentActivity: Activity<RestTimerAttributes>?
+    @MainActor private var currentActivity: Activity<RestTimerAttributes>?
 
     func startRestActivity(
         session: WorkoutSession,

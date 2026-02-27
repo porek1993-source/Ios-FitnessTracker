@@ -16,6 +16,25 @@ final class TrainerContextBuilder {
 
     func buildContext(
         for date: Date, 
+        profileID: PersistentIdentifier,
+        equipmentOverride: Set<Equipment>? = nil,
+        timeLimitMinutes: Int? = nil
+    ) async throws -> TrainerRequestContext {
+        // Načteme profil v tomto (potentially isolation-hopped) kontextu
+        guard let profile = modelContext.model(for: profileID) as? UserProfile else {
+            throw AppError.internalError("Profil nebyl nalezen ve SwiftData")
+        }
+        
+        return try await buildContext(
+            for: date,
+            profile: profile,
+            equipmentOverride: equipmentOverride,
+            timeLimitMinutes: timeLimitMinutes
+        )
+    }
+
+    func buildContext(
+        for date: Date, 
         profile: UserProfile,
         equipmentOverride: Set<Equipment>? = nil,
         timeLimitMinutes: Int? = nil
