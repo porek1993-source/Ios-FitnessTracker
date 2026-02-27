@@ -151,6 +151,7 @@ private struct ToastView: View {
         case .info:    return Color(red: 0.13, green: 0.80, blue: 0.43)
         case .warning: return Color(red: 1.0,  green: 0.68, blue: 0.20)
         case .error:   return Color(red: 1.0,  green: 0.35, blue: 0.35)
+        case .critical: return Color(red: 0.80, green: 0.15, blue: 0.15)
         }
     }
 

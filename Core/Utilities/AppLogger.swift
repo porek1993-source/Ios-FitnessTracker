@@ -4,8 +4,8 @@ import SwiftUI
 
 /// Jednoduchý logger, který ukládá zprávy i do paměti pro zobrazení v UI (pro debugování na Windows)
 @MainActor
-final class AppLogger: ObservableObject {
-    nonisolated(unsafe) static let shared = AppLogger()
+final class AppLogger: ObservableObject, @unchecked Sendable {
+    static let shared = AppLogger()
     
     @Published var logs: [LogEntry] = []
     private let maxLogs = 100
