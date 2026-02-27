@@ -60,7 +60,11 @@ final class AITrainerService: ObservableObject {
         STRUKTURA (VŽDY DODRŽET):
         • Compound cviky PRVNÍ (dřep, mrtvý tah, benchpress), izolace POSLEDNÍ
         • Blok A Silový: 2–3 compound cviky, 3–5×3–8, pauza 120–180s, RIR 1–2, tempo povinné
-        • Blok B Objem: 3–5 izolací, 3–4×10–20, pauza 45–90s, RIR 0–1
+        • Blok B Objem: 4–5 izolací, 3–4×10–20, pauza 45–90s, RIR 0–1
+
+        OBJEM TRÉNINKU (POVINNÉ):
+        • Generuj VŽDY min. 6, max. 8 cviků v mainBlocks (blok A + blok B dohromady)
+        • Pokud generuješ méně než 6, přidej další izolace pro klíčové svaly dne
 
         READINESS:
         • GREEN (HRV>65% avg, spánek>7h) → plný objem, +2.5–5% váhy
