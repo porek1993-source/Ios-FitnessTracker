@@ -33,6 +33,7 @@ final class ExerciseSearchViewModel: ObservableObject {
         do {
             allExercises = try await repository.fetchMuscleWikiAll()
         } catch {
+            AppLogger.error("Chyba při načítání ExerciseSearchView: \(error.localizedDescription)")
             allExercises = []
         }
     }

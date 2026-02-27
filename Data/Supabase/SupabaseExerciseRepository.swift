@@ -40,7 +40,28 @@ actor SupabaseExerciseRepository {
         self.apiKey  = apiKey
     }
 
-    // MARK: - Fetch All
+    // MARK: - MuscleWiki Data
+
+    /// Načte všechny cviky z tabulky `public.muscle_wiki_data`.
+    func fetchMuscleWikiAll() async throws -> [MuscleWikiExercise] {
+        let url = try buildURL(path: "/rest/v1/muscle_wiki_data", query: [
+            ("select", "*"),
+            ("order", "muscle_group.asc,name.asc")
+        ])
+        return try await performRequest(url: url)
+    }
+
+    /// Načte cviky z `muscle_wiki_data` filtrované podle svalové skupiny.
+    func fetchMuscleWikiByGroup(_ group: String) async throws -> [MuscleWikiExercise] {
+        let url = try buildURL(path: "/rest/v1/muscle_wiki_data", query: [
+            ("select", "*"),
+            ("muscle_group", "eq.\(group)"),
+            ("order", "name.asc")
+        ])
+        return try await performRequest(url: url)
+    }
+
+    // MARK: - Exercise Data (Detailed)
 
     /// Načte všechny cviky z tabulky `public.exercises`.
     func fetchAll() async throws -> [ExerciseDTO] {
