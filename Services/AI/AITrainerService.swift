@@ -250,8 +250,8 @@ private extension AITrainerService {
     }
 
     // MARK: Sestavení user message (JSON kontext)
-    // static: nepotřebuje přístup k instance stavu, umožňuje volání odkudkoliv bez actor hoppingu
-    static func buildUserMessage(context: TrainerRequestContext) throws -> String {
+    // static nonisolated: čistě výpočetní, bezpečné pro synchronní volání z pozadí
+    static nonisolated func buildUserMessage(context: TrainerRequestContext) throws -> String {
         let encoder = JSONEncoder()
         encoder.outputFormatting     = [.sortedKeys]   // Bez .prettyPrinted → méně tokenů
         encoder.dateEncodingStrategy = .iso8601
@@ -264,8 +264,8 @@ private extension AITrainerService {
     }
 
     // MARK: Parsování a čistění JSON odpovědi
-    // static: čistě výpočetní operace, umožňuje volání odkudkoliv bez actor hoppingu
-    static func parseAndValidateJSON(rawJSON: String) throws -> TrainerResponse {
+    // static nonisolated: čistě výpočetní, bezpečné pro synchronní volání z pozadí
+    static nonisolated func parseAndValidateJSON(rawJSON: String) throws -> TrainerResponse {
         // Agresivní čistění: stripujeme veškerý Markdown a BOM znaky
         let cleaned = rawJSON
             .replacingOccurrences(of: "```json", with: "")
