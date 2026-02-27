@@ -325,7 +325,7 @@ private extension AITrainerService {
     // Structured Output schema zaručuje, že Gemini vrátí vždy validní JSON
     // odpovídající TrainerResponse — bez markdown, bez prose, bez obalů.
 
-    static var trainerResponseSchema: [String: Any] {
+    nonisolated(unsafe) static let trainerResponseSchema: [String: Any] = {
         [
             "type": "OBJECT",
             "properties": [
@@ -399,7 +399,7 @@ private extension AITrainerService {
                 "coolDown"
             ]
         ]
-    }
+    }()
 }
 
 // MARK: ═══════════════════════════════════════════════════════════════════════
