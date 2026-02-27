@@ -72,7 +72,7 @@ final class FallbackWorkoutGenerator {
         }
 
         return ResponsePlan(
-            motivationalMessage: "Spojení s AI trenérem je dočasně nedostupné. Tady je tvůj záložní plán — kvalita tréninku závisí na tobě, ne na internetu. Jdeme na to! 💪",
+            motivationalMessage: "Spojení s AI trenérem je dočasně nedostupné. Tady je tvůj offline záložní plán — kvalita tréninku závisí na tobě, ne na internetu. Jdeme na to! 💪",
             warmupUrl: nil,
             exercises: exercises
         )

@@ -214,7 +214,7 @@ private extension AITrainerService {
         timeLimitMinutes: Int?
     ) async throws -> TrainerResponse {
 
-        // 1. Připravíme data na hlavním herci (protože contextBuilder vyžaduje @MainActor)
+        // 1. Připravíme data na hlavním herci
         let profileID = profile.persistentModelID
         let plannedDayID = plannedDay.persistentModelID
         let timeout = self.timeoutSeconds
@@ -228,19 +228,17 @@ private extension AITrainerService {
             timeLimitMinutes: timeLimitMinutes
         )
         let userMessage = try AITrainerService.buildUserMessage(context: ctx)
-        let systemPrompt = AITrainerService.systemPrompt
-        let schema = AITrainerService.trainerResponseSchema
         
-        // Lokální kopie aktora pro task group (aby se necapturoval self)
+        // Lokální kopie aktora pro task group
         let apiClient = self.apiClient
 
         return try await withThrowingTaskGroup(of: TrainerResponse.self) { group in
-            // API Task
+            // AI Task
             group.addTask {
                 let rawJSON = try await apiClient.generate(
-                    systemPrompt:   systemPrompt,
+                    systemPrompt:   AITrainerService.systemPrompt,
                     userMessage:    userMessage,
-                    responseSchema: schema
+                    responseSchema: AITrainerService.trainerResponseSchema
                 )
                 return try AITrainerService.parseAndValidateJSON(rawJSON: rawJSON)
             }
