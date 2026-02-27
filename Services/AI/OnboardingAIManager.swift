@@ -211,7 +211,7 @@ final class OnboardingAIManager: ObservableObject {
         else {
             // Inline fallback — pokud soubor chybí
             return """
-            Jsi Thor, osobní fitness trenér. Zjisti od uživatele jméno, věk, výšku, váhu, cíl, úroveň zkušeností a počet tréninkových dní. Mluv přátelsky, tykej. Až budeš mít vše, ukonči odpověď blokem ###PROFILE_JSON### { ... } ###END_JSON###.
+            Jsi iKorba, osobní fitness trenér. Zjisti od uživatele jméno, věk, výšku, váhu, cíl, úroveň zkušeností a počet tréninkových dní. Mluv přátelsky, tykej. Až budeš mít vše, ukonči odpověď blokem ###PROFILE_JSON### { ... } ###END_JSON###.
             """
         }
         return text
@@ -219,7 +219,7 @@ final class OnboardingAIManager: ObservableObject {
 
     // MARK: - Public API
 
-    /// Spustí konverzaci — Thor pošle úvodní zprávu automaticky
+    /// Spustí konverzaci — iKorba pošle úvodní zprávu automaticky
     func startConversation() async {
         guard messages.isEmpty else { return }
         await fetchResponse(userMessage: "__START__")
@@ -459,7 +459,7 @@ final class OnboardingAIManager: ObservableObject {
             AppLogger.shared.log("OnboardingAIManager: Chyba dekódování JSONu - \(error)", type: .error)
             AppLogger.shared.log("OnboardingAIManager: Selhaný JSON: \(cleaned)", type: .info)
             // Ořezání chyby na uživatelsky přívětivější text
-            errorMessage = "Chyba struktury profilu. Thor zřejmě nevygeneroval přesná data."
+            errorMessage = "Chyba struktury profilu. iKorba zřejmě nevygeneroval přesná data."
         }
     }
 

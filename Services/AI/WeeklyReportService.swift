@@ -67,7 +67,7 @@ final class WeeklyReportService {
         
         // 4. Prompt
         let systemPrompt = """
-        Jsi Jakub, elitní a empatický silový trenér (Agilní Fitness Trenér).
+        Jsi iKorba, elitní a empatický silový trenér (Agilní Fitness Trenér).
         Tvým úkolem je zhodnotit posledních 7 dní cvičence a poskytnout mu týdenní report.
         Mluv česky. Buď profesionální, povzbudivý, ale upřímný, pokud vidíš chyby (např. málo spánku, vynechané tréninky).
         
@@ -176,7 +176,7 @@ final class WeeklyReportService {
     // MARK: - Daily Insight
     func generateDailyInsight(for profile: UserProfile, snapshot: HealthMetricsSnapshot?) async throws -> String {
         let systemPrompt = """
-        Jsi Jakub, elitní a empatický silový trenér. Tvojí rolí je zhodnotit aktuální ranní připravenost cvičence a dát mu 1-2 věty doporučení pro dnešní trénink.
+        Jsi iKorba, elitní a empatický silový trenér. Tvojí rolí je zhodnotit aktuální ranní připravenost cvičence a dát mu 1-2 věty doporučení pro dnešní trénink.
         Mluv česky, buď stručný (max 2 věty). Vrať JSON objekt s klíčem "insight" obsahuje text doporučení.
         """
         
@@ -219,7 +219,7 @@ final class WeeklyReportService {
     static func sendWorkoutCompletionNotification(streakDays: Int, sessionLabel: String) {
         let content = UNMutableNotificationContent()
         content.title = "Trénink dokončen! 🎉"
-        content.body = "Skvělá práce na \(sessionLabel)! Tvůj streak je \(streakDays) dní. Jakub je na tebe hrdý."
+        content.body = "Skvělá práce na \(sessionLabel)! Tvůj streak je \(streakDays) dní. iKorba je na tebe hrdý."
         content.sound = .default
 
         let request = UNNotificationRequest(

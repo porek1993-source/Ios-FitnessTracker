@@ -44,7 +44,7 @@ struct LogFatigueIntent: AppIntent {
         }
 
         return .result(
-            dialog: "Zaznamenáno! \(muscleGroup.capitalized) — \(severityText) únava (stupeň \(clampedSeverity)/5). Trenér Jakub to zohlední příště. 👍"
+            dialog: "Zaznamenáno! \(muscleGroup.capitalized) — \(severityText) únava (stupeň \(clampedSeverity)/5). Trenér iKorba to zohlední příště. 👍"
         )
     }
 }

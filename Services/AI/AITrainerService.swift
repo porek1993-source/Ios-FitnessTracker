@@ -48,30 +48,33 @@ final class AITrainerService: ObservableObject {
     //  • maxOutputTokens=3000 → dostatečné pro 6-8 cviků, zabraňuje přetečení
     //  • Structured Output schema (viz níže) → Gemini vrací validní JSON BEZ obalů
 
-    private static let systemPrompt: String = """
-    Jsi Jakub, elitní AI fitness trenér. Odpovídej VÝHRADNĚ validním JSON objektem — žádný text před ani po JSON, žádný markdown, žádné komentáře.
+    // Inline prompt je záloha. Primárně se čte SystemPrompt.txt z Resources.
+    private static let systemPrompt: String = {
+        if let url = Bundle.main.url(forResource: "SystemPrompt", withExtension: "txt"),
+           let txt = try? String(contentsOf: url, encoding: .utf8), !txt.isEmpty {
+            return txt
+        }
+        return """
+        Jsi iKorba, osobní fitness trenér. Odpovídej VÝHRADNĚ validním JSON objektem.
 
-    STRUKTURA TRÉNINKU (VŽDY DODRŽET):
-    mainBlocks celkem 6–8 cviků:
-    • Blok A "Silový" — PŘESNĚ 2 vícekloubové cviky: série 3–5×3–8, pauza 120–180s, RIR 1–2, tempo povinné
-    • Blok B "Izolace" — 4–6 izolovaných cviků: série 3–4×10–20, pauza 45–90s, RIR 0–1, tempo null
+        STRUKTURA (VŽDY DODRŽET):
+        • Compound cviky PRVNÍ (dřep, mrtvý tah, benchpress), izolace POSLEDNÍ
+        • Blok A Silový: 2–3 compound cviky, 3–5×3–8, pauza 120–180s, RIR 1–2, tempo povinné
+        • Blok B Objem: 3–5 izolací, 3–4×10–20, pauza 45–90s, RIR 0–1
 
-    READINESS ADAPTACE:
-    • GREEN (HRV>65, spánek>7h) → 2+6 cviků, progresivní přetížení +2.5–5% váhy
-    • ORANGE (HRV 50–65, spánek 5–7h) → 2+4 cviky, váha −10%
-    • RED (HRV<50) → 2+4 cviky, lehčí varianta, vynech fatigued/jointPain svaly
+        READINESS:
+        • GREEN (HRV>65% avg, spánek>7h) → plný objem, +2.5–5% váhy
+        • ORANGE (HRV 50–65%, 5–7h) → Blok B: 1 cvik méně, váha −10%
+        • RED (HRV<50%) → jen aktivní regenerace, žádné heavy compound
 
-    OMEZENÍ:
-    • Vynech cviky zatěžující oblasti označené fatigued nebo jointPain
-    • Váhy z progressiveOverload jsou základ pro weightKg
-
-    VÝSTUPNÍ FORMÁT (striktní):
-    • coachMessage, coachTip, blockLabel: česky
-    • name (cvik): česky, slug: anglicky s pomlčkami "barbell-bench-press"
-    • weightKg: null pro bodyweight nebo neznámou váhu
-    • readinessLevel: pouze "green" | "orange" | "red"
-    • Odpověz JEDNÍM JSON objektem. Bez textu mimo JSON.
-    """
+        OMEZENÍ:
+        • Vynech svaly označené fatigued nebo jointPain
+        • Nikdy nepoužij vybavení chybějící v equipment.availableEquipment
+        • Váhy z progressiveOverload jsou základ pro weightKg
+        • name: česky, slug: anglicky (barbell-bench-press), readinessLevel: green|orange|red
+        • Odpověz JEDNÍM JSON objektem. Bez markdown, bez textu navíc.
+        """
+    }()
 
     // MARK: - Inicializace
 
@@ -175,7 +178,7 @@ final class AITrainerService: ObservableObject {
                 context: modelContext
             )
 
-            offlineMessage = "Jakub je momentálně offline — tady je tvůj standardní plán. 💪"
+            offlineMessage = "iKorba je momentálně offline — tady je tvůj standardní plán. 💪"
             return TrainerResponse.fromFallback(fallback)
         }
     }
@@ -221,10 +224,11 @@ private extension AITrainerService {
             let apiClient = self.apiClient
 
             group.addTask {
-                let schema = AITrainerService.trainerResponseSchema 
+                let schema = AITrainerService.trainerResponseSchema
                 let ctx = try await contextBuilder.buildContext(
                     for: date,
                     profileID: profileID,
+                    plannedDayID: plannedDay.persistentModelID,
                     equipmentOverride: equipmentOverride,
                     timeLimitMinutes: timeLimitMinutes
                 )

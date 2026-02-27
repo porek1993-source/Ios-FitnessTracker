@@ -15,8 +15,9 @@ final class TrainerContextBuilder {
     }
 
     func buildContext(
-        for date: Date, 
+        for date: Date,
         profileID: PersistentIdentifier,
+        plannedDayID: PersistentIdentifier? = nil,
         equipmentOverride: Set<Equipment>? = nil,
         timeLimitMinutes: Int? = nil
     ) async throws -> TrainerRequestContext {
@@ -24,18 +25,28 @@ final class TrainerContextBuilder {
         guard let profile = modelContext.model(for: profileID) as? UserProfile else {
             throw AppError.internalError("Profil nebyl nalezen ve SwiftData")
         }
-        
+
+        // Pokud máme konkrétní ID dne, použijeme ho přímo (zabrání záměně dne při timezone edge case)
+        let plannedDay: PlannedWorkoutDay?
+        if let pid = plannedDayID {
+            plannedDay = modelContext.model(for: pid) as? PlannedWorkoutDay
+        } else {
+            plannedDay = nil
+        }
+
         return try await buildContext(
             for: date,
             profile: profile,
+            plannedDayOverride: plannedDay,
             equipmentOverride: equipmentOverride,
             timeLimitMinutes: timeLimitMinutes
         )
     }
 
     func buildContext(
-        for date: Date, 
+        for date: Date,
         profile: UserProfile,
+        plannedDayOverride: PlannedWorkoutDay? = nil,
         equipmentOverride: Set<Equipment>? = nil,
         timeLimitMinutes: Int? = nil
     ) async throws -> TrainerRequestContext {
@@ -48,10 +59,21 @@ final class TrainerContextBuilder {
         let acts   = try await activities
         let snap   = try resolveHealthSnapshot(date: date)
 
-        guard
-            let activePlan = profile.workoutPlans.first(where: \.isActive),
-            let plannedDay = activePlan.scheduledDays.first(where: { $0.dayOfWeek == date.weekday })
-        else { throw AppError.noPlanForToday }
+        guard let activePlan = profile.workoutPlans.first(where: \.isActive) else {
+            throw AppError.noPlanForToday
+        }
+
+        // Priorita: explicitně předaný den > lookup podle weekday
+        // Tím se opravuje bug kdy buildContext ignoroval plannedDay z calleru
+        // a mohl načíst jiný den při timezone edge case nebo manuálním startu
+        let plannedDay: PlannedWorkoutDay
+        if let override = plannedDayOverride {
+            plannedDay = override
+        } else if let found = activePlan.scheduledDays.first(where: { $0.dayOfWeek == date.weekday }) {
+            plannedDay = found
+        } else {
+            throw AppError.noPlanForToday
+        }
 
         return TrainerRequestContext(
             userProfile:         buildUserProfile(profile: profile),

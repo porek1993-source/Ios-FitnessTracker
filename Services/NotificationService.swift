@@ -32,7 +32,7 @@ final class NotificationService {
 
         let content = UNMutableNotificationContent()
         content.title = "Čas na trénink! 💪"
-        content.body = "Trenér Jakub na tebe čeká. Podívej se na dnešní plán."
+        content.body = "Trenér iKorba na tebe čeká. Podívej se na dnešní plán."
         content.sound = .default
         content.badge = 1
 
@@ -62,7 +62,7 @@ final class NotificationService {
 
         let content = UNMutableNotificationContent()
         content.title = "Vynechal jsi trénink 😕"
-        content.body = "Nevadí! Trenér Jakub ti naplánoval náhradní trénink. Zkus to dnes?"
+        content.body = "Nevadí! Trenér iKorba ti naplánoval náhradní trénink. Zkus to dnes?"
         content.sound = .default
 
         let triggerDate = afterDate.addingTimeInterval(24 * 3600)
@@ -126,7 +126,7 @@ extension WeeklyReportService {
 
             let content = UNMutableNotificationContent()
             content.title = "📊 Týdenní report je připraven"
-            content.body = "Trenér Jakub zhodnotil tvůj týden. Podívej se, jak ses zlepšil!"
+            content.body = "Trenér iKorba zhodnotil tvůj týden. Podívej se, jak ses zlepšil!"
             content.sound = .default
 
             var components = DateComponents()

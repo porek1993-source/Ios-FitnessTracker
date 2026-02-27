@@ -1,5 +1,5 @@
 // AudioCoachService.swift
-// Agilní Fitness Trenér — Audio kouč Jakub
+// Agilní Fitness Trenér — Audio kouč iKorba
 //
 // Capabilities / Info.plist:
 //   Žádné speciální permissions — AVAudioSession je dostupná bez oprávnění.
@@ -9,7 +9,7 @@
 import AVFoundation
 import Combine
 
-// MARK: - Coach Event (co Jakub říká a kdy)
+// MARK: - Coach Event (co iKorba říká a kdy)
 
 enum CoachSpeech: Equatable {
     // Tempo hlášky
@@ -70,7 +70,11 @@ enum CoachSpeech: Equatable {
             "Skvělá série, drž tempo!",
             "Tohle byl čistý rep, makej dál.",
             "Přesně takhle. Jsi na správný cestě.",
-            "Solidní výkon!"
+            "Solidní výkon!",
+            "Jedna série za tebou. Jedeš!",
+            "Čistá technika. Přesně jak má být.",
+            "Tohle je základ síly. Pokračuj.",
+            "Makáš správně. Tělo ti poděkuje."
         ]
         return phrases.randomElement() ?? "Dobrá práce!"
     }
