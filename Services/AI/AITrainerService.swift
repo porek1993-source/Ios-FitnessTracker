@@ -250,7 +250,11 @@ private extension AITrainerService {
                 try await Task.sleep(nanoseconds: timeout * 1_000_000_000)
                 throw APITimeoutError()
             }
-
+            // Kdo dřív přijde...
+            guard let result = try await group.next() else {
+                throw AppError.internalError("Chyba v paralelním zpracování Gemini")
+            }
+            
             group.cancelAll()
             return result
         }
