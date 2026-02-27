@@ -25,48 +25,6 @@ enum SupabaseError: Error, LocalizedError {
     }
 }
 
-// MARK: - ExerciseDTO
-// ✅ OPRAVENO: byl undefined → způsoboval chybu kompilace
-// Mapuje na tabulku public.exercises (budoucí rozšíření) nebo slouží jako fallback.
-struct ExerciseDTO: Codable, Identifiable {
-    let id: UUID
-    let nameCz: String
-    let nameEn: String?
-    let slug: String
-    let category: String?
-    let equipment: String?
-    let primaryMuscles: [String]?
-    let secondaryMuscles: [String]?
-    let instructions: String?
-    let instructionsMissing: Bool?
-    let instructionsSource: String?
-
-    enum CodingKeys: String, CodingKey {
-        case id
-        case nameCz               = "name_cz"
-        case nameEn               = "name_en"
-        case slug
-        case category
-        case equipment
-        case primaryMuscles       = "primary_muscles"
-        case secondaryMuscles     = "secondary_muscles"
-        case instructions
-        case instructionsMissing  = "instructions_missing"
-        case instructionsSource   = "instructions_source"
-    }
-}
-
-// MARK: - AIEnrichedExerciseData
-// ✅ OPRAVENO: byl undefined → způsoboval chybu kompilace
-// Payload pro AI write-back do Supabase po dogenerování dat.
-struct AIEnrichedExerciseData {
-    let nameEn: String
-    let equipment: String
-    let primaryMuscles: [String]
-    let secondaryMuscles: [String]
-    let instructions: String
-}
-
 // MARK: - SupabaseExerciseRepository
 
 actor SupabaseExerciseRepository {
