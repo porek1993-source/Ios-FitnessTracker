@@ -31,6 +31,12 @@ struct ExerciseDTO: Codable, Identifiable {
         case instructionsMissing  = "instructions_missing"
         case instructionsSource   = "instructions_source"
     }
+
+    // MARK: - Helpers
+    // ✅ Přidáno pro kompatibilitu s ExerciseDetailViewModel
+    var safeNameCz: String { nameCz }
+    var safeSlug: String { slug }
+    var isMissing: Bool { instructionsMissing ?? false }
 }
 
 // MARK: - AIEnrichedExerciseData
