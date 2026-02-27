@@ -16,7 +16,7 @@ enum AppConstants {
            !key.isEmpty {
             return key
         }
-        assertionFailure("⚠️ GEMINI_API_KEY není nastaven! Přidej ho do Scheme → Environment Variables.")
+        print("⚠️ GEMINI_API_KEY není nastaven! Pokud běží testy, je to v pořádku, jinak přidej klíč do env vars.")
         return ""
     }()
 

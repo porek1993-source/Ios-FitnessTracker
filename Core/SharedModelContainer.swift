@@ -28,9 +28,8 @@ enum SharedModelContainer {
     ])
 
     /// Sdílený `ModelContainer` — uložiště dat v App Group kontejneru.
-    /// Hlavní app i widget volají tuto property. ModelContainer je thread-safe (Sendable),
-    /// ale Swift 6 vyžaduje explicitní označení pro globální statické proměnné.
-    nonisolated(unsafe) static let container: ModelContainer = {
+    /// Hlavní app i widget volají tuto property. ModelContainer je thread-safe (Sendable).
+    static let container: ModelContainer = {
         let storeURL: URL
         if let groupURL = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupID) {
             storeURL = groupURL.appending(path: "AgileFitness.store")

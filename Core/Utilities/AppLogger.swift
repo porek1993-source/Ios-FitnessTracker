@@ -5,7 +5,7 @@ import SwiftUI
 /// Jednoduchý logger, který ukládá zprávy i do paměti pro zobrazení v UI (pro debugování na Windows)
 @MainActor
 final class AppLogger: ObservableObject, @unchecked Sendable {
-    static let shared = AppLogger()
+    nonisolated static let shared = AppLogger()
     
     nonisolated init() {}
     @Published var logs: [LogEntry] = []
