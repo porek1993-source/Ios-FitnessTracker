@@ -217,19 +217,19 @@ private extension AITrainerService {
         return try await withThrowingTaskGroup(of: TrainerResponse.self) { [weak self] group in
             guard let self else { throw AppError.internalError("AITrainerService byl dealokován") }
 
-            let schema = self.trainerResponseSchema 
-            nonisolated(unsafe) let safeProfileID = profileID // Potlačení falešného varování u "sending" do tasku
+            let contextBuilder = self.contextBuilder
+            let apiClient = self.apiClient
 
             group.addTask {
-                let contextBuilder = await self.contextBuilder
+                let schema = AITrainerService.trainerResponseSchema 
                 let ctx = try await contextBuilder.buildContext(
                     for: date,
-                    profileID: safeProfileID,
+                    profileID: profileID,
                     equipmentOverride: equipmentOverride,
                     timeLimitMinutes: timeLimitMinutes
                 )
                 let userMessage = try AITrainerService.buildUserMessage(context: ctx)
-                let rawJSON = try await self.apiClient.generate(
+                let rawJSON = try await apiClient.generate(
                     systemPrompt:   AITrainerService.systemPrompt,
                     userMessage:    userMessage,
                     responseSchema: schema
@@ -325,7 +325,7 @@ private extension AITrainerService {
     // Structured Output schema zaručuje, že Gemini vrátí vždy validní JSON
     // odpovídající TrainerResponse — bez markdown, bez prose, bez obalů.
 
-    var trainerResponseSchema: [String: Any] {
+    static var trainerResponseSchema: [String: Any] {
         [
             "type": "OBJECT",
             "properties": [

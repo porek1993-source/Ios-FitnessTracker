@@ -67,19 +67,22 @@ final class LiveActivityManager: ObservableObject {
         updatedState.restEndsAt       = newEndsAt
         updatedState.totalRestSeconds = totalSeconds
         let updated = ActivityContent(state: updatedState, staleDate: newEndsAt.addingTimeInterval(5))
-        await activity.update(updated)
+        nonisolated(unsafe) let safeActivity = activity
+        await safeActivity.update(updated)
     }
 
     func endCurrentActivity() async {
         guard let activity = currentActivity else { return }
-        await activity.end(activity.content, dismissalPolicy: .immediate)
+        nonisolated(unsafe) let safeActivity = activity
+        await safeActivity.end(activity.content, dismissalPolicy: .immediate)
         currentActivity = nil
     }
 
     func endWithDismissalDelay(_ seconds: TimeInterval = 3) async {
         guard let activity = currentActivity else { return }
         let dismissDate = Date.now.addingTimeInterval(seconds)
-        await activity.end(activity.content, dismissalPolicy: .after(dismissDate))
+        nonisolated(unsafe) let safeActivity = activity
+        await safeActivity.end(activity.content, dismissalPolicy: .after(dismissDate))
         currentActivity = nil
     }
 }
