@@ -52,10 +52,7 @@ enum WorkoutPlanGenerator {
                 )
                 plannedEx.plannedDay = day
                 context.insert(plannedEx)
-                day.plannedExercises.append(plannedEx)
             }
-            
-            plan.scheduledDays.append(day)
         }
 
         profile.workoutPlans.append(plan)
