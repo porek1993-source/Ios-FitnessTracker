@@ -214,43 +214,43 @@ private extension AITrainerService {
         timeLimitMinutes: Int?
     ) async throws -> TrainerResponse {
 
-        // Souběžné race: API call vs timeout task
-        let profileID = profile.persistentModelID // Přenášíme ID, ne objekt (SwiftData modely nejsou Sendable)
+        // 1. Připravíme data na hlavním herci (protože contextBuilder vyžaduje @MainActor)
+        let profileID = profile.persistentModelID
+        let plannedDayID = plannedDay.persistentModelID
+        let timeout = self.timeoutSeconds
         
-        return try await withThrowingTaskGroup(of: TrainerResponse.self) { [weak self] group in
-            guard let self else { throw AppError.internalError("AITrainerService byl dealokován") }
+        // Sestavení kontextu musí proběhnout zde (na MainActoru)
+        let ctx = try await contextBuilder.buildContext(
+            for: date,
+            profileID: profileID,
+            plannedDayID: plannedDayID,
+            equipmentOverride: equipmentOverride,
+            timeLimitMinutes: timeLimitMinutes
+        )
+        let userMessage = try AITrainerService.buildUserMessage(context: ctx)
+        let systemPrompt = AITrainerService.systemPrompt
+        let schema = AITrainerService.trainerResponseSchema
+        
+        // Lokální kopie aktora pro task group (aby se necapturoval self)
+        let apiClient = self.apiClient
 
-            let contextBuilder = self.contextBuilder
-            let apiClient = self.apiClient
-
+        return try await withThrowingTaskGroup(of: TrainerResponse.self) { group in
+            // API Task
             group.addTask {
-                let schema = AITrainerService.trainerResponseSchema
-                let ctx = try await contextBuilder.buildContext(
-                    for: date,
-                    profileID: profileID,
-                    plannedDayID: plannedDay.persistentModelID,
-                    equipmentOverride: equipmentOverride,
-                    timeLimitMinutes: timeLimitMinutes
-                )
-                let userMessage = try AITrainerService.buildUserMessage(context: ctx)
                 let rawJSON = try await apiClient.generate(
-                    systemPrompt:   AITrainerService.systemPrompt,
+                    systemPrompt:   systemPrompt,
                     userMessage:    userMessage,
                     responseSchema: schema
                 )
                 return try AITrainerService.parseAndValidateJSON(rawJSON: rawJSON)
             }
 
-            // Timeout task
+            // Timeout Task
             group.addTask {
-                try await Task.sleep(nanoseconds: self.timeoutSeconds * 1_000_000_000)
+                try await Task.sleep(nanoseconds: timeout * 1_000_000_000)
                 throw APITimeoutError()
             }
 
-            // První hotový výsledek vyhraje, druhý task se zruší
-            guard let result = try await group.next() else {
-                throw AppError.internalError("Prázdný výsledek z task group")
-            }
             group.cancelAll()
             return result
         }

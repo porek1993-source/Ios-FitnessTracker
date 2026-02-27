@@ -24,8 +24,8 @@ final class FallbackWorkoutGenerator {
         let lowerBodyDefault: Double
         let baseSets: Int
 
-        switch profile.fitnessLevel.lowercased() {
-        case "expert", "pokročilý", "advanced":
+        switch profile.fitnessLevel.lowercased().trimmingCharacters(in: .whitespacesAndNewlines) {
+        case "expert", "pokročilý", "pokrocily", "advanced":
             upperBodyDefault = 60.0
             lowerBodyDefault = 100.0
             baseSets = 4
