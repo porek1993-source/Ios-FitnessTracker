@@ -215,6 +215,8 @@ private extension AITrainerService {
         return try await withThrowingTaskGroup(of: TrainerResponse.self) { [weak self] group in
             guard let self else { throw AppError.internalError("AITrainerService byl dealokován") }
 
+            let schema = self.trainerResponseSchema // Přečteme z MaintActor kontextu bezpečně zde
+
             // Hlavní API task
             group.addTask {
                 let ctx = try await self.contextBuilder.buildContext(
@@ -223,13 +225,13 @@ private extension AITrainerService {
                     equipmentOverride: equipmentOverride,
                     timeLimitMinutes: timeLimitMinutes
                 )
-                let userMessage = try self.buildUserMessage(context: ctx)
+                let userMessage = try self.buildUserMessage(context: ctx) // removed await since it's synchronous
                 let rawJSON = try await self.apiClient.generate(
                     systemPrompt:   AITrainerService.systemPrompt,
                     userMessage:    userMessage,
-                    responseSchema: self.trainerResponseSchema
+                    responseSchema: schema
                 )
-                return try self.parseAndValidateJSON(rawJSON: rawJSON)
+                return try self.parseAndValidateJSON(rawJSON: rawJSON) // removed await
             }
 
             // Timeout task
