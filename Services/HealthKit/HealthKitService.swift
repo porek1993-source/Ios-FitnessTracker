@@ -129,8 +129,7 @@ final class HealthKitService: ObservableObject {
         let predicate = HKQuery.predicateForSamples(withStart: start, end: min(end, .now))
 
         guard let sleepType = HKObjectType.categoryType(forIdentifier: .sleepAnalysis) else {
-            continuation.resume(returning: SleepResult(duration: 0, efficiency: 0, deepHours: 0, remHours: 0))
-            return
+            return SleepResult(duration: 0, efficiency: 0, deepHours: 0, remHours: 0)
         }
         
         return try await withCheckedThrowingContinuation { continuation in
