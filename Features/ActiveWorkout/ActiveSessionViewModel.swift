@@ -41,6 +41,7 @@ final class ActiveSessionViewModel: ObservableObject {
     @Published var restSecondsRemaining:  Int = 0
     @Published var totalRestSeconds:      Int = 90
     @Published var elapsedSeconds:        Int = 0
+    @Published var audioEnabled:          Bool = false
 
     // AI Coach state
     @Published var isLoadingCoachTip:     Bool = false
@@ -69,6 +70,7 @@ final class ActiveSessionViewModel: ObservableObject {
     let session:   WorkoutSession
     let planLabel: String
     private weak var appEnv: AppEnvironment?  // ⚠️ weak: zabraňuje retain cycle ViewModel ↔ AppEnvironment
+    private var audioCoach: AudioCoachService?
 
     // MARK: - Init
 
@@ -85,6 +87,7 @@ final class ActiveSessionViewModel: ObservableObject {
 
         buildExerciseStates(from: plan, aiResponse: aiResponse)
         startElapsedTimer()
+        audioCoach = AudioCoachService()
     }
 
     // MARK: - deinit: KRITICKY DŮLEŽITÉ pro prevenci memory leaků
@@ -182,20 +185,24 @@ final class ActiveSessionViewModel: ObservableObject {
             // Zápis do HealthKit (async I/O)
             let hkResult = await self.writeToHealthKit(session: sessionCopy)
 
-            // ✅ Výsledky zapisujeme zpět na MainActor
-            // Protože třída je @MainActor, stačí await na MainActor.run
+            // Gamifikace a PR Detection
+            let prEvents = await self.detectPersonalRecords(exercises: exercisesCopy)
+            let gamificationInput = await self.buildGamificationInput(from: exercisesCopy, prEvents: prEvents)
+            let engine = GamificationEngine()
+            
             await MainActor.run { [weak self] in
                 guard let self else { return }
+                engine.loadRecords(from: modelContext)
+                let gains = engine.process(input: gamificationInput, context: modelContext)
+                
+                if gains.contains(where: { $0.didLevelUp }) {
+                    UINotificationFeedbackGenerator().notificationOccurred(.success)
+                }
+                
+                self.saveSessionToSwiftData(session: sessionCopy, context: modelContext, exercises: exercisesCopy)
                 self.hkWriteResult = hkResult
                 self.isFinishing   = false
-                AppLogger.info("[ActiveSession] Trénink dokončen: \(completedExercises.count) cviků.")
-            }
-
-            // SwiftData save na background threadu (pomocí ModelActor v produkci)
-            // Zde pro jednoduchost voláme na MainActor
-            await MainActor.run { [weak self] in
-                guard let self else { return }
-                self.saveSessionToSwiftData(session: sessionCopy, context: modelContext)
+                AppLogger.info("[ActiveSession] Trénink dokončen: \(completedExercises.count) cviků. Uloženo do SwiftData.")
             }
         }
     }
@@ -208,7 +215,6 @@ final class ActiveSessionViewModel: ObservableObject {
     // Bez [weak self] v closure: ViewModel → Timer closure → ViewModel = retain cycle.
 
     private func startElapsedTimer() {
-        // Zruš existující task (prevence duplicit)
         elapsedTask?.cancel()
 
         elapsedTask = Task { @MainActor [weak self] in
@@ -222,21 +228,33 @@ final class ActiveSessionViewModel: ObservableObject {
 
     func startRestTimer(seconds: Int) {
         restTask?.cancel()
+        guard seconds > 0 else { return }
+        
         restSecondsRemaining = seconds
         totalRestSeconds     = seconds
         isResting            = true
+
+        if audioEnabled {
+            audioCoach?.speak(.restStarted(seconds))
+        }
 
         restTask = Task { @MainActor [weak self] in
             while !Task.isCancelled {
                 try? await Task.sleep(nanoseconds: 1_000_000_000)
                 guard !Task.isCancelled, let self = self else { break }
                 
-                if self.restSecondsRemaining > 0 {
+                if self.restSecondsRemaining > 1 {
                     self.restSecondsRemaining -= 1
+                    
+                    if self.restSecondsRemaining == 10 && self.audioEnabled {
+                        self.audioCoach?.speak(.restWarning(10))
+                    }
                 } else {
+                    self.restSecondsRemaining -= 1
                     self.restTask = nil
                     self.isResting = false
                     HapticManager.shared.playSuccess()
+                    if self.audioEnabled { self.audioCoach?.speak(.restEnd) }
                     break
                 }
             }
@@ -284,6 +302,15 @@ final class ActiveSessionViewModel: ObservableObject {
         else { return }
 
         exercises[exerciseIndex].sets[setIndex].isCompleted = true
+        
+        stopTempo()
+
+        if audioEnabled {
+            let exercise = exercises[exerciseIndex]
+            let setNum = setIndex + 1
+            let totalSets = exercise.sets.filter { !$0.isWarmup }.count
+            audioCoach?.speak(.setStarting(setNum, totalSets))
+        }
 
         let restSeconds = exercises[exerciseIndex].restSeconds
         if restSeconds > 0 {
@@ -305,10 +332,23 @@ final class ActiveSessionViewModel: ObservableObject {
         totalRestSeconds     = max(totalRestSeconds, restSecondsRemaining)
     }
 
+    @Published var allExercisesDone = false
+
     func skipExercise() {
-        guard currentExerciseIndex < exercises.count - 1 else { return }
+        guard currentExerciseIndex < exercises.count - 1 else {
+            withAnimation { allExercisesDone = true }
+            if audioEnabled { audioCoach?.speak(.sessionStart) }
+            UINotificationFeedbackGenerator().notificationOccurred(.success)
+            return
+        }
         currentExerciseIndex += 1
         HapticManager.shared.playSelection()
+        
+        if audioEnabled {
+            let next = exercises[currentExerciseIndex]
+            let workingSets = next.sets.filter { !$0.isWarmup }.count
+            audioCoach?.speak(.setStarting(1, workingSets))
+        }
     }
 
     func swapExercise(at index: Int, newName: String, newSlug: String) {
@@ -316,6 +356,26 @@ final class ActiveSessionViewModel: ObservableObject {
         exercises[index].name = newName
         exercises[index].slug = newSlug
         HapticManager.shared.playMediumClick()
+    }
+    
+    // MARK: - Tempo Controls
+    
+    func startTempoForCurrentExercise() {
+        guard audioEnabled else { return }
+        let ex = exercises[currentExerciseIndex]
+        let reps = ex.sets.first?.targetRepsMax ?? 10
+        audioCoach?.startTempo(tempoString: ex.tempo, reps: reps)
+    }
+    
+    func stopTempo() {
+        audioCoach?.stopTempo()
+    }
+
+    func toggleAudio() {
+        audioEnabled.toggle()
+        if audioEnabled {
+            audioCoach?.speak(.sessionStart)
+        }
     }
 
     // MARK: - Computed Properties
@@ -358,15 +418,81 @@ final class ActiveSessionViewModel: ObservableObject {
         }
     }
 
-    private func saveSessionToSwiftData(session: WorkoutSession, context: ModelContext) {
+    private func saveSessionToSwiftData(session: WorkoutSession, context: ModelContext, exercises: [SessionExerciseState]) {
         session.finishedAt = .now
+        session.durationMinutes = elapsedSeconds / 60
+        session.status = .completed
+
+        // Ulož WeightEntry pro progressive overload
+        for ex in exercises {
+            guard !ex.isWarmupOnly, let exerciseDB = ex.exercise else { continue }
+            let workingSets = ex.sets.filter { $0.isCompleted && !$0.isWarmup }
+            for (setIdx, set) in workingSets.enumerated() {
+                let weight = set.weightKg ?? 0
+                guard let reps = set.reps, reps > 0 else { continue }
+                let isSuccess = (set.rpe ?? 5) <= 9 // RPE 10 znamená selhání
+                let entry = WeightEntry(
+                    exercise: exerciseDB,
+                    sessionId: session.id,
+                    weightKg: weight,
+                    reps: reps,
+                    rpe: set.rpe,
+                    wasSuccessful: isSuccess,
+                    setNumber: setIdx + 1
+                )
+                context.insert(entry)
+            }
+        }
+
         do {
             try context.save()
-            AppLogger.info("[ActiveSession] Session uložena do SwiftData.")
+            AppLogger.info("[ActiveSession] Session uložena do SwiftData s WeightEntry záznamy.")
         } catch {
             AppLogger.error("[ActiveSession] Chyba při ukládání session: \(error)")
             appEnv?.showError(message: "Trénink se nepodařilo uložit. Zkus to znovu.")
         }
+    }
+
+    private func detectPersonalRecords(exercises: [SessionExerciseState]) -> [PREvent] {
+        var prs: [PREvent] = []
+        for ex in exercises {
+            guard let exercise = ex.exercise else { continue }
+            let maxWeight = ex.sets.filter { $0.isCompleted && !$0.isWarmup }
+                .compactMap { $0.weightKg }.max() ?? 0
+            let prev = exercise.lastUsedWeight ?? 0
+            if maxWeight > prev && prev > 0 {
+                prs.append(PREvent(
+                    exerciseName: ex.name,
+                    muscleGroup: exercise.musclesTarget.first ?? .pecs,
+                    oldValue: prev,
+                    newValue: maxWeight,
+                    type: .weight
+                ))
+            }
+        }
+        return prs
+    }
+
+    private func buildGamificationInput(from states: [SessionExerciseState], prEvents: [PREvent] = []) -> SessionGamificationInput {
+        let exerciseResults: [SessionGamificationInput.ExerciseResult] = states.compactMap { state in
+            guard !state.isWarmupOnly else { return nil }
+            let completed = state.sets.filter { $0.isCompleted }
+            guard !completed.isEmpty else { return nil }
+
+            let primary = state.exercise?.musclesTarget ?? [.pecs]
+            let secondary = state.exercise?.musclesSecondary ?? []
+
+            let setResults: [SessionGamificationInput.SetResult] = completed.map {
+                .init(weightKg: $0.weightKg ?? 0, reps: $0.reps ?? 0, isWarmup: $0.isWarmup)
+            }
+            return SessionGamificationInput.ExerciseResult(
+                exerciseName: state.name,
+                musclesTarget: primary,
+                musclesSecondary: secondary,
+                completedSets: setResults
+            )
+        }
+        return SessionGamificationInput(exercises: exerciseResults, personalRecords: prEvents)
     }
 
     private func buildExerciseStates(from plan: PlannedWorkoutDay, aiResponse: TrainerResponse?) {

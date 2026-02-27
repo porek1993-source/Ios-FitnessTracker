@@ -78,27 +78,59 @@ actor SupabaseExerciseRepository {
             request.setValue(value, forHTTPHeaderField: key)
         }
 
-        let data: Data
-        let response: URLResponse
-        do {
-            (data, response) = try await URLSession.shared.data(for: request)
-        } catch {
-            throw SupabaseError.networkError(error)
-        }
+        let maxRetries = 3
+        var currentAttempt = 0
 
-        guard let http = response as? HTTPURLResponse else {
-            throw SupabaseError.httpError(statusCode: 0)
-        }
+        while currentAttempt <= maxRetries {
+            do {
+                let (data, response) = try await URLSession.shared.data(for: request)
+                
+                guard let http = response as? HTTPURLResponse else {
+                    throw SupabaseError.httpError(statusCode: 0)
+                }
 
-        guard (200...299).contains(http.statusCode) else {
-            throw SupabaseError.httpError(statusCode: http.statusCode)
-        }
+                guard (200...299).contains(http.statusCode) else {
+                    throw SupabaseError.httpError(statusCode: http.statusCode)
+                }
 
-        do {
-            let decoder = JSONDecoder()
-            return try decoder.decode(T.self, from: data)
-        } catch {
-            throw SupabaseError.decodingFailed(error.localizedDescription)
+                let decoder = JSONDecoder()
+                return try decoder.decode(T.self, from: data)
+
+            } catch let error as SupabaseError {
+                // If it's a decoding error or specific HTTP error (e.g., 401, 404), do not retry
+                switch error {
+                case .decodingFailed, .invalidURL:
+                    throw error
+                case .httpError(let code) where (400...499).contains(code):
+                    // Client errors usually don't resolve by retrying (except maybe 429, but let's keep it simple)
+                    if code != 429 { throw error }
+                default:
+                    break
+                }
+                
+                if currentAttempt == maxRetries { throw error }
+                await performBackoff(attempt: currentAttempt)
+            } catch {
+                if currentAttempt == maxRetries { throw SupabaseError.networkError(error) }
+                await performBackoff(attempt: currentAttempt)
+            }
+            currentAttempt += 1
         }
+        
+        // This should theoretically be unreachable because the loop throws on maxRetries
+        throw SupabaseError.networkError(NSError(domain: "SupabaseRetry", code: -1))
+    }
+    
+    // MARK: - Exponential Backoff
+    
+    private func performBackoff(attempt: Int) async {
+        // Obvyklé časy: 1s, 2s, 4s (s mírným jitterem)
+        let baseDelay = pow(2.0, Double(attempt))
+        let jitter = Double.random(in: 0...0.5)
+        let totalDelaySeconds = baseDelay + jitter
+        let nanoseconds = UInt64(totalDelaySeconds * 1_000_000_000)
+        
+        AppLogger.warning("⚠️ [Supabase] Síťová chyba, pokus \(attempt + 1) selhal. Opakuji za \(String(format: "%.1f", totalDelaySeconds))s...")
+        try? await Task.sleep(nanoseconds: nanoseconds)
     }
 }

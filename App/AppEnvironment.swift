@@ -1,10 +1,14 @@
 // AppEnvironment.swift
-// Agilní Fitness Trenér — Centrální Dependency Injection kontejner
+// Agilní Fitness Trenér — Centrální Dependency Injection kontejner (v2.1)
 //
-// ✅ Jediné místo inicializace sdílených služeb (prevence memory leaků)
-// ✅ @MainActor zajišťuje thread-safe přístup ke všem @Published properties
-// ✅ Lazy inicializace těžkých závislostí
-// ✅ Bezpečný přístup přes @EnvironmentObject
+// OPRAVY v2.1:
+//  ✅ aiTrainerService je private(set) — čtení odkudkoliv, zápis jen interně
+//  ✅ performStartup: všechna Task.detached volání mají explicit [weak self]
+//  ✅ configure() je idempotentní — bezpečné opakované volání (ochrana před double-init)
+//  ✅ GlobalError API rozšířeno: showError(AppError) pro typované chyby
+//  ✅ AppToastError: přidána .critical severity pro fatální chyby
+//  ✅ @MainActor garantuje thread-safe přístup ke všem @Published vlastnostem
+//  ✅ Lifecycle: WeeklyReportService.scheduleWeeklyNotificationIfNeeded() je nonisolated
 
 import SwiftUI
 import SwiftData
@@ -16,25 +20,31 @@ import SwiftData
 @MainActor
 final class AppEnvironment: ObservableObject {
 
-    // MARK: - Sdílené služby (singleton instance)
+    // MARK: - Sdílené služby (inicializovány při startu, singleton pro celou app)
 
-    /// HealthKit — sdílená instance, předává se přes .environmentObject
+    /// HealthKit manager — sdílená instance přes celou aplikaci
     let healthKitService: HealthKitService
 
-    /// Background sync manager — spravuje BGTask registraci
+    /// Background sync — spravuje BGTask registraci a scheduling
     let healthBackgroundManager: HealthBackgroundManager
 
-    /// AI trenér — závislý na ModelContext a HealthKitService
-    /// Lazy — inicializuje se až po dostupnosti modelContext
-    private(set) var aiTrainerService: AITrainerService?
-
-    /// Supabase repository — actor-isolated, bezpečný pro concurrent přístup
+    /// Supabase exercise repository — actor-isolated, thread-safe pro concurrent fetch
     let exerciseRepository: SupabaseExerciseRepository
 
-    // MARK: - Global Error State
+    /// AI Trenér — lazy init po dostupnosti ModelContext (SwiftData dependency)
+    /// Použij `aiTrainerService!` až po volání `configure(modelContext:)`
+    private(set) var aiTrainerService: AITrainerService?
 
-    /// Globální chybový stav pro GlobalErrorModifier
+    // MARK: - Globální UI stav
+
     @Published var globalError: AppToastError?
+
+    /// Flag: startup sequence dokončena → UI může zobrazit hlavní obsah
+    @Published private(set) var isStartupComplete: Bool = false
+
+    // MARK: - Interní stav
+
+    private var isConfigured: Bool = false
 
     // MARK: - Inicializace
 
@@ -42,75 +52,121 @@ final class AppEnvironment: ObservableObject {
         self.healthKitService        = HealthKitService()
         self.healthBackgroundManager = HealthBackgroundManager.shared
         self.exerciseRepository      = SupabaseExerciseRepository()
+
+        AppLogger.info("🚀 [AppEnvironment] Inicializován.")
     }
 
-    /// Voláno z App.swift po dostupnosti ModelContext.
-    /// Až zde inicializujeme závislosti na SwiftData.
+    // MARK: - Konfigurace SwiftData závislostí
+
+    /// Volej jednou z `App.swift` po dostupnosti ModelContainer.
+    /// Idempotentní — opakované volání je bezpečné (přeskočí konfiguraci).
     func configure(modelContext: ModelContext) {
-        self.aiTrainerService = AITrainerService(
+        guard !isConfigured else {
+            AppLogger.info("ℹ️ [AppEnvironment] configure() již proběhlo, přeskakuji.")
+            return
+        }
+        isConfigured     = true
+        aiTrainerService = AITrainerService(
             modelContext: modelContext,
             healthKitService: healthKitService
         )
+        AppLogger.info("✅ [AppEnvironment] configure() — AITrainerService inicializován.")
     }
 
     // MARK: - Startup Sequence
 
     /// Orchestruje veškerou inicializaci při startu aplikace.
-    /// Volá se jednou z App.swift v .task modifikátoru.
+    /// Volá se jednou z App.swift v `.task` modifikátoru.
+    ///
+    /// Pořadí je důležité:
+    ///  1. SwiftData konfigurace (blokující — musí být první)
+    ///  2. Background Tasks (musí proběhnout před BGTaskScheduler.submit)
+    ///  3. Notifikace scheduling
+    ///  4. HealthKit auth + foreground sync (neblokující, paralelně)
     func performStartup(modelContext: ModelContext) async {
-        // 1. Konfiguruj závislosti na SwiftData
+
+        // 1. SwiftData závislosti
         configure(modelContext: modelContext)
 
-        // 2. Registruj background tasky (musí být před jakýmkoliv schedulováním)
+        // 2. BGTask registrace (musí být před jakýmkoliv schedulováním)
         healthBackgroundManager.registerBackgroundTasks()
         healthBackgroundManager.scheduleNextSync()
 
-        // 3. Týdenní report notifikace
+        // 3. Týdenní report notifikace (nonisolated — bezpečné z MainActor)
         WeeklyReportService.scheduleWeeklyNotificationIfNeeded()
 
-        // 4. (Cviky se nyní načítají přímo z Supabase muscle_wiki_data — seed není potřeba)
-
-        // 5. Notifikační oprávnění + reminder (non-blocking)
-        Task.detached(priority: .utility) {
+        // 4. Notifikační oprávnění (non-blocking, fire-and-forget)
+        Task.detached(priority: .utility) { [weak self] in
+            guard self != nil else { return }
             _ = await NotificationService.shared.requestPermission()
             await NotificationService.shared.scheduleWorkoutReminder(hour: 8, minute: 30)
         }
 
-        // 6. HealthKit autorizace + foreground sync (non-blocking)
-        Task {
-            await healthKitService.checkAuthorizationStatus()
-            try? await healthKitService.requestAuthorization()
-            await healthBackgroundManager.performForegroundSync(healthKit: healthKitService)
+        // 5. HealthKit auth + sync (non-blocking)
+        Task { [weak self] in
+            guard let self else { return }
+            await self.healthKitService.checkAuthorizationStatus()
+            try? await self.healthKitService.requestAuthorization()
+            await self.healthBackgroundManager.performForegroundSync(
+                healthKit: self.healthKitService
+            )
         }
+
+        // Startup dokončen — UI může přejít do aktivního stavu
+        isStartupComplete = true
+        AppLogger.info("🏁 [AppEnvironment] Startup sequence dokončena.")
     }
 
-    // MARK: - Global Error Handling
+    // MARK: - Globální Error Handling
 
-    /// Zobrazí globální toast chybu. Bezpečné volání z libovolného místa.
-    func showError(_ error: AppToastError) {
-        globalError = error
+    /// Zobrazí globální toast chybu. Thread-safe (MainActor).
+    func showError(_ toastError: AppToastError) {
+        globalError = toastError
     }
 
-    func showError(message: String, icon: String = "exclamationmark.triangle.fill") {
-        globalError = AppToastError(message: message, icon: icon)
+    func showError(message: String, icon: String = "exclamationmark.triangle.fill", severity: AppToastError.Severity = .warning) {
+        globalError = AppToastError(message: message, icon: icon, severity: severity)
+    }
+
+    /// Překladač z typovaného `AppError` na `AppToastError`.
+    func showError(_ appError: AppError) {
+        let toast: AppToastError
+        switch appError {
+        case .networkUnavailable:
+            toast = .noInternet
+        case .encodingFailed:
+            toast = AppToastError(message: "Chyba při kódování dat. Zkus to znovu.", icon: "exclamationmark.triangle.fill", severity: .error)
+        case .internalError(let desc):
+            toast = AppToastError(message: "Interní chyba: \(desc)", icon: "ladybug.fill", severity: .error)
+        default:
+            toast = AppToastError(message: appError.localizedDescription, icon: "exclamationmark.circle.fill", severity: .warning)
+        }
+        globalError = toast
     }
 }
 
 // MARK: ═══════════════════════════════════════════════════════════════════════
-// MARK: AppToastError — datový model pro globální chyby
+// MARK: AppToastError — datový model pro globální toasty
 // MARK: ═══════════════════════════════════════════════════════════════════════
 
 struct AppToastError: Identifiable, Equatable {
-    let id        = UUID()
-    let message:  String
-    let icon:     String
+
+    let id       = UUID()
+    let message: String
+    let icon:    String
     var severity: Severity = .warning
 
-    enum Severity { case info, warning, error }
+    enum Severity {
+        case info     /// Neutral informace (modrá)
+        case warning  /// Varování (oranžová)
+        case error    /// Chyba (červená)
+        case critical /// Kritická chyba — vyžaduje akci uživatele
+    }
 
-    // Předpřipravené chyby
+    // MARK: Předpřipravené stavy
+
     static let noInternet = AppToastError(
-        message:  "Žádné připojení k internetu. Jakub pracuje offline.",
+        message:  "Žádné připojení k internetu — Jakub pracuje offline.",
         icon:     "wifi.slash",
         severity: .warning
     )
@@ -128,5 +184,10 @@ struct AppToastError: Identifiable, Equatable {
         message:  "Trénink uložen! 💪",
         icon:     "checkmark.circle.fill",
         severity: .info
+    )
+    static let supabaseError = AppToastError(
+        message:  "Cviky se nepodařilo načíst z databáze. Zkontroluj internet.",
+        icon:     "exclamationmark.icloud.fill",
+        severity: .error
     )
 }
