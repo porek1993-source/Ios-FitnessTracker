@@ -15,8 +15,8 @@ final class WorkoutViewModel: ObservableObject {
     @Published var audioEnabled = false
     @Published var hkWriteResult: HealthKitWriteResult?
 
-    private var restTimer: Timer?
-    private var elapsedTimer: Timer?
+    nonisolated(unsafe) private var restTimer: Timer?
+    nonisolated(unsafe) private var elapsedTimer: Timer?
     private var audioCoach: AudioCoachService?
 
     let session: WorkoutSession

@@ -62,6 +62,8 @@ enum AppError: Error, LocalizedError {
     case encodingFailed
     case healthKitUnavailable
     case noActiveProfile
+    case networkUnavailable
+    case internalError(String)
     case unknown
 
     var errorDescription: String? {
@@ -70,6 +72,8 @@ enum AppError: Error, LocalizedError {
         case .encodingFailed:       return "Chyba při přípravě dat pro AI."
         case .healthKitUnavailable: return "HealthKit není dostupný na tomto zařízení."
         case .noActiveProfile:      return "Nenalezen aktivní uživatelský profil."
+        case .networkUnavailable:   return "Síť dnení dostupná."
+        case .internalError(let msg): return "Interní chyba: \(msg)"
         case .unknown:              return "Neznámá chyba."
         }
     }

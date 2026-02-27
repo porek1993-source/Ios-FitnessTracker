@@ -77,30 +77,25 @@ struct WorkoutViewWithAI: View {
 
         let aiService = AITrainerService(modelContext: modelContext, healthKitService: healthKit)
 
-        do {
-            let response = try await aiService.generateTodayWorkout(
-                for: .now,
-                profile: profile,
-                plannedDay: plannedDay,
-                equipmentOverride: selectedEquipment.isEmpty ? nil : selectedEquipment,
-                timeLimitMinutes: timeLimit
-            )
-            trainerResponse = response
-            offlineMessage = aiService.offlineMessage
+        let response = await aiService.generateTodayWorkout(
+            for: .now,
+            profile: profile,
+            plannedDay: plannedDay,
+            equipmentOverride: selectedEquipment.isEmpty ? nil : selectedEquipment,
+            timeLimitMinutes: timeLimit
+        )
+        trainerResponse = response
+        offlineMessage = aiService.offlineMessage
 
-            // Uložíme sessionLabel do plánu pro budoucí kontext (Gemini continuity)
-            if let activePlan = profile.workoutPlans.first(where: \.isActive) {
-                activePlan.geminiSessionContext = response.sessionLabel
-                try? modelContext.save()
-            }
+        // Uložíme sessionLabel do plánu pro budoucí kontext (Gemini continuity)
+        if let activePlan = profile.workoutPlans.first(where: \.isActive) {
+            activePlan.geminiSessionContext = response.sessionLabel
+            try? modelContext.save()
+        }
 
-            withAnimation(.spring(response: 0.5)) {
-                isLoading = false
-                showWorkout = true
-            }
-        } catch {
+        withAnimation(.spring(response: 0.5)) {
             isLoading = false
-            loadError = "Nepodařilo se načíst trénink: \(error.localizedDescription)"
+            showWorkout = true
         }
     }
 

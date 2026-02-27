@@ -186,8 +186,8 @@ final class ActiveSessionViewModel: ObservableObject {
             let hkResult = await self.writeToHealthKit(session: sessionCopy)
 
             // Gamifikace a PR Detection
-            let prEvents = await self.detectPersonalRecords(exercises: exercisesCopy)
-            let gamificationInput = await self.buildGamificationInput(from: exercisesCopy, prEvents: prEvents)
+            let prEvents = self.detectPersonalRecords(exercises: exercisesCopy)
+            let gamificationInput = self.buildGamificationInput(from: exercisesCopy, prEvents: prEvents)
             let engine = GamificationEngine()
             
             await MainActor.run { [weak self] in
