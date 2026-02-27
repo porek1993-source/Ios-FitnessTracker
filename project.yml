@@ -147,6 +147,11 @@ targets:
 
         # Barevné schéma (vždy dark)
         UIUserInterfaceStyle: Dark
+        
+        # Povolení pro běh na pozadí (nutné pro BGTaskScheduler)
+        UIBackgroundModes:
+          - fetch
+          - processing
 
         # API klíče (injektovány přes Build Settings)
         GEMINI_API_KEY:    $(GEMINI_API_KEY)
