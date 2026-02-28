@@ -584,6 +584,13 @@ final class WorkoutViewModel: ObservableObject {
         return m > 0 ? "\(m):\(String(format: "%02d", s))" : "\(s)"
     }
 
+    var completionProgress: Double {
+        let totalSets     = exercises.flatMap(\.sets).count
+        let completedSets = exercises.flatMap(\.sets).filter(\.isCompleted).count
+        guard totalSets > 0 else { return 0 }
+        return Double(completedSets) / Double(totalSets)
+    }
+
     var elapsedTimeFormatted: String {
         let h = elapsedSeconds / 3600
         let m = (elapsedSeconds % 3600) / 60
