@@ -10,7 +10,7 @@ enum FatigueStore {
         // Automaticky promaž starší než dnešek
         UserDefaults.standard.set(Date.now.startOfDay.timeIntervalSince1970, forKey: dateKey)
         let data = entries.map {
-            ["id": $0.area.id,
+            ["id": $0.areaSlug,
              "severity": $0.severity,
              "isJoint": $0.isJointPain] as [String: Any]
         }
