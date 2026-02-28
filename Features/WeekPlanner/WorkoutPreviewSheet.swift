@@ -71,7 +71,6 @@ struct WorkoutPreviewSheet: View {
         .frame(maxWidth: .infinity)
         .padding(.top, 40)
     }
-
     }
 }
 
