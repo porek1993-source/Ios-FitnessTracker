@@ -271,6 +271,7 @@ struct RollingWeekView: View {
                 WeekDayExerciseDetailView(
                     day: selectedDay,
                     plan: activePlan,
+                    profile: profile,
                     onStartWorkout: {
                         showWorkout = true
                     }
@@ -465,9 +466,16 @@ private struct DayOverrideSheet: View {
 struct WeekDayExerciseDetailView: View {
     let day: WeekDay
     let plan: WorkoutPlan?
+    let profile: UserProfile?
     var onStartWorkout: (() -> Void)? = nil
     @Environment(\.modelContext) private var modelContext
+    @EnvironmentObject private var healthKit: HealthKitService
     @State private var refreshID = UUID()  // Force SwiftUI refresh po repair
+
+    // Preview state
+    @State private var previewResponse: TrainerResponse?
+    @State private var isGeneratingPreview: Bool = false
+    @State private var hasCheckedCache: Bool = false
 
     // Mapování WeekDay.date → dayOfWeek (1=Po...7=Ne)
     private var ourDayIndex: Int {
@@ -478,6 +486,10 @@ struct WeekDayExerciseDetailView: View {
 
     private var plannedDay: PlannedWorkoutDay? {
         plan?.scheduledDays.first { $0.dayOfWeek == ourDayIndex && !$0.isRestDay }
+    }
+
+    private var previewExercises: [ResponseExercise] {
+        previewResponse?.mainBlocks.flatMap { $0.exercises } ?? []
     }
 
     private var exercises: [PlannedExercise] {
@@ -541,25 +553,76 @@ struct WeekDayExerciseDetailView: View {
 
             Divider().background(Color.white.opacity(0.07))
 
-            if exercises.isEmpty {
-                // Prázdný stav — AI vygeneruje cviky při spuštění tréninku
-                HStack(spacing: 12) {
-                    Image(systemName: "wand.and.sparkles")
-                        .font(.system(size: 20))
-                        .foregroundStyle(.blue.opacity(0.7))
-                    VStack(alignment: .leading, spacing: 3) {
-                        Text("Plán čeká na AI")
-                            .font(.system(size: 13, weight: .semibold))
-                            .foregroundStyle(.white)
-                        Text("Klikni na „Začít trénink“ a iKorba sestaví personalizovaný workout.")
-                            .font(.system(size: 11))
-                            .foregroundStyle(.white.opacity(0.4))
-                            .fixedSize(horizontal: false, vertical: true)
+            if exercises.isEmpty && previewExercises.isEmpty {
+                // Prázdný stav — AI vygeneruje cviky při spuštění tréninku nebo na vyžádání
+                VStack(spacing: 12) {
+                    HStack(spacing: 12) {
+                        Image(systemName: "wand.and.sparkles")
+                            .font(.system(size: 20))
+                            .foregroundStyle(.blue.opacity(0.7))
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text("Plán čeká na AI")
+                                .font(.system(size: 13, weight: .semibold))
+                                .foregroundStyle(.white)
+                            Text("Klikni na „Začít trénink“ nebo vygeneruj náhled.")
+                                .font(.system(size: 11))
+                                .foregroundStyle(.white.opacity(0.4))
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                        Spacer()
+                    }
+                    
+                    if isGeneratingPreview {
+                        HStack {
+                            ProgressView().tint(.blue)
+                                .scaleEffect(0.8)
+                            Text("Generuji náhled...")
+                                .font(.system(size: 11, weight: .medium))
+                                .foregroundStyle(.blue)
+                        }
+                    } else {
+                        Button(action: generatePreview) {
+                            Text("Generovat náhled tréninku")
+                                .font(.system(size: 12, weight: .bold))
+                                .foregroundStyle(.white)
+                                .padding(.horizontal, 16)
+                                .padding(.vertical, 8)
+                                .background(RoundedRectangle(cornerRadius: 10).fill(Color.blue.opacity(0.8)))
+                        }
                     }
                 }
                 .padding(12)
                 .background(RoundedRectangle(cornerRadius: 12).fill(Color.blue.opacity(0.07))
                     .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.blue.opacity(0.2), lineWidth: 1)))
+            } else if !previewExercises.isEmpty {
+                // Zobrazit cviky z AI preview
+                ForEach(Array(previewExercises.enumerated()), id: \.offset) { idx, ex in
+                    HStack(spacing: 12) {
+                        ZStack {
+                            Circle().fill(Color.white.opacity(0.07)).frame(width: 28, height: 28)
+                            Text("\(idx + 1)")
+                                .font(.system(size: 11, weight: .bold, design: .rounded))
+                                .foregroundStyle(.white.opacity(0.5))
+                        }
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(ex.name)
+                                .font(.system(size: 14, weight: .semibold))
+                                .foregroundStyle(.white)
+                            Text("\(ex.sets)× \(ex.repsMin)–\(ex.repsMax) rep · \(ex.restSeconds / 60)m \(ex.restSeconds % 60)s pauza")
+                                .font(.system(size: 11))
+                                .foregroundStyle(.white.opacity(0.4))
+                        }
+                        Spacer()
+                        if let weight = ex.weightKg, weight > 0 {
+                            Text(String(format: "%.0f kg", weight))
+                                .font(.system(size: 11, weight: .semibold))
+                                .foregroundStyle(.orange.opacity(0.8))
+                        }
+                    }
+                    if idx < previewExercises.count - 1 {
+                        Divider().background(Color.white.opacity(0.05))
+                    }
+                }
             } else {
                 ForEach(Array(exercises.enumerated()), id: \.element.id) { idx, ex in
                     HStack(spacing: 12) {
@@ -624,6 +687,9 @@ struct WeekDayExerciseDetailView: View {
             .padding(.top, 4)
         }
         .padding(14)
+        .onAppear {
+            checkCache()
+        }
         .background(
             RoundedRectangle(cornerRadius: 16)
                 .fill(Color.white.opacity(0.04))

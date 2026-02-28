@@ -53,6 +53,46 @@ struct ExerciseCardView: View {
                     TechTipsRow(exercise: exercise)
                         .padding(.horizontal, 20)
 
+                    // ── Postup provedení ──
+                    if let instructions = exercise.exercise?.instructions,
+                       !instructions.isEmpty {
+                        VStack(alignment: .leading, spacing: 10) {
+                            Text("POSTUP PROVEDENÍ")
+                                .font(.system(size: 10, weight: .black))
+                                .foregroundStyle(.white.opacity(0.35))
+                                .kerning(1.5)
+
+                            let steps = instructions.components(separatedBy: ". ").enumerated().map { ($0, $1) }
+                            ForEach(steps, id: \.0) { index, step in
+                                let cleanStep = step.trimmingCharacters(in: .whitespacesAndNewlines)
+                                    .trimmingCharacters(in: CharacterSet(charactersIn: "."))
+                                if !cleanStep.isEmpty {
+                                    HStack(alignment: .top, spacing: 12) {
+                                        ZStack {
+                                            Circle()
+                                                .fill(Color.appPrimaryAccent.opacity(0.15))
+                                                .frame(width: 28, height: 28)
+                                            Text("\(index + 1)")
+                                                .font(.system(size: 12, weight: .bold, design: .rounded))
+                                                .foregroundStyle(Color.appPrimaryAccent)
+                                        }
+                                        Text(cleanStep)
+                                            .font(.system(size: 14))
+                                            .foregroundStyle(.white.opacity(0.8))
+                                            .fixedSize(horizontal: false, vertical: true)
+                                    }
+                                }
+                            }
+                        }
+                        .padding(16)
+                        .background(
+                            RoundedRectangle(cornerRadius: 14)
+                                .fill(Color.white.opacity(0.04))
+                                .overlay(RoundedRectangle(cornerRadius: 14)
+                                    .stroke(Color.white.opacity(0.08), lineWidth: 1))
+                        )
+                        .padding(.horizontal, 20)
+                    }
                     VStack(spacing: 10) {
                         SetHeaderRow()
                         ForEach(exercise.sets.indices, id: \.self) { i in
@@ -137,165 +177,13 @@ struct ExerciseAnimationView: View {
     let slug: String
     let nameCz: String
     let nameEn: String?
-    var videoUrl: String? = nil   // ✅ Video z muscle_wiki_data_full (Supabase Storage)
-
-    @Environment(\.openURL) private var openURL
-
-    // Video state — lazy init jen pokud máme URL
-    @State private var videoPlayer: AVQueuePlayer?
-    @State private var playerLooper: AVPlayerLooper?
+    var videoUrl: String? = nil   // ✅ Video (GIF) z muscle_wiki_data_full (Supabase Storage)
 
     var body: some View {
-        ZStack {
-            if let player = videoPlayer {
-                // ── REÁLNÉ VIDEO z Supabase Storage ───────────────────────
-                ZStack(alignment: .bottomTrailing) {
-                    LoopingVideoPlayer(player: player)
-                        .clipped()
-
-                    LinearGradient(
-                        colors: [.clear, .black.opacity(0.6)],
-                        startPoint: .init(x: 0.5, y: 0.5), endPoint: .bottom
-                    )
-                    .allowsHitTesting(false)
-
-                    // YouTube button jako fallback / doplněk
-                    Button {
-                        HapticManager.shared.playMediumClick()
-                        let url = YouTubeLinkGenerator.searchURL(nameEn: nameEn, nameCz: nameCz)
-                        openURL(url)
-                    } label: {
-                        HStack(spacing: 5) {
-                            Image(systemName: "play.rectangle.fill")
-                                .font(.system(size: 11))
-                            Text("Technika")
-                                .font(.system(size: 12, weight: .bold))
-                        }
-                        .foregroundStyle(.white.opacity(0.75))
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 5)
-                        .background(
-                            Capsule()
-                                .fill(Color.black.opacity(0.5))
-                                .overlay(Capsule().stroke(.white.opacity(0.15), lineWidth: 1))
-                        )
-                    }
-                    .padding(.bottom, 10)
-                    .padding(.trailing, 12)
-                }
-            } else {
-                // ── FALLBACK (bez video URL) — čistý gradient + YouTube ──
-                LinearGradient(
-                    colors: [exerciseColor(slug).opacity(0.15), Color.black],
-                    startPoint: .top, endPoint: .bottom
-                )
-                VStack(spacing: 12) {
-                    Spacer()
-                    Text(exerciseCategoryLabel(slug))
-                        .font(.system(size: 13, weight: .bold))
-                        .foregroundStyle(exerciseColor(slug).opacity(0.8))
-                        .kerning(1.5)
-                        .textCase(.uppercase)
-
-                    Button {
-                        HapticManager.shared.playMediumClick()
-                        let url = YouTubeLinkGenerator.searchURL(nameEn: nameEn, nameCz: nameCz)
-                        openURL(url)
-                    } label: {
-                        HStack(spacing: 8) {
-                            Image(systemName: "play.rectangle.fill")
-                                .font(.system(size: 14))
-                            Text("Podívej se na techniku")
-                                .font(.system(size: 14, weight: .bold))
-                        }
-                        .foregroundStyle(.white)
-                        .padding(.horizontal, 18)
-                        .padding(.vertical, 10)
-                        .background(
-                            Capsule()
-                                .fill(Color.red.opacity(0.8))
-                                .shadow(color: .red.opacity(0.3), radius: 6, y: 3)
-                        )
-                    }
-                    Spacer()
-                }
-                LinearGradient(
-                    colors: [.clear, .black],
-                    startPoint: .init(x: 0.5, y: 0.55), endPoint: .bottom
-                )
-            }
-        }
-        .onAppear { setupVideo() }
-        .onDisappear {
-            videoPlayer?.pause()
-            playerLooper = nil
-            videoPlayer = nil
-        }
-        .onChange(of: videoUrl) { setupVideo() }
-    }
-
-    // MARK: Video Setup
-
-    private func setupVideo() {
-        videoPlayer?.pause()
-        playerLooper = nil
-        videoPlayer = nil
-
-        guard let urlString = videoUrl, let url = URL(string: urlString) else { return }
-        let item = AVPlayerItem(url: url)
-        let player = AVQueuePlayer(playerItem: item)
-        playerLooper = AVPlayerLooper(player: player, templateItem: item)
-        player.isMuted = true
-        player.play()
-        videoPlayer = player
-    }
-
-    private func exerciseIcon(_ slug: String) -> String {
-        let s = slug.lowercased()
-        // POZOR: "dumbbell.fill" existuje jen v iOS 18+ → nepoužíváme
-        if s.contains("bench") || s.contains("chest") || s.contains("fly") { return "figure.strengthtraining.traditional" }
-        if s.contains("press") && (s.contains("shoulder") || s.contains("overhead") || s.contains("ohp")) { return "figure.arms.open" }
-        if s.contains("press") { return "figure.strengthtraining.traditional" }
-        if s.contains("squat") { return "figure.strengthtraining.traditional" }
-        if s.contains("leg-press") || s.contains("leg_press") { return "figure.strengthtraining.traditional" }
-        if s.contains("deadlift") || s.contains("rdl") || s.contains("hip-thrust") { return "figure.strengthtraining.functional" }
-        if s.contains("pull-up") || s.contains("pullup") || s.contains("chin") { return "figure.gymnastics" }
-        if s.contains("row") || s.contains("pull") || s.contains("lat") { return "figure.rowing" }
-        if s.contains("curl") || s.contains("bicep") { return "figure.arms.open" }
-        if s.contains("tricep") || s.contains("extension") || s.contains("pushdown") { return "figure.arms.open" }
-        if s.contains("calf") || s.contains("raise") { return "figure.walk" }
-        if s.contains("lateral") || s.contains("shoulder") || s.contains("delt") { return "figure.arms.open" }
-        if s.contains("plank") || s.contains("core") || s.contains("ab") || s.contains("crunch") { return "figure.core.training" }
-        if s.contains("run") || s.contains("cardio") || s.contains("treadmill") { return "figure.run" }
-        if s.contains("warmup") || s.contains("warm") || s.contains("stretch") { return "figure.flexibility" }
-        return "figure.strengthtraining.traditional"
-    }
-
-    private func exerciseColor(_ slug: String) -> Color {
-        let s = slug.lowercased()
-        if s.contains("bench") || s.contains("chest") || s.contains("press") { return .blue }
-        if s.contains("pull") || s.contains("row") || s.contains("lat") { return .purple }
-        if s.contains("squat") || s.contains("leg") || s.contains("deadlift") { return Color(red: 0.3, green: 0.8, blue: 0.4) }
-        if s.contains("shoulder") || s.contains("lateral") || s.contains("overhead") { return .orange }
-        if s.contains("curl") || s.contains("bicep") { return .cyan }
-        if s.contains("tricep") || s.contains("pushdown") { return Color(red: 0.9, green: 0.5, blue: 0.2) }
-        if s.contains("core") || s.contains("plank") || s.contains("ab") { return .yellow }
-        if s.contains("warmup") || s.contains("stretch") { return .teal }
-        return .blue
-    }
-
-    private func exerciseCategoryLabel(_ slug: String) -> String {
-        let s = slug.lowercased()
-        if s.contains("bench") || s.contains("chest") { return "Hrudník" }
-        if s.contains("pull") || s.contains("row") || s.contains("lat") { return "Záda" }
-        if s.contains("squat") || s.contains("leg") { return "Nohy" }
-        if s.contains("deadlift") || s.contains("rdl") { return "Zadní řetězec" }
-        if s.contains("shoulder") || s.contains("lateral") || s.contains("overhead") { return "Ramena" }
-        if s.contains("curl") || s.contains("bicep") { return "Biceps" }
-        if s.contains("tricep") || s.contains("pushdown") || s.contains("extension") { return "Triceps" }
-        if s.contains("core") || s.contains("plank") || s.contains("ab") { return "Střed těla" }
-        if s.contains("warmup") || s.contains("stretch") { return "Rozcvička" }
-        if s.contains("calf") { return "Lýtka" }
-        return "Silový trénink"
+        ExerciseMediaView(
+            gifURL: videoUrl.flatMap { URL(string: $0) },
+            exerciseName: nameCz,
+            exerciseNameEn: nameEn
+        )
     }
 }

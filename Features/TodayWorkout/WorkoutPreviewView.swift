@@ -11,6 +11,12 @@ struct WorkoutPreviewView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
 
+    @EnvironmentObject private var healthKit: HealthKitService
+    @Query private var profiles: [UserProfile]
+
+    @State private var isGenerating = false
+    @State private var previewResponse: TrainerResponse?
+
     // Opravit chybějící exercise relationships při zobrazení
     private var repairedExercises: [PlannedExercise] {
         let exs = vm.todayPlannedExercises
@@ -84,13 +90,57 @@ struct WorkoutPreviewView: View {
                         .padding(.bottom, 24)
 
                         // Exercise list
-                        if !repairedExercises.isEmpty {
+                        if isGenerating {
+                            VStack(spacing: 16) {
+                                ProgressView()
+                                    .scaleEffect(1.2)
+                                    .tint(.blue)
+                                Text("iKorba připravuje plán na míru...")
+                                    .font(.system(size: 14, weight: .medium))
+                                    .foregroundStyle(.blue)
+                            }
+                            .padding(.top, 40)
+                            .padding(.bottom, 20)
+                        } else if let response = previewResponse {
                             VStack(spacing: 12) {
-                                ForEach(Array(repairedExercises.enumerated()), id: \.offset) { idx, ex in
-                                    PlannedExerciseRow(index: idx + 1, exercise: ex)
+                                ForEach(Array(response.mainBlocks.flatMap { $0.exercises }.enumerated()), id: \.offset) { idx, ex in
+                                     AIPreviewExerciseRow(index: idx + 1, exercise: ex)
                                 }
                             }
                             .padding(.horizontal, 18)
+                        } else if !repairedExercises.isEmpty {
+                            VStack(spacing: 16) {
+                                Button {
+                                    generatePreview()
+                                } label: {
+                                    HStack(spacing: 10) {
+                                        Image(systemName: "wand.and.sparkles")
+                                            .font(.system(size: 16, weight: .bold))
+                                        Text("Získat AI rozpis přesně na míru")
+                                            .font(.system(size: 16, weight: .bold))
+                                    }
+                                    .foregroundStyle(.white)
+                                    .frame(maxWidth: .infinity, minHeight: 52)
+                                    .background(
+                                        RoundedRectangle(cornerRadius: 14)
+                                            .fill(
+                                                LinearGradient(
+                                                    colors: [Color(red: 0.20, green: 0.52, blue: 1.0),
+                                                             Color(red: 0.08, green: 0.35, blue: 0.85)],
+                                                    startPoint: .topLeading, endPoint: .bottomTrailing)
+                                            )
+                                    )
+                                    .shadow(color: .blue.opacity(0.4), radius: 10, y: 4)
+                                }
+                                .padding(.horizontal, 18)
+
+                                VStack(spacing: 12) {
+                                    ForEach(Array(repairedExercises.enumerated()), id: \.offset) { idx, ex in
+                                        PlannedExerciseRow(index: idx + 1, exercise: ex)
+                                    }
+                                }
+                                .padding(.horizontal, 18)
+                            }
                         } else {
                             emptyState
                         }
@@ -131,6 +181,33 @@ struct WorkoutPreviewView: View {
                 .foregroundStyle(.white.opacity(0.35))
         }
         .padding(.top, 60)
+    }
+
+    private func generatePreview() {
+        guard let profile = profiles.first else { return }
+        
+        let dayIndex = Date.now.weekday
+        guard let activePlan = profile.workoutPlans.first(where: { $0.isActive }),
+              let plannedDay = activePlan.scheduledDays.first(where: { $0.dayOfWeek == dayIndex && !$0.isRestDay }) else {
+            return
+        }
+
+        isGenerating = true
+        Task {
+            let aiService = AITrainerService(modelContext: modelContext, healthKitService: healthKit)
+            let response = await aiService.generateTodayWorkout(
+                for: .now,
+                profile: profile,
+                plannedDay: plannedDay,
+                equipmentOverride: nil,
+                timeLimitMinutes: nil
+            )
+            
+            await MainActor.run {
+                self.previewResponse = response
+                self.isGenerating = false
+            }
+        }
     }
 }
 
@@ -236,6 +313,44 @@ private struct PlannedExerciseRow: View {
                 .overlay(
                     RoundedRectangle(cornerRadius: 16, style: .continuous)
                         .stroke(AppColors.border, lineWidth: 1)
+                )
+        )
+    }
+}
+
+// MARK: - AI Preview Exercise Row
+
+private struct AIPreviewExerciseRow: View {
+    let index: Int
+    let exercise: ResponseExercise
+
+    var body: some View {
+        HStack(spacing: 14) {
+            ZStack {
+                Circle().fill(Color.blue.opacity(0.15)).frame(width: 36, height: 36)
+                Text("\(index)").font(.system(size: 14, weight: .bold, design: .rounded)).foregroundStyle(.blue)
+            }
+            VStack(alignment: .leading, spacing: 4) {
+                Text(exercise.name).font(.system(size: 15, weight: .semibold)).foregroundStyle(.white).lineLimit(2)
+                HStack(spacing: 10) {
+                    Label("\(exercise.sets)×\(exercise.repsMin)-\(exercise.repsMax)", systemImage: "repeat")
+                    if exercise.restSeconds > 0 { Label("\(exercise.restSeconds)s", systemImage: "timer") }
+                }
+                .font(.system(size: 12)).foregroundStyle(.white.opacity(0.45))
+                
+                if let weight = exercise.weightKg, weight > 0 {
+                    Text("Doporučená váha: \(Int(weight)) kg").font(.system(size: 11, weight: .bold)).foregroundStyle(.orange)
+                }
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(14)
+        .background(
+            RoundedRectangle(cornerRadius: 16)
+                .fill(AppColors.secondaryBg)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16)
+                        .stroke(Color.blue.opacity(0.3), lineWidth: 1)
                 )
         )
     }

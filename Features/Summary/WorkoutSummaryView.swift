@@ -476,192 +476,34 @@ private struct GainsMuscleMapView: View {
                         lineWidth: 1.0
                     )
 
-                // ── Svalový glow canvas ──────────────────────────────────
-                Canvas { ctx, size in
-                    let cW = size.width
-                    let cH = size.height
-                    let cCX = cW / 2
-
-                    // ─ Hrudník ─
-                    let chestPath = Path { p in
-                        p.move(to: CGPoint(x: cCX - cW*0.225, y: cH*0.218))
-                        p.addCurve(to: CGPoint(x: cCX + cW*0.225, y: cH*0.218),
-                                   control1: CGPoint(x: cCX - cW*0.07, y: cH*0.192),
-                                   control2: CGPoint(x: cCX + cW*0.07, y: cH*0.192))
-                        p.addLine(to: CGPoint(x: cCX + cW*0.205, y: cH*0.328))
-                        p.addCurve(to: CGPoint(x: cCX - cW*0.205, y: cH*0.328),
-                                   control1: CGPoint(x: cCX + cW*0.05, y: cH*0.345),
-                                   control2: CGPoint(x: cCX - cW*0.05, y: cH*0.345))
-                        p.closeSubpath()
-                    }
-                    ctx.fill(chestPath, with: .color(color(for: .chest)))
-                    if glowIntensity(for: .chest) > 0.1 {
-                        ctx.blendMode = .plusLighter
-                        ctx.fill(chestPath, with: .color(color(for: .chest).opacity(0.18)))
-                        ctx.blendMode = .normal
-                    }
-
-                    // ─ Přední ramena ─
-                    for side in [-1.0, 1.0] as [CGFloat] {
-                        let delt = Path(ellipseIn: CGRect(
-                            x: cCX + side*(cW*0.205) - cW*0.055,
-                            y: cH*0.165, width: cW*0.080, height: cH*0.055
-                        ))
-                        ctx.fill(delt, with: .color(color(for: .frontShoulders)))
-                    }
-
-                    // ─ Bicepsy ─
-                    for side in [-1.0, 1.0] as [CGFloat] {
-                        let bicepPath = Path(ellipseIn: CGRect(
-                            x: cCX + side*(cW*0.270) - cW*0.040,
-                            y: cH*0.230, width: cW*0.058, height: cH*0.120
-                        ))
-                        ctx.fill(bicepPath, with: .color(color(for: .biceps)))
-                    }
-
-                    // ─ Tricepsy ─
-                    for side in [-1.0, 1.0] as [CGFloat] {
-                        let tricepPath = Path(ellipseIn: CGRect(
-                            x: cCX + side*(cW*0.278) - cW*0.034,
-                            y: cH*0.240, width: cW*0.048, height: cH*0.105
-                        ))
-                        ctx.fill(tricepPath, with: .color(color(for: .triceps).opacity(0.7)))
-                    }
-
-                    // ─ Předloktí ─
-                    for side in [-1.0, 1.0] as [CGFloat] {
-                        let forearmPath = Path(ellipseIn: CGRect(
-                            x: cCX + side*(cW*0.270) - cW*0.030,
-                            y: cH*0.370, width: cW*0.042, height: cH*0.100
-                        ))
-                        ctx.fill(forearmPath, with: .color(color(for: .forearms)))
-                    }
-
-                    // ─ Lats (boční pásy) ─
-                    for side in [-1.0, 1.0] as [CGFloat] {
-                        let latsPath = Path { p in
-                            p.move(to: CGPoint(x: cCX + side*cW*0.160, y: cH*0.225))
-                            p.addCurve(to: CGPoint(x: cCX + side*cW*0.200, y: cH*0.350),
-                                       control1: CGPoint(x: cCX + side*cW*0.205, y: cH*0.260),
-                                       control2: CGPoint(x: cCX + side*cW*0.215, y: cH*0.310))
-                            p.addCurve(to: CGPoint(x: cCX + side*cW*0.125, y: cH*0.400),
-                                       control1: CGPoint(x: cCX + side*cW*0.192, y: cH*0.380),
-                                       control2: CGPoint(x: cCX + side*cW*0.160, y: cH*0.400))
-                            p.addCurve(to: CGPoint(x: cCX + side*cW*0.140, y: cH*0.225),
-                                       control1: CGPoint(x: cCX + side*cW*0.118, y: cH*0.340),
-                                       control2: CGPoint(x: cCX + side*cW*0.120, y: cH*0.275))
-                            p.closeSubpath()
+                // ── Svalový Canvas pomocí MuscleArea (přesné lícování se siluetou) ──
+                let allAreas = MuscleArea.frontAreas + MuscleArea.backAreas
+                
+                // Uděláme si lookup slovník pro rychlejší přístup a zamezení duplicit
+                // (např. pokud máme gained 'calves', nasvítíme přední i zadní lýtka)
+                ZStack {
+                    ForEach(allAreas) { area in
+                        if let targetMuscle = MuscleGroup(rawValue: area.slug),
+                           let _ = gains.first(where: { $0.muscleGroup == targetMuscle }) {
+                            
+                            let fillCol = color(for: targetMuscle)
+                            let glow = glowIntensity(for: targetMuscle)
+                            
+                            Capsule()
+                                .fill(fillCol)
+                                .frame(
+                                    width: area.relativeRect(in: geo.size).width,
+                                    height: area.relativeRect(in: geo.size).height
+                                )
+                                .position(
+                                    x: area.relativeRect(in: geo.size).midX,
+                                    y: area.relativeRect(in: geo.size).midY
+                                )
+                                .shadow(color: fillCol.opacity(0.6), radius: 6 * glow)
                         }
-                        ctx.fill(latsPath, with: .color(color(for: .lats).opacity(0.78)))
-                    }
-
-                    // ─ Trapézy ─
-                    let trapsPath = Path { p in
-                        p.move(to: CGPoint(x: cCX - cW*0.060, y: cH*0.135))
-                        p.addCurve(to: CGPoint(x: cCX + cW*0.060, y: cH*0.135),
-                                   control1: CGPoint(x: cCX - cW*0.010, y: cH*0.120),
-                                   control2: CGPoint(x: cCX + cW*0.010, y: cH*0.120))
-                        p.addCurve(to: CGPoint(x: cCX + cW*0.155, y: cH*0.215),
-                                   control1: CGPoint(x: cCX + cW*0.100, y: cH*0.140),
-                                   control2: CGPoint(x: cCX + cW*0.145, y: cH*0.180))
-                        p.addCurve(to: CGPoint(x: cCX - cW*0.155, y: cH*0.215),
-                                   control1: CGPoint(x: cCX + cW*0.030, y: cH*0.240),
-                                   control2: CGPoint(x: cCX - cW*0.030, y: cH*0.240))
-                        p.addCurve(to: CGPoint(x: cCX - cW*0.060, y: cH*0.135),
-                                   control1: CGPoint(x: cCX - cW*0.145, y: cH*0.180),
-                                   control2: CGPoint(x: cCX - cW*0.100, y: cH*0.140))
-                        p.closeSubpath()
-                    }
-                    ctx.fill(trapsPath, with: .color(color(for: .traps).opacity(0.65)))
-
-                    // ─ Střední záda ─
-                    let midBackPath = Path(roundedRect: CGRect(
-                        x: cCX - cW*0.120, y: cH*0.250, width: cW*0.240, height: cH*0.065
-                    ), cornerRadius: 8)
-                    ctx.fill(midBackPath, with: .color(color(for: .trapsMiddle).opacity(0.70)))
-
-                    // ─ Spodní záda ─
-                    let lowerBackPath = Path(roundedRect: CGRect(
-                        x: cCX - cW*0.100, y: cH*0.345, width: cW*0.200, height: cH*0.055
-                    ), cornerRadius: 7)
-                    ctx.fill(lowerBackPath, with: .color(color(for: .lowerback).opacity(0.70)))
-
-                    // ─ Břicho (sixpack segmenty) ─
-                    let absCol = color(for: .abdominals)
-                    for row in 0..<3 {
-                        for col in 0..<2 {
-                            let segX = cCX + CGFloat(col == 0 ? -1 : 1) * cW*0.032 - cW*0.028
-                            let segY = cH*(0.305 + Double(row)*0.035)
-                            let rect = CGRect(x: segX, y: segY, width: cW*0.052, height: cH*0.026)
-                            ctx.fill(Path(roundedRect: rect, cornerRadius: 4), with: .color(absCol))
-                        }
-                    }
-
-                    // ─ Obliques ─
-                    for side in [-1.0, 1.0] as [CGFloat] {
-                        let oblPath = Path(ellipseIn: CGRect(
-                            x: cCX + side*cW*0.092 - cW*0.048,
-                            y: cH*0.300, width: cW*0.060, height: cH*0.080
-                        ))
-                        ctx.fill(oblPath, with: .color(color(for: .obliques).opacity(0.65)))
-                    }
-
-                    // ─ Hýždě ─
-                    for side in [-1.0, 1.0] as [CGFloat] {
-                        let glutePath = Path(ellipseIn: CGRect(
-                            x: cCX + side*(cW*0.020) - cW*0.065,
-                            y: cH*0.420, width: cW*0.100, height: cH*0.055
-                        ))
-                        ctx.fill(glutePath, with: .color(color(for: .glutes).opacity(0.68)))
-                    }
-
-                    // ─ Přední stehna (quads) ─
-                    for side in [-1.0, 1.0] as [CGFloat] {
-                        let quadPath = Path { p in
-                            let qx = cCX + side * cW*0.050 - cW*0.065
-                            p.move(to: CGPoint(x: qx + cW*0.065, y: cH*0.470))
-                            p.addCurve(to: CGPoint(x: qx + cW*0.105, y: cH*0.640),
-                                       control1: CGPoint(x: qx + cW*0.130, y: cH*0.510),
-                                       control2: CGPoint(x: qx + cW*0.125, y: cH*0.595))
-                            p.addCurve(to: CGPoint(x: qx + cW*0.025, y: cH*0.640),
-                                       control1: CGPoint(x: qx + cW*0.080, y: cH*0.660),
-                                       control2: CGPoint(x: qx + cW*0.050, y: cH*0.660))
-                            p.addCurve(to: CGPoint(x: qx + cW*0.065, y: cH*0.470),
-                                       control1: CGPoint(x: qx + cW*0.005, y: cH*0.595),
-                                       control2: CGPoint(x: qx + cW*0.000, y: cH*0.510))
-                            p.closeSubpath()
-                        }
-                        ctx.fill(quadPath, with: .color(color(for: .quads)))
-                    }
-
-                    // ─ Hamstringy ─
-                    for side in [-1.0, 1.0] as [CGFloat] {
-                        let hamPath = Path(ellipseIn: CGRect(
-                            x: cCX + side*(cW*0.050) - cW*0.055,
-                            y: cH*0.485, width: cW*0.080, height: cH*0.145
-                        ))
-                        ctx.fill(hamPath, with: .color(color(for: .hamstrings).opacity(0.65)))
-                    }
-
-                    // ─ Lýtka ─
-                    for side in [-1.0, 1.0] as [CGFloat] {
-                        let calfPath = Path(ellipseIn: CGRect(
-                            x: cCX + side*(cW*0.050) - cW*0.045,
-                            y: cH*0.680, width: cW*0.072, height: cH*0.120
-                        ))
-                        ctx.fill(calfPath, with: .color(color(for: .calves)))
-                    }
-
-                    // ─ Zadní ramena ─
-                    for side in [-1.0, 1.0] as [CGFloat] {
-                        let rearDelt = Path(ellipseIn: CGRect(
-                            x: cCX + side*(cW*0.202) - cW*0.050,
-                            y: cH*0.165, width: cW*0.072, height: cH*0.055
-                        ))
-                        ctx.fill(rearDelt, with: .color(color(for: .rearShoulders).opacity(0.72)))
                     }
                 }
-                .blur(radius: 0)   // No blur — crisp muscle fills
+                .clipShape(CleanBodySilhouette())
             }
         }
     }
@@ -671,20 +513,19 @@ private struct GainsMuscleMapView: View {
 private struct CleanBodySilhouette: Shape {
     func path(in rect: CGRect) -> Path {
         var p = Path()
-        let w = rect.width
-        let h = rect.height
+        let w = rect.width, h = rect.height
         let cx = w * 0.5
 
-        // Hlava
+        // ── Hlava ──
         p.addEllipse(in: CGRect(x: cx - w*0.11, y: h*0.005, width: w*0.22, height: h*0.10))
 
-        // Krk
+        // ── Krk ──
         p.addRoundedRect(
             in: CGRect(x: cx - w*0.045, y: h*0.09, width: w*0.09, height: h*0.035),
             cornerSize: CGSize(width: 6, height: 6), style: .continuous
         )
 
-        // Trup (Bézier — ramena → pas)
+        // ── Trup (ramena → pas) — Bézier ──
         p.move(to: CGPoint(x: cx - w*0.26, y: h*0.125))
         p.addQuadCurve(to: CGPoint(x: cx - w*0.28, y: h*0.18),
                        control: CGPoint(x: cx - w*0.29, y: h*0.125))
@@ -702,56 +543,54 @@ private struct CleanBodySilhouette: Shape {
                        control: CGPoint(x: cx, y: h*0.115))
         p.closeSubpath()
 
-        // Paže + předloktí
+        // Průchod obou stran pro končetiny
         for side in [-1.0, 1.0] as [CGFloat] {
+            // Paže (horní)
             let ox = cx + side * w * 0.32
+            let armTopY = h * 0.16, armBotY = h * 0.38
             let armW: CGFloat = w * 0.065
-            // Upper arm
             p.addRoundedRect(
-                in: CGRect(x: ox - armW, y: h*0.16, width: armW*2, height: h*0.22),
-                cornerSize: CGSize(width: armW*0.8, height: armW*0.8), style: .continuous
+                in: CGRect(x: ox - armW, y: armTopY, width: armW * 2, height: armBotY - armTopY),
+                cornerSize: CGSize(width: armW * 0.8, height: armW * 0.8), style: .continuous
             )
-            // Forearm
+
+            // Předloktí
+            let fTopY = h * 0.39, fBotY = h * 0.56
             let fW: CGFloat = w * 0.048
             p.addRoundedRect(
-                in: CGRect(x: ox - fW, y: h*0.39, width: fW*2, height: h*0.17),
-                cornerSize: CGSize(width: fW*0.8, height: fW*0.8), style: .continuous
+                in: CGRect(x: ox - fW, y: fTopY, width: fW * 2, height: fBotY - fTopY),
+                cornerSize: CGSize(width: fW * 0.8, height: fW * 0.8), style: .continuous
             )
-        }
 
-        // Stehna (tapered)
-        for side in [-1.0, 1.0] as [CGFloat] {
-            let ox = cx + side * w * 0.115
+            // Stehno
+            let legX = cx + side * w * 0.115
             let topY = h * 0.445, botY = h * 0.72
             let topW: CGFloat = w * 0.10, botW: CGFloat = w * 0.065
-            p.move(to: CGPoint(x: ox - topW, y: topY))
-            p.addLine(to: CGPoint(x: ox + topW, y: topY))
-            p.addQuadCurve(to: CGPoint(x: ox + botW, y: botY),
-                           control: CGPoint(x: ox + topW*0.9, y: (topY+botY)*0.55))
-            p.addQuadCurve(to: CGPoint(x: ox - botW, y: botY),
-                           control: CGPoint(x: ox, y: botY + h*0.012))
-            p.addQuadCurve(to: CGPoint(x: ox - topW, y: topY),
-                           control: CGPoint(x: ox - topW*0.9, y: (topY+botY)*0.55))
+            p.move(to: CGPoint(x: legX - topW, y: topY))
+            p.addLine(to: CGPoint(x: legX + topW, y: topY))
+            p.addQuadCurve(to: CGPoint(x: legX + botW, y: botY),
+                           control: CGPoint(x: legX + topW * 0.9, y: (topY + botY) * 0.55))
+            p.addQuadCurve(to: CGPoint(x: legX - botW, y: botY),
+                           control: CGPoint(x: legX, y: botY + h * 0.012))
+            p.addQuadCurve(to: CGPoint(x: legX - topW, y: topY),
+                           control: CGPoint(x: legX - topW * 0.9, y: (topY + botY) * 0.55))
             p.closeSubpath()
-        }
 
-        // Lýtka (anatomicky zaoblené)
-        for side in [-1.0, 1.0] as [CGFloat] {
-            let ox = cx + side * w * 0.115
-            let topY = h * 0.73, botY = h * 0.93
-            let topW: CGFloat = w * 0.058, midW: CGFloat = w * 0.065, botW: CGFloat = w * 0.042
-            p.move(to: CGPoint(x: ox - topW, y: topY))
-            p.addLine(to: CGPoint(x: ox + topW, y: topY))
-            p.addQuadCurve(to: CGPoint(x: ox + midW, y: topY + (botY-topY)*0.35),
-                           control: CGPoint(x: ox + midW*1.05, y: topY + (botY-topY)*0.15))
-            p.addQuadCurve(to: CGPoint(x: ox + botW, y: botY),
-                           control: CGPoint(x: ox + midW*0.8, y: topY + (botY-topY)*0.7))
-            p.addQuadCurve(to: CGPoint(x: ox - botW, y: botY),
-                           control: CGPoint(x: ox, y: botY + h*0.015))
-            p.addQuadCurve(to: CGPoint(x: ox - midW, y: topY + (botY-topY)*0.35),
-                           control: CGPoint(x: ox - midW*0.8, y: topY + (botY-topY)*0.7))
-            p.addQuadCurve(to: CGPoint(x: ox - topW, y: topY),
-                           control: CGPoint(x: ox - midW*1.05, y: topY + (botY-topY)*0.15))
+            // Lýtko
+            let cTopY = h * 0.73, cBotY = h * 0.93
+            let cTopW: CGFloat = w * 0.058, cMidW: CGFloat = w * 0.065, cBotW: CGFloat = w * 0.042
+            p.move(to: CGPoint(x: legX - cTopW, y: cTopY))
+            p.addLine(to: CGPoint(x: legX + cTopW, y: cTopY))
+            p.addQuadCurve(to: CGPoint(x: legX + cMidW, y: cTopY + (cBotY - cTopY) * 0.35),
+                           control: CGPoint(x: legX + cMidW * 1.05, y: cTopY + (cBotY - cTopY) * 0.15))
+            p.addQuadCurve(to: CGPoint(x: legX + cBotW, y: cBotY),
+                           control: CGPoint(x: legX + cMidW * 0.8, y: cTopY + (cBotY - cTopY) * 0.7))
+            p.addQuadCurve(to: CGPoint(x: legX - cBotW, y: cBotY),
+                           control: CGPoint(x: legX, y: cBotY + h * 0.015))
+            p.addQuadCurve(to: CGPoint(x: legX - cMidW, y: cTopY + (cBotY - cTopY) * 0.35),
+                           control: CGPoint(x: legX - cMidW * 0.8, y: cTopY + (cBotY - cTopY) * 0.7))
+            p.addQuadCurve(to: CGPoint(x: legX - cTopW, y: cTopY),
+                           control: CGPoint(x: legX - cMidW * 1.05, y: cTopY + (cBotY - cTopY) * 0.15))
             p.closeSubpath()
         }
 

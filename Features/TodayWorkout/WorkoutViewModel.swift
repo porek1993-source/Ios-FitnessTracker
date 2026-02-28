@@ -42,6 +42,9 @@ final class WorkoutViewModel: ObservableObject {
             // AI vygenerovala konkrétní cviky
             var states: [SessionExerciseState] = []
 
+            // ✅ Načteme VŠECHNY cviky z DB pro spolehlivé napárování (slug/name)
+            let allDBExercises: [Exercise] = (try? SharedModelContainer.container.mainContext.fetch(FetchDescriptor<Exercise>())) ?? []
+
             // Warmup
             for wu in response.warmUp {
                 states.append(SessionExerciseState.warmupExercise(wu))
@@ -52,39 +55,50 @@ final class WorkoutViewModel: ObservableObject {
                 for (index, ex) in block.exercises.enumerated() {
                     var state = SessionExerciseState(from: ex)
 
-                    // Progressive overload: načti historii z PlannedExercises
-                    // ⚠️ Důležité: ex.slug je raw slug z AI/fallback, DB slug je normalizovaný
+                    // ✅ Hledáme v celé DB, ne jen v plannedExercises
                     let normalizedSlug = FallbackWorkoutGenerator.normalizedSlug(ex.slug)
                     var exerciseRef: Exercise? = nil
+
+                    // 1. Nejprve zkus plan.plannedExercises (má weight history)
                     if let plannedEx = plan.plannedExercises.first(where: {
                         let dbSlug = $0.exercise?.slug ?? ""
                         return dbSlug == normalizedSlug || dbSlug == ex.slug
                             || $0.exercise?.nameEN.lowercased() == ex.name.lowercased()
                     }) {
                         exerciseRef = plannedEx.exercise
-                        if let exercise = exerciseRef {
-                            // Použij ProgressionEngine pro výpočet cíle
-                            let history = exercise.weightHistory
-                                .sorted { $0.loggedAt > $1.loggedAt }
-                                .prefix(6)
-                                .map { entry in
-                                    CompletedSet(
-                                        setNumber: entry.setNumber,
-                                        weightKg: entry.weightKg,
-                                        reps: entry.reps,
-                                        rpe: entry.rpe,
-                                        isWarmupSet: false
-                                    )
-                                }
-                            
-                            if let suggestion = ProgressionEngine.calculateNextTarget(
-                                previousSets: history,
-                                programRepsMin: ex.repsMin,
-                                programRepsMax: ex.repsMax
-                            ) {
-                                for j in 0..<state.sets.count {
-                                    state.sets[j].previousWeightKg = suggestion.weight
-                                }
+                    }
+
+                    // 2. Pokud nenalezeno v plánu, hledej v celé DB
+                    if exerciseRef == nil {
+                        exerciseRef = allDBExercises.first(where: {
+                            $0.slug == normalizedSlug || $0.slug == ex.slug
+                                || $0.nameEN.lowercased() == ex.name.lowercased()
+                                || $0.name.lowercased() == ex.name.lowercased()
+                        })
+                    }
+
+                    if let exercise = exerciseRef {
+                        // Použij ProgressionEngine pro výpočet cíle
+                        let history = exercise.weightHistory
+                            .sorted { $0.loggedAt > $1.loggedAt }
+                            .prefix(6)
+                            .map { entry in
+                                CompletedSet(
+                                    setNumber: entry.setNumber,
+                                    weightKg: entry.weightKg,
+                                    reps: entry.reps,
+                                    rpe: entry.rpe,
+                                    isWarmupSet: false
+                                )
+                            }
+                        
+                        if let suggestion = ProgressionEngine.calculateNextTarget(
+                            previousSets: history,
+                            programRepsMin: ex.repsMin,
+                            programRepsMax: ex.repsMax
+                        ) {
+                            for j in 0..<state.sets.count {
+                                state.sets[j].previousWeightKg = suggestion.weight
                             }
                         }
                     }
@@ -640,6 +654,7 @@ struct SessionExerciseState: Identifiable {
         }
         self.isWarmupOnly = false
         self.exercise = planned.exercise
+        self.videoUrl = planned.exercise?.videoURL  // ✅ Video z DB
     }
 
     init(from response: ResponseExercise) {
@@ -658,6 +673,8 @@ struct SessionExerciseState: Identifiable {
             )
         }
         self.isWarmupOnly = false
+        // ✅ Zkusíme najít exercise v DB a vzít z něj video URL
+        self.videoUrl = nil  // bude nastaveno v linkExercisesWithDB()
     }
 
     static func warmupExercise(_ wu: WarmUpExercise) -> SessionExerciseState {

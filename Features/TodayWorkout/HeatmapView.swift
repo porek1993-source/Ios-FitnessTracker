@@ -122,27 +122,33 @@ struct BodyFigureView: View {
                             .stroke(Color.white.opacity(0.12), lineWidth: 1))
 
                     // Barevné overlay (jen vizuál, žádná tap logika)
-                    ForEach(areas) { area in
-                        let state = vm.state(for: area)
-                        RoundedRectangle(cornerRadius: area.cornerRadius)
-                            .fill(heatmapFillColor(for: state))
-                            .frame(width: area.relativeRect(in: geo.size).width,
-                                   height: area.relativeRect(in: geo.size).height)
-                            .position(x: area.relativeRect(in: geo.size).midX,
-                                      y: area.relativeRect(in: geo.size).midY)
-                            .animation(.easeInOut(duration: 0.25), value: state)
-                    }
-
-                    // Gamifikace overlay
-                    ForEach(areas) { area in
-                        if vm.muscleProgress(for: area) > 0 {
-                            MuscleGrowthOverlay(
-                                area: area,
-                                progress: vm.muscleProgress(for: area),
-                                canvasSize: geo.size
-                            )
+                    ZStack {
+                        ForEach(areas) { area in
+                            let state = vm.state(for: area)
+                            Capsule()
+                                .fill(heatmapFillColor(for: state))
+                                .frame(width: area.relativeRect(in: geo.size).width,
+                                       height: area.relativeRect(in: geo.size).height)
+                                .position(x: area.relativeRect(in: geo.size).midX,
+                                          y: area.relativeRect(in: geo.size).midY)
+                                .animation(.easeInOut(duration: 0.25), value: state)
                         }
                     }
+                    .clipShape(BodySilhouette(isFront: showingFront))
+
+                    // Gamifikace overlay
+                    ZStack {
+                        ForEach(areas) { area in
+                            if vm.muscleProgress(for: area) > 0 {
+                                MuscleGrowthOverlay(
+                                    area: area,
+                                    progress: vm.muscleProgress(for: area),
+                                    canvasSize: geo.size
+                                )
+                            }
+                        }
+                    }
+                    .clipShape(BodySilhouette(isFront: showingFront))
 
                     // OPRAVA: Jediný tap handler přes celý canvas.
                     // Místo contentShape(Rectangle()) na každé zone (kde vždy vyhrál
@@ -673,53 +679,53 @@ struct MuscleArea: Identifiable {
     }
 
     static let frontAreas: [MuscleArea] = [
-        // Hrudník — centered on torso
-        .init(id: "chest",           slug: "chest",           displayName: "Hrudník",            isFrontSide: true,  relX: 0.50, relY: 0.22, relW: 0.36, relH: 0.08),
-        // Přední ramena — at shoulder joints
-        .init(id: "l_front_shoulder",slug: "front-shoulders", displayName: "L. přední rameno",   isFrontSide: true,  relX: 0.24, relY: 0.17, relW: 0.11, relH: 0.06, cornerRadius: 16),
-        .init(id: "r_front_shoulder",slug: "front-shoulders", displayName: "P. přední rameno",   isFrontSide: true,  relX: 0.76, relY: 0.17, relW: 0.11, relH: 0.06, cornerRadius: 16),
-        // Bicepsy — on upper arms
-        .init(id: "left_bicep",      slug: "biceps",          displayName: "Levý biceps",         isFrontSide: true,  relX: 0.18, relY: 0.27, relW: 0.09, relH: 0.12, cornerRadius: 10),
-        .init(id: "right_bicep",     slug: "biceps",          displayName: "Pravý biceps",        isFrontSide: true,  relX: 0.82, relY: 0.27, relW: 0.09, relH: 0.12, cornerRadius: 10),
+        // Hrudník
+        .init(id: "chest",           slug: "chest",           displayName: "Hrudník",            isFrontSide: true,  relX: 0.50, relY: 0.22, relW: 0.36, relH: 0.10),
+        // Přední ramena
+        .init(id: "l_front_shoulder",slug: "front-shoulders", displayName: "L. přední rameno",   isFrontSide: true,  relX: 0.22, relY: 0.15, relW: 0.12, relH: 0.08, cornerRadius: 16),
+        .init(id: "r_front_shoulder",slug: "front-shoulders", displayName: "P. přední rameno",   isFrontSide: true,  relX: 0.78, relY: 0.15, relW: 0.12, relH: 0.08, cornerRadius: 16),
+        // Bicepsy
+        .init(id: "left_bicep",      slug: "biceps",          displayName: "Levý biceps",         isFrontSide: true,  relX: 0.18, relY: 0.24, relW: 0.09, relH: 0.14, cornerRadius: 10),
+        .init(id: "right_bicep",     slug: "biceps",          displayName: "Pravý biceps",        isFrontSide: true,  relX: 0.82, relY: 0.24, relW: 0.09, relH: 0.14, cornerRadius: 10),
         // Předloktí
-        .init(id: "left_forearm",    slug: "forearms",        displayName: "Levé předloktí",      isFrontSide: true,  relX: 0.18, relY: 0.47, relW: 0.07, relH: 0.12, cornerRadius: 8),
-        .init(id: "right_forearm",   slug: "forearms",        displayName: "Pravé předloktí",     isFrontSide: true,  relX: 0.82, relY: 0.47, relW: 0.07, relH: 0.12, cornerRadius: 8),
+        .init(id: "left_forearm",    slug: "forearms",        displayName: "Levé předloktí",      isFrontSide: true,  relX: 0.18, relY: 0.415, relW: 0.07, relH: 0.13, cornerRadius: 8),
+        .init(id: "right_forearm",   slug: "forearms",        displayName: "Pravé předloktí",     isFrontSide: true,  relX: 0.82, relY: 0.415, relW: 0.07, relH: 0.13, cornerRadius: 8),
         // Šikmé svaly břišní
-        .init(id: "left_oblique",    slug: "obliques",        displayName: "Levé šikmé svaly",   isFrontSide: true,  relX: 0.33, relY: 0.36, relW: 0.10, relH: 0.08, cornerRadius: 8),
-        .init(id: "right_oblique",   slug: "obliques",        displayName: "Pravé šikmé svaly",  isFrontSide: true,  relX: 0.67, relY: 0.36, relW: 0.10, relH: 0.08, cornerRadius: 8),
+        .init(id: "left_oblique",    slug: "obliques",        displayName: "Levé šikmé svaly",   isFrontSide: true,  relX: 0.35, relY: 0.36, relW: 0.06, relH: 0.10, cornerRadius: 8),
+        .init(id: "right_oblique",   slug: "obliques",        displayName: "Pravé šikmé svaly",  isFrontSide: true,  relX: 0.65, relY: 0.36, relW: 0.06, relH: 0.10, cornerRadius: 8),
         // Břicho
-        .init(id: "abs",             slug: "abdominals",      displayName: "Břicho",              isFrontSide: true,  relX: 0.50, relY: 0.35, relW: 0.20, relH: 0.10),
+        .init(id: "abs",             slug: "abdominals",      displayName: "Břicho",              isFrontSide: true,  relX: 0.50, relY: 0.35, relW: 0.24, relH: 0.12),
         // Přední stehna
-        .init(id: "left_quad",       slug: "quads",           displayName: "Levý kvadriceps",     isFrontSide: true,  relX: 0.39, relY: 0.58, relW: 0.14, relH: 0.18, cornerRadius: 12),
-        .init(id: "right_quad",      slug: "quads",           displayName: "Pravý kvadriceps",    isFrontSide: true,  relX: 0.61, relY: 0.58, relW: 0.14, relH: 0.18, cornerRadius: 12),
+        .init(id: "left_quad",       slug: "quads",           displayName: "Levý kvadriceps",     isFrontSide: true,  relX: 0.36, relY: 0.57, relW: 0.12, relH: 0.20, cornerRadius: 12),
+        .init(id: "right_quad",      slug: "quads",           displayName: "Pravý kvadriceps",    isFrontSide: true,  relX: 0.64, relY: 0.57, relW: 0.12, relH: 0.20, cornerRadius: 12),
         // Lýtka (přední)
-        .init(id: "left_calf_f",     slug: "calves",          displayName: "Levé lýtko",          isFrontSide: true,  relX: 0.39, relY: 0.82, relW: 0.10, relH: 0.12, cornerRadius: 10),
-        .init(id: "right_calf_f",    slug: "calves",          displayName: "Pravé lýtko",         isFrontSide: true,  relX: 0.61, relY: 0.82, relW: 0.10, relH: 0.12, cornerRadius: 10),
+        .init(id: "left_calf_f",     slug: "calves",          displayName: "Levé lýtko",          isFrontSide: true,  relX: 0.36, relY: 0.79, relW: 0.10, relH: 0.16, cornerRadius: 10),
+        .init(id: "right_calf_f",    slug: "calves",          displayName: "Pravé lýtko",         isFrontSide: true,  relX: 0.64, relY: 0.79, relW: 0.10, relH: 0.16, cornerRadius: 10),
     ]
 
     static let backAreas: [MuscleArea] = [
         // Trapézy (vrchní)
-        .init(id: "traps",            slug: "traps",           displayName: "Trapézy",             isFrontSide: false, relX: 0.50, relY: 0.17, relW: 0.32, relH: 0.06),
+        .init(id: "traps",            slug: "traps",           displayName: "Trapézy",             isFrontSide: false, relX: 0.50, relY: 0.14, relW: 0.30, relH: 0.06),
         // Zadní ramena
-        .init(id: "l_rear_shoulder",  slug: "rear-shoulders",  displayName: "L. zadní rameno",    isFrontSide: false, relX: 0.24, relY: 0.17, relW: 0.11, relH: 0.06, cornerRadius: 16),
-        .init(id: "r_rear_shoulder",  slug: "rear-shoulders",  displayName: "P. zadní rameno",    isFrontSide: false, relX: 0.76, relY: 0.17, relW: 0.11, relH: 0.06, cornerRadius: 16),
+        .init(id: "l_rear_shoulder",  slug: "rear-shoulders",  displayName: "L. zadní rameno",    isFrontSide: false, relX: 0.22, relY: 0.15, relW: 0.12, relH: 0.08, cornerRadius: 16),
+        .init(id: "r_rear_shoulder",  slug: "rear-shoulders",  displayName: "P. zadní rameno",    isFrontSide: false, relX: 0.78, relY: 0.15, relW: 0.12, relH: 0.08, cornerRadius: 16),
         // Tricepsy
-        .init(id: "left_tricep",      slug: "triceps",         displayName: "Levý triceps",        isFrontSide: false, relX: 0.18, relY: 0.27, relW: 0.09, relH: 0.12, cornerRadius: 10),
-        .init(id: "right_tricep",     slug: "triceps",         displayName: "Pravý triceps",       isFrontSide: false, relX: 0.82, relY: 0.27, relW: 0.09, relH: 0.12, cornerRadius: 10),
+        .init(id: "left_tricep",      slug: "triceps",         displayName: "Levý triceps",        isFrontSide: false, relX: 0.18, relY: 0.24, relW: 0.09, relH: 0.14, cornerRadius: 10),
+        .init(id: "right_tricep",     slug: "triceps",         displayName: "Pravý triceps",       isFrontSide: false, relX: 0.82, relY: 0.24, relW: 0.09, relH: 0.14, cornerRadius: 10),
         // Latissimus dorsi (boční záda)
-        .init(id: "left_lat",         slug: "lats",            displayName: "Lats (levé záda)",    isFrontSide: false, relX: 0.32, relY: 0.26, relW: 0.16, relH: 0.10, cornerRadius: 8),
-        .init(id: "right_lat",        slug: "lats",            displayName: "Lats (pravé záda)",   isFrontSide: false, relX: 0.68, relY: 0.26, relW: 0.16, relH: 0.10, cornerRadius: 8),
+        .init(id: "left_lat",         slug: "lats",            displayName: "Lats (levé záda)",    isFrontSide: false, relX: 0.34, relY: 0.26, relW: 0.12, relH: 0.12, cornerRadius: 8),
+        .init(id: "right_lat",        slug: "lats",            displayName: "Lats (pravé záda)",   isFrontSide: false, relX: 0.66, relY: 0.26, relW: 0.12, relH: 0.12, cornerRadius: 8),
         // Střední záda (rhomboid + mid-trap)
-        .init(id: "traps_middle",     slug: "traps-middle",    displayName: "Střední záda",        isFrontSide: false, relX: 0.50, relY: 0.27, relW: 0.22, relH: 0.08),
+        .init(id: "traps_middle",     slug: "traps-middle",    displayName: "Střední záda",        isFrontSide: false, relX: 0.50, relY: 0.26, relW: 0.20, relH: 0.10),
         // Spodní záda
-        .init(id: "lower_back",       slug: "lowerback",       displayName: "Spodní záda",         isFrontSide: false, relX: 0.50, relY: 0.39, relW: 0.24, relH: 0.07),
+        .init(id: "lower_back",       slug: "lowerback",       displayName: "Spodní záda",         isFrontSide: false, relX: 0.50, relY: 0.36, relW: 0.22, relH: 0.08),
         // Hýždě
-        .init(id: "glutes",           slug: "glutes",          displayName: "Hýždě",               isFrontSide: false, relX: 0.50, relY: 0.47, relW: 0.30, relH: 0.07),
+        .init(id: "glutes",           slug: "glutes",          displayName: "Hýždě",               isFrontSide: false, relX: 0.50, relY: 0.44, relW: 0.30, relH: 0.08),
         // Zadní stehna
-        .init(id: "left_hamstring",   slug: "hamstrings",      displayName: "Levý hamstring",      isFrontSide: false, relX: 0.39, relY: 0.58, relW: 0.14, relH: 0.17, cornerRadius: 12),
-        .init(id: "right_hamstring",  slug: "hamstrings",      displayName: "Pravý hamstring",     isFrontSide: false, relX: 0.61, relY: 0.58, relW: 0.14, relH: 0.17, cornerRadius: 12),
+        .init(id: "left_hamstring",   slug: "hamstrings",      displayName: "Levý hamstring",      isFrontSide: false, relX: 0.36, relY: 0.57, relW: 0.12, relH: 0.20, cornerRadius: 12),
+        .init(id: "right_hamstring",  slug: "hamstrings",      displayName: "Pravý hamstring",     isFrontSide: false, relX: 0.64, relY: 0.57, relW: 0.12, relH: 0.20, cornerRadius: 12),
         // Lýtka (zadní)
-        .init(id: "left_calf_b",      slug: "calves",          displayName: "Levé lýtko",          isFrontSide: false, relX: 0.39, relY: 0.82, relW: 0.10, relH: 0.12, cornerRadius: 10),
-        .init(id: "right_calf_b",     slug: "calves",          displayName: "Pravé lýtko",         isFrontSide: false, relX: 0.61, relY: 0.82, relW: 0.10, relH: 0.12, cornerRadius: 10),
+        .init(id: "left_calf_b",      slug: "calves",          displayName: "Levé lýtko",          isFrontSide: false, relX: 0.36, relY: 0.79, relW: 0.10, relH: 0.16, cornerRadius: 10),
+        .init(id: "right_calf_b",     slug: "calves",          displayName: "Pravé lýtko",         isFrontSide: false, relX: 0.64, relY: 0.79, relW: 0.10, relH: 0.16, cornerRadius: 10),
     ]
 }

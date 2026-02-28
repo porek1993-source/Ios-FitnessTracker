@@ -257,8 +257,6 @@ private struct ExerciseHero: View {
     let onSwap:   () -> Void
 
     @State private var glowPulse = false
-    @State private var videoPlayer: AVQueuePlayer?
-    @State private var playerLooper: AVPlayerLooper?
 
     private var completedSets: Int { exercise.sets.filter(\.isCompleted).count }
     private var totalSets: Int     { exercise.sets.count }
@@ -271,7 +269,7 @@ private struct ExerciseHero: View {
                          AppColors.background],
                 startPoint: .top, endPoint: .bottom
             )
-            .frame(height: 230)
+            .frame(height: 260)
             .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
 
             // Ambient glow
@@ -283,45 +281,13 @@ private struct ExerciseHero: View {
                 .animation(.easeInOut(duration: 2.6).repeatForever(autoreverses: true), value: glowPulse)
                 .offset(y: -30)
 
-            // Video / ikona cviku — používá videoUrl z muscle_wiki_data_full pokud je k dispozici
-            VStack(spacing: 0) {
-                if let player = videoPlayer {
-                    // ✅ Reálné video z Supabase Storage (muscle_wiki_data_full.video_url)
-                    LoopingVideoPlayer(player: player)
-                        .frame(height: 230)
-                        .clipped()
-                        .overlay(
-                            LinearGradient(
-                                colors: [Color.black.opacity(0.3), Color.clear, Color.clear],
-                                startPoint: .top, endPoint: .bottom
-                            )
-                        )
-                } else {
-                    // Fallback ikona pokud video URL není k dispozici
-                    Image(systemName: iconForSlug(exercise.slug))
-                        .font(.system(size: 64))
-                        .foregroundStyle(
-                            LinearGradient(
-                                colors: [.blue, .cyan.opacity(0.75)],
-                                startPoint: .topLeading, endPoint: .bottomTrailing
-                            )
-                        )
-                        .symbolEffect(.pulse.wholeSymbol, options: .repeating)
-                        .padding(.top, 28)
-
-                    Text("VIDEO TECHNIKY")
-                        .font(.system(size: 8, weight: .black))
-                        .foregroundStyle(.white.opacity(0.16))
-                        .kerning(1.0)
-                        .padding(.top, 10)
-
-                    Spacer()
-                }
-            }
-            .frame(height: 230)
-            .onAppear { setupVideoPlayer() }
-            .onDisappear { videoPlayer?.pause() }
-            .onChange(of: exercise.id) { setupVideoPlayer() }
+            // ✅ Sjednocené video/GIF view z ExerciseMediaView
+            ExerciseMediaView(
+                gifURL: exercise.videoUrl.flatMap { URL(string: $0) },
+                exerciseName: exercise.name,
+                exerciseNameEn: exercise.exercise?.nameEN
+            )
+            .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
 
             // Bottom: name + progress + swap button
             VStack(spacing: 0) {
@@ -389,35 +355,9 @@ private struct ExerciseHero: View {
                 }
                 .frame(height: 2.5)
             }
+            .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
         }
         .onAppear { glowPulse = true }
-    }
-
-    private func setupVideoPlayer() {
-        // Zastavit předchozí přehrávání
-        videoPlayer?.pause()
-        playerLooper = nil
-        videoPlayer = nil
-
-        guard let urlString = exercise.videoUrl,
-              let url = URL(string: urlString) else { return }
-
-        let item = AVPlayerItem(url: url)
-        let player = AVQueuePlayer(playerItem: item)
-        playerLooper = AVPlayerLooper(player: player, templateItem: item)
-        player.isMuted = true   // Video jako vizuální reference — bez zvuku
-        player.play()
-        videoPlayer = player
-    }
-
-    private func iconForSlug(_ slug: String) -> String {
-        if slug.contains("bench") || slug.contains("chest") { return "scalemass.fill" }
-        if slug.contains("press") && !slug.contains("leg")  { return "scalemass.fill" }
-        if slug.contains("squat") || slug.contains("leg")   { return "figure.strengthtraining.traditional" }
-        if slug.contains("pull")  || slug.contains("row")   { return "figure.gymnastics" }
-        if slug.contains("curl")  || slug.contains("bicep") { return "figure.arms.open" }
-        if slug.contains("dead")                            { return "figure.strengthtraining.functional" }
-        return "figure.core.training"
     }
 }
 

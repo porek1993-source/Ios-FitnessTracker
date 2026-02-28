@@ -518,6 +518,9 @@ final class ActiveSessionViewModel: ObservableObject {
                 states.append(SessionExerciseState.warmupExercise(wu))
             }
 
+            // ✅ Načteme VŠECHNY cviky z DB pro spolehlivé napárování
+            let allDBExercises: [Exercise] = (try? SharedModelContainer.container.mainContext.fetch(FetchDescriptor<Exercise>())) ?? []
+
             // Main blocks — napáruj Exercise DB referenci a progressive overload
             let allPlanned = plan.plannedExercises
             var isFirstWorkingExercise = true
@@ -526,12 +529,21 @@ final class ActiveSessionViewModel: ObservableObject {
                 for ex in block.exercises {
                     var state = SessionExerciseState(from: ex)
 
-                    // Najdi odpovídající Exercise v DB podle slug nebo názvu
-                    let matchedExercise = allPlanned.first(where: {
+                    // ✅ Hledej v planned i v celé DB
+                    let normalizedSlug = FallbackWorkoutGenerator.normalizedSlug(ex.slug)
+                    var matchedExercise: Exercise? = allPlanned.first(where: {
                         let dbSlug = $0.exercise?.slug ?? ""
-                        let normalizedEx = FallbackWorkoutGenerator.normalizedSlug(ex.slug)
-                        return dbSlug == normalizedEx || dbSlug == ex.slug
+                        return dbSlug == normalizedSlug || dbSlug == ex.slug
                     })?.exercise
+
+                    // Fallback: hledej v celé DB podle slug nebo jména
+                    if matchedExercise == nil {
+                        matchedExercise = allDBExercises.first(where: {
+                            $0.slug == normalizedSlug || $0.slug == ex.slug
+                                || $0.nameEN.lowercased() == ex.name.lowercased()
+                                || $0.name.lowercased() == ex.name.lowercased()
+                        })
+                    }
 
                     if let exercise = matchedExercise {
                         state.exercise = exercise
