@@ -708,6 +708,33 @@ struct WeekDayExerciseDetailView: View {
             }
         }
     }
+
+    // MARK: - Actions
+
+    private func generatePreview() {
+        guard let profile = profile, let pDay = plannedDay else { return }
+
+        isGeneratingPreview = true
+        Task {
+            let aiService = AITrainerService(modelContext: modelContext, healthKitService: healthKit)
+            let response = await aiService.generateTodayWorkout(
+                for: day.date,
+                profile: profile,
+                plannedDay: pDay,
+                equipmentOverride: nil,
+                timeLimitMinutes: nil
+            )
+            
+            await MainActor.run {
+                self.previewResponse = response
+                self.isGeneratingPreview = false
+            }
+        }
+    }
+
+    private func checkCache() {
+        hasCheckedCache = true
+    }
 }
 
 
