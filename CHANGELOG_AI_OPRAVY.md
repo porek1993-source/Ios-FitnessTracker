@@ -53,3 +53,22 @@
   → Finální XcodeGen konfigurace s HealthKit entitlements a privacy strings
 - `.github/workflows/ios-build.yml`
   → Pipeline s cache (SPM + Homebrew), build numbering, TestResults upload
+---
+
+## Session 4: Video Sync & SVG Anatomy
+
+### Nové soubory:
+- `Features/Shared/AnatomySVGPath.swift`
+  → Centrální mapa SVG cest a offsetů z human-anatomy-main (přední část těla)
+
+### Přepsané soubory:
+- `App/AppEnvironment.swift`
+  → Vylepšený `syncExerciseVideos` s fuzzy matchingem (fix "ukázka chybí")
+- `Features/Shared/DetailedBodyFigureView.swift`
+  → Implementace dynamického skládání SVG dílků s přesným zarovnáním
+- `Features/Shared/ExerciseMediaView.swift`
+  → Úplné odstranění YouTube fallbacku, pročištění komentářů
+
+### Smazané soubory:
+- `Core/Utilities/YouTubeLinkGenerator.swift`
+  → Již nepotřebné, veškerá media jsou lokální/Supabase

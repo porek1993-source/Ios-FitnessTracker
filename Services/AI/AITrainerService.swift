@@ -208,6 +208,37 @@ final class AITrainerService: ObservableObject {
         AppLogger.info("🗑️ [AITrainer] Cache dnešního tréninku vymazána (manuální).")
     }
 
+    /// Generuje tréninky pro všechny dny v plánu, které nemají zatím cviky.
+    /// Šetří prompty tím, že využívá cache a v budoucnu může být sjednoceno do batch promptu.
+    func generateFullWeek(profile: UserProfile, plan: WorkoutPlan) async {
+        isLoading = true
+        defer { isLoading = false }
+
+        AppLogger.info("📅 [AITrainer] Spouštím batch generování pro plán: \(plan.title)")
+        
+        // Získáme tréninkové dny, které nemají naplánované cviky
+        let daysToProcess = plan.scheduledDays.filter { !$0.isRestDay && $0.plannedExercises.isEmpty }
+        
+        for day in daysToProcess {
+            // Kalkulujeme datum pro tento 'den v týdnu' (1=Po...7=Ne)
+            let calendar = Calendar.current
+            let today = Date.now
+            let currentWeekday = calendar.component(.weekday, from: today)
+            let ourTodayIdx = (currentWeekday == 1 ? 7 : currentWeekday - 1)
+            
+            let diff = day.dayOfWeek - ourTodayIdx
+            let targetDate = calendar.date(byAdding: .day, value: (diff < 0 ? diff + 7 : diff), to: today) ?? today
+            
+            AppLogger.info("🔄 [Batch] Generuji \(day.label) pro datum \(targetDate.formatted(date: .abbreviated, time: .omitted))")
+            
+            _ = await generateTodayWorkout(
+                for: targetDate,
+                profile: profile,
+                plannedDay: day
+            )
+        }
+    }
+
     /// Vymaže celou cache (po změně profilu nebo tréninkového plánu).
     func clearAllCache() {
         WorkoutCache.clearAll()
