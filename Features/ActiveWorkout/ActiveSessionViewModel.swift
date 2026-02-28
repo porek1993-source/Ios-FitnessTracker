@@ -125,33 +125,9 @@ final class ActiveSessionViewModel: ObservableObject {
     //   Bez tohoto guardu by kód mohl crashnout při přístupu na dealokovaný objekt.
 
     func loadCoachTipForCurrentExercise(aiService: AITrainerService) {
-        // Zruš předchozí Task pokud ještě běží (uživatel rychle přepíná cviky)
+        // AI API VOLÁNÍ DEAKTIVOVÁNO PRO ÚSPORU. Proaktivní tipy vypnuty.
         coachTipTask?.cancel()
-
-        coachTipTask = Task { [weak self] in  // ⚠️ [weak self] — POVINNÉ
-            guard let self else { return }     // ⚠️ guard — POVINNÉ
-
-            self.isLoadingCoachTip = true
-            defer {
-                // ✅ FIX #8: Task je @MainActor-isolated, proto defer může přímo přiřadit
-                // Vnitřní Task { @MainActor } byl zbytečný a mohl způsobit race condition:
-                // defer se spustí synchronně při opuštění scope, ale vnořený Task byl
-                // naplánován asynchronně — isLoadingCoachTip zůstal true déle než bylo nutné.
-                self.isLoadingCoachTip = false
-            }
-
-            // Kontrola Task cancellation před heavyweight operací
-            guard !Task.isCancelled else { return }
-
-            // Simulace AI volání (nahraď skutečným AI service voláním)
-            // V produkci: let tip = try await aiService.generateCoachTip(for: exercise)
-            try? await Task.sleep(nanoseconds: 100_000_000)  // 0.1s debounce
-
-    
-
-            // ✅ Bezpečné: @MainActor třída zajišťuje, že jsme na main threadu
-            self.coachMessage = self.exercises[safe: self.currentExerciseIndex]?.coachTip
-        }
+        coachMessage = "Soustřeď se na techniku a dýchání. 💪"
     }
 
     // MARK: ═══════════════════════════════════════════════════════════════════

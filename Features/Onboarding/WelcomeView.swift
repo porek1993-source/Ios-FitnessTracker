@@ -5,6 +5,7 @@ import SwiftUI
 
 struct WelcomeView: View {
     let onStart: () -> Void
+    let onSkip: () -> Void
 
     @State private var animateItems = false
 
@@ -104,6 +105,15 @@ struct WelcomeView: View {
                     Text("iKorba je tvůj osobní AI průvodce")
                         .font(.system(size: 13, weight: .medium))
                         .foregroundStyle(.white.opacity(0.3))
+                        
+                    // ── Přeskočení Onboardingu (Testování) ──
+                    Button(action: onSkip) {
+                        Text("Přeskočit Onboarding (Mock Data)")
+                            .font(.system(size: 14, weight: .medium))
+                            .foregroundStyle(.white.opacity(0.5))
+                            .underline()
+                    }
+                    .padding(.top, 8)
                 }
                 .offset(y: animateItems ? 0 : 30)
                 .opacity(animateItems ? 1 : 0)
@@ -120,5 +130,5 @@ struct WelcomeView: View {
 }
 
 #Preview {
-    WelcomeView(onStart: {})
+    WelcomeView(onStart: {}, onSkip: {})
 }

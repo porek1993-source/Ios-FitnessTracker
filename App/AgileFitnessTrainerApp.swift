@@ -57,6 +57,7 @@ struct AgileFitnessTrainerApp: App {
 struct RootView: View {
 
     @Query private var profiles: [UserProfile]
+    @Environment(\.modelContext) private var modelContext
     @EnvironmentObject private var appEnv: AppEnvironment
 
     @State private var showChat = false
@@ -105,13 +106,45 @@ struct RootView: View {
                     removal:   .opacity
                 ))
         } else {
-            WelcomeView(onStart: {
-                withAnimation(.spring(response: 0.44, dampingFraction: 0.80)) {
-                    showChat = true
+            WelcomeView(
+                onStart: {
+                    withAnimation(.spring(response: 0.44, dampingFraction: 0.80)) {
+                        showChat = true
+                    }
+                },
+                onSkip: {
+                    injectMockProfile()
                 }
-            })
+            )
             .transition(.opacity)
         }
+    }
+    
+    // MARK: - Mock Bypassing (Testování)
+    private func injectMockProfile() {
+        let calendar = Calendar(identifier: .gregorian)
+        var dateComponents = DateComponents()
+        // 32 let starý uživatel (cca 1994)
+        dateComponents.year = calendar.component(.year, from: .now) - 32
+        let birthDate = calendar.date(from: dateComponents) ?? .now
+
+        let mockProfile = UserProfile(
+            name: "Tester",
+            birthDate: birthDate,
+            gender: .male,
+            heightCm: 177.0,
+            weightKg: 70.0,
+            primaryGoal: .hypertrophy,
+            fitnessLevel: .advanced,
+            availableDaysPerWeek: 4,
+            preferredSplitType: .upperLower, // or PPL/FullBody
+            sessionDurationMinutes: 60
+        )
+        
+        // Okamžitě vložíme do SwiftData. Aplikace díky @Query[UserProfile] automaticky pochopí,
+        // že profiles.isEmpty == false a zobrazí MainTabView s vynecháním AI onboarding.
+        modelContext.insert(mockProfile)
+        try? modelContext.save()
     }
 }
 
