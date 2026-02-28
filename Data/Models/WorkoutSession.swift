@@ -50,6 +50,8 @@ final class SessionExercise {
     var substitutionReason: String?
 
     var exercise: Exercise?
+    var fallbackSlug: String?
+    var fallbackName: String?
 
     var session: WorkoutSession?
 
@@ -57,13 +59,18 @@ final class SessionExercise {
     var completedSets: [CompletedSet]
 
     var exerciseName: String {
-        exercise?.name ?? "Neznámý cvik"
+        if let ex = exercise { return ex.name }
+        if let fn = fallbackName { return fn }
+        if let fs = fallbackSlug { return "🔍 Načítám... (\(fs))" }
+        return "Neznámý cvik"
     }
 
-    init(order: Int, exercise: Exercise?, session: WorkoutSession?) {
+    init(order: Int, exercise: Exercise?, fallbackSlug: String? = nil, fallbackName: String? = nil, session: WorkoutSession?) {
         self.order = order
         self.wasSubstituted = false
         self.exercise = exercise
+        self.fallbackSlug = fallbackSlug
+        self.fallbackName = fallbackName
         self.session = session
         self.completedSets = []
     }

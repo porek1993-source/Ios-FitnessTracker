@@ -68,12 +68,16 @@ final class PlannedExercise {
     var restSeconds: Int
 
     var exercise: Exercise?
+    var fallbackSlug: String?
+    var fallbackName: String?
 
     var plannedDay: PlannedWorkoutDay?
 
     init(
         order: Int,
         exercise: Exercise?,
+        fallbackSlug: String? = nil,
+        fallbackName: String? = nil,
         targetSets: Int = 3,
         targetRepsMin: Int = 8,
         targetRepsMax: Int = 12,
@@ -82,6 +86,8 @@ final class PlannedExercise {
     ) {
         self.order = order
         self.exercise = exercise
+        self.fallbackSlug = fallbackSlug
+        self.fallbackName = fallbackName
         self.targetSets = targetSets
         self.targetRepsMin = targetRepsMin
         self.targetRepsMax = targetRepsMax

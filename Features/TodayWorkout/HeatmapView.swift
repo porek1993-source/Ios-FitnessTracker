@@ -4,6 +4,7 @@ import SwiftUI
 
 struct HeatmapView: View {
     @StateObject private var vm = HeatmapViewModel()
+    @EnvironmentObject private var healthKit: HealthKitService
     @State private var showConfirmation = false
 
     var body: some View {
@@ -48,6 +49,7 @@ struct HeatmapView: View {
         }
         .preferredColorScheme(.dark)
         .animation(.spring(response: 0.4, dampingFraction: 0.75), value: vm.affectedAreas.count)
+        .onAppear { vm.loadReadiness(healthKit: healthKit) }
     }
 }
 
@@ -88,7 +90,7 @@ struct ReadinessRingView: View {
                 .animation(.spring(response: 0.6), value: score)
             VStack(spacing: 0) {
                 Text("\(Int(score))").font(.system(size: 18, weight: .bold)).foregroundStyle(.white)
-                Text("kondice").font(.system(size: 8)).foregroundStyle(.white.opacity(0.4))
+                Text("připravenost").font(.system(size: 7)).foregroundStyle(.white.opacity(0.4))
             }
         }
         .frame(width: 64, height: 64)
@@ -171,18 +173,151 @@ struct BodySilhouette: Shape {
     func path(in rect: CGRect) -> Path {
         var p = Path()
         let w = rect.width, h = rect.height
-        p.addEllipse(in: CGRect(x: w*0.35, y: 0, width: w*0.30, height: w*0.30))
-        p.addRect(CGRect(x: w*0.44, y: w*0.28, width: w*0.12, height: h*0.04))
-        p.addRoundedRect(in: CGRect(x: w*0.22, y: h*0.17, width: w*0.56, height: h*0.33), cornerSize: .init(width: 12, height: 12))
-        p.addRoundedRect(in: CGRect(x: w*0.04, y: h*0.17, width: w*0.16, height: h*0.28), cornerSize: .init(width: 8, height: 8))
-        p.addRoundedRect(in: CGRect(x: w*0.80, y: h*0.17, width: w*0.16, height: h*0.28), cornerSize: .init(width: 8, height: 8))
-        p.addRoundedRect(in: CGRect(x: w*0.05, y: h*0.47, width: w*0.14, height: h*0.22), cornerSize: .init(width: 7, height: 7))
-        p.addRoundedRect(in: CGRect(x: w*0.81, y: h*0.47, width: w*0.14, height: h*0.22), cornerSize: .init(width: 7, height: 7))
-        p.addRoundedRect(in: CGRect(x: w*0.20, y: h*0.49, width: w*0.60, height: h*0.10), cornerSize: .init(width: 8, height: 8))
-        p.addRoundedRect(in: CGRect(x: w*0.22, y: h*0.58, width: w*0.24, height: h*0.24), cornerSize: .init(width: 10, height: 10))
-        p.addRoundedRect(in: CGRect(x: w*0.54, y: h*0.58, width: w*0.24, height: h*0.24), cornerSize: .init(width: 10, height: 10))
-        p.addRoundedRect(in: CGRect(x: w*0.24, y: h*0.83, width: w*0.20, height: h*0.17), cornerSize: .init(width: 8, height: 8))
-        p.addRoundedRect(in: CGRect(x: w*0.56, y: h*0.83, width: w*0.20, height: h*0.17), cornerSize: .init(width: 8, height: 8))
+        let cx = w * 0.5
+
+        // ── Hlava ──
+        p.addEllipse(in: CGRect(x: cx - w*0.11, y: h*0.005, width: w*0.22, height: h*0.10))
+
+        // ── Krk ──
+        p.addRoundedRect(
+            in: CGRect(x: cx - w*0.045, y: h*0.09, width: w*0.09, height: h*0.035),
+            cornerSize: CGSize(width: 6, height: 6), style: .continuous
+        )
+
+        // ── Trup (ramena → pas) — Bézier ──
+        p.move(to: CGPoint(x: cx - w*0.26, y: h*0.125))
+        // Levé rameno zaoblení
+        p.addQuadCurve(to: CGPoint(x: cx - w*0.28, y: h*0.18),
+                       control: CGPoint(x: cx - w*0.29, y: h*0.125))
+        // Levý bok dolů k pasu
+        p.addCurve(to: CGPoint(x: cx - w*0.18, y: h*0.44),
+                   control1: CGPoint(x: cx - w*0.28, y: h*0.30),
+                   control2: CGPoint(x: cx - w*0.22, y: h*0.40))
+        // Pánev spodek
+        p.addQuadCurve(to: CGPoint(x: cx + w*0.18, y: h*0.44),
+                       control: CGPoint(x: cx, y: h*0.46))
+        // Pravý bok nahoru
+        p.addCurve(to: CGPoint(x: cx + w*0.28, y: h*0.18),
+                   control1: CGPoint(x: cx + w*0.22, y: h*0.40),
+                   control2: CGPoint(x: cx + w*0.28, y: h*0.30))
+        // Pravé rameno zaoblení
+        p.addQuadCurve(to: CGPoint(x: cx + w*0.26, y: h*0.125),
+                       control: CGPoint(x: cx + w*0.29, y: h*0.125))
+        // Uzavření přes hrudník nahoře
+        p.addQuadCurve(to: CGPoint(x: cx - w*0.26, y: h*0.125),
+                       control: CGPoint(x: cx, y: h*0.115))
+        p.closeSubpath()
+
+        // ── Levá paže (horní = biceps/triceps) ──
+        let armTopPath = makeArmPath(cx: cx, w: w, h: h, side: -1)
+        p.addPath(armTopPath)
+
+        // ── Pravá paže ──
+        let armTopPathR = makeArmPath(cx: cx, w: w, h: h, side: 1)
+        p.addPath(armTopPathR)
+
+        // ── Levé předloktí ──
+        let forearmL = makeForearmPath(cx: cx, w: w, h: h, side: -1)
+        p.addPath(forearmL)
+
+        // ── Pravé předloktí ──
+        let forearmR = makeForearmPath(cx: cx, w: w, h: h, side: 1)
+        p.addPath(forearmR)
+
+        // ── Levá noha (stehno) ──
+        let thighL = makeThighPath(cx: cx, w: w, h: h, side: -1)
+        p.addPath(thighL)
+
+        // ── Pravá noha (stehno) ──
+        let thighR = makeThighPath(cx: cx, w: w, h: h, side: 1)
+        p.addPath(thighR)
+
+        // ── Levé lýtko ──
+        let calfL = makeCalfPath(cx: cx, w: w, h: h, side: -1)
+        p.addPath(calfL)
+
+        // ── Pravé lýtko ──
+        let calfR = makeCalfPath(cx: cx, w: w, h: h, side: 1)
+        p.addPath(calfR)
+
+        return p
+    }
+
+    // MARK: - Limb Helpers
+
+    private func makeArmPath(cx: CGFloat, w: CGFloat, h: CGFloat, side: CGFloat) -> Path {
+        var p = Path()
+        let ox = cx + side * w * 0.32
+        let topY = h * 0.16
+        let botY = h * 0.38
+        let armW: CGFloat = w * 0.065
+
+        p.addRoundedRect(
+            in: CGRect(x: ox - armW, y: topY, width: armW * 2, height: botY - topY),
+            cornerSize: CGSize(width: armW * 0.8, height: armW * 0.8), style: .continuous
+        )
+        return p
+    }
+
+    private func makeForearmPath(cx: CGFloat, w: CGFloat, h: CGFloat, side: CGFloat) -> Path {
+        var p = Path()
+        let ox = cx + side * w * 0.32
+        let topY = h * 0.39
+        let botY = h * 0.56
+        let fW: CGFloat = w * 0.048
+
+        p.addRoundedRect(
+            in: CGRect(x: ox - fW, y: topY, width: fW * 2, height: botY - topY),
+            cornerSize: CGSize(width: fW * 0.8, height: fW * 0.8), style: .continuous
+        )
+        return p
+    }
+
+    private func makeThighPath(cx: CGFloat, w: CGFloat, h: CGFloat, side: CGFloat) -> Path {
+        var p = Path()
+        let ox = cx + side * w * 0.115
+        let topY = h * 0.445
+        let botY = h * 0.72
+        let topW: CGFloat = w * 0.10
+        let botW: CGFloat = w * 0.065
+
+        // Tapered shape — wider at top, narrower at knee
+        p.move(to: CGPoint(x: ox - topW, y: topY))
+        p.addLine(to: CGPoint(x: ox + topW, y: topY))
+        p.addQuadCurve(to: CGPoint(x: ox + botW, y: botY),
+                       control: CGPoint(x: ox + topW * 0.9, y: (topY + botY) * 0.55))
+        p.addQuadCurve(to: CGPoint(x: ox - botW, y: botY),
+                       control: CGPoint(x: ox, y: botY + h * 0.012))
+        p.addQuadCurve(to: CGPoint(x: ox - topW, y: topY),
+                       control: CGPoint(x: ox - topW * 0.9, y: (topY + botY) * 0.55))
+        p.closeSubpath()
+        return p
+    }
+
+    private func makeCalfPath(cx: CGFloat, w: CGFloat, h: CGFloat, side: CGFloat) -> Path {
+        var p = Path()
+        let ox = cx + side * w * 0.115
+        let topY = h * 0.73
+        let botY = h * 0.93
+        let topW: CGFloat = w * 0.058
+        let midW: CGFloat = w * 0.065
+        let botW: CGFloat = w * 0.042
+
+        // Calf: slim at knee, wider at muscle belly, tapers to ankle
+        p.move(to: CGPoint(x: ox - topW, y: topY))
+        p.addLine(to: CGPoint(x: ox + topW, y: topY))
+        p.addQuadCurve(to: CGPoint(x: ox + midW, y: topY + (botY - topY) * 0.35),
+                       control: CGPoint(x: ox + midW * 1.05, y: topY + (botY - topY) * 0.15))
+        p.addQuadCurve(to: CGPoint(x: ox + botW, y: botY),
+                       control: CGPoint(x: ox + midW * 0.8, y: topY + (botY - topY) * 0.7))
+        // Foot hint
+        p.addQuadCurve(to: CGPoint(x: ox - botW, y: botY),
+                       control: CGPoint(x: ox, y: botY + h * 0.015))
+        p.addQuadCurve(to: CGPoint(x: ox - midW, y: topY + (botY - topY) * 0.35),
+                       control: CGPoint(x: ox - midW * 0.8, y: topY + (botY - topY) * 0.7))
+        p.addQuadCurve(to: CGPoint(x: ox - topW, y: topY),
+                       control: CGPoint(x: ox - midW * 1.05, y: topY + (botY - topY) * 0.15))
+        p.closeSubpath()
         return p
     }
 }
@@ -444,8 +579,42 @@ struct InstructionsBanner: View {
 final class HeatmapViewModel: ObservableObject {
     @Published var affectedAreas: [FatigueEntry] = []
     @Published var lastTappedArea: MuscleArea?
-    @Published var readinessScore: Double = 78
+    @Published var readinessScore: Double = 0
     @Published var muscleProgressMap: [String: Double] = [:]
+
+    /// Načte readiness z HealthKit — stejný výpočet jako Dashboard
+    func loadReadiness(healthKit: HealthKitService) {
+        Task {
+            guard let summary = try? await healthKit.fetchDailySummary(for: .now) else {
+                await MainActor.run { readinessScore = 65 }
+                return
+            }
+            var score = 70.0
+            if let sleep = summary.sleepDurationHours {
+                if sleep >= 8   { score += 15 }
+                else if sleep >= 7 { score += 8 }
+                else if sleep >= 6 { score += 0 }
+                else if sleep >= 5 { score -= 15 }
+                else { score -= 25 }
+            }
+            if let hrv = summary.hrv {
+                if hrv > 60  { score += 10 }
+                else if hrv > 40  { score += 3 }
+                else { score -= 5 }
+            }
+            if let rhr = summary.restingHeartRate {
+                if rhr < 55  { score += 5 }
+                else if rhr < 65  { score += 2 }
+                else if rhr > 80  { score -= 10 }
+            }
+            let final = max(10, min(100, score))
+            await MainActor.run {
+                withAnimation(.spring(response: 0.8)) {
+                    readinessScore = final
+                }
+            }
+        }
+    }
 
     func state(for area: MuscleArea) -> MuscleState {
         guard let entry = affectedAreas.first(where: { $0.area.id == area.id }) else { return .healthy }
@@ -504,53 +673,53 @@ struct MuscleArea: Identifiable {
     }
 
     static let frontAreas: [MuscleArea] = [
-        // Hrudník
-        .init(id: "chest",           slug: "chest",           displayName: "Hrudník",            isFrontSide: true,  relX: 0.50, relY: 0.25, relW: 0.38, relH: 0.09),
-        // Přední ramena
-        .init(id: "l_front_shoulder",slug: "front-shoulders", displayName: "L. přední rameno",   isFrontSide: true,  relX: 0.22, relY: 0.22, relW: 0.13, relH: 0.07, cornerRadius: 20),
-        .init(id: "r_front_shoulder",slug: "front-shoulders", displayName: "P. přední rameno",   isFrontSide: true,  relX: 0.78, relY: 0.22, relW: 0.13, relH: 0.07, cornerRadius: 20),
-        // Bicepsy
-        .init(id: "left_bicep",      slug: "biceps",          displayName: "Levý biceps",         isFrontSide: true,  relX: 0.11, relY: 0.30, relW: 0.10, relH: 0.10, cornerRadius: 10),
-        .init(id: "right_bicep",     slug: "biceps",          displayName: "Pravý biceps",        isFrontSide: true,  relX: 0.89, relY: 0.30, relW: 0.10, relH: 0.10, cornerRadius: 10),
+        // Hrudník — centered on torso
+        .init(id: "chest",           slug: "chest",           displayName: "Hrudník",            isFrontSide: true,  relX: 0.50, relY: 0.22, relW: 0.36, relH: 0.08),
+        // Přední ramena — at shoulder joints
+        .init(id: "l_front_shoulder",slug: "front-shoulders", displayName: "L. přední rameno",   isFrontSide: true,  relX: 0.24, relY: 0.17, relW: 0.11, relH: 0.06, cornerRadius: 16),
+        .init(id: "r_front_shoulder",slug: "front-shoulders", displayName: "P. přední rameno",   isFrontSide: true,  relX: 0.76, relY: 0.17, relW: 0.11, relH: 0.06, cornerRadius: 16),
+        // Bicepsy — on upper arms
+        .init(id: "left_bicep",      slug: "biceps",          displayName: "Levý biceps",         isFrontSide: true,  relX: 0.18, relY: 0.27, relW: 0.09, relH: 0.12, cornerRadius: 10),
+        .init(id: "right_bicep",     slug: "biceps",          displayName: "Pravý biceps",        isFrontSide: true,  relX: 0.82, relY: 0.27, relW: 0.09, relH: 0.12, cornerRadius: 10),
         // Předloktí
-        .init(id: "left_forearm",    slug: "forearms",        displayName: "Levé předloktí",      isFrontSide: true,  relX: 0.08, relY: 0.43, relW: 0.09, relH: 0.09, cornerRadius: 8),
-        .init(id: "right_forearm",   slug: "forearms",        displayName: "Pravé předloktí",     isFrontSide: true,  relX: 0.92, relY: 0.43, relW: 0.09, relH: 0.09, cornerRadius: 8),
+        .init(id: "left_forearm",    slug: "forearms",        displayName: "Levé předloktí",      isFrontSide: true,  relX: 0.18, relY: 0.47, relW: 0.07, relH: 0.12, cornerRadius: 8),
+        .init(id: "right_forearm",   slug: "forearms",        displayName: "Pravé předloktí",     isFrontSide: true,  relX: 0.82, relY: 0.47, relW: 0.07, relH: 0.12, cornerRadius: 8),
         // Šikmé svaly břišní
-        .init(id: "left_oblique",    slug: "obliques",        displayName: "Levé šikmé svaly",   isFrontSide: true,  relX: 0.32, relY: 0.38, relW: 0.11, relH: 0.10, cornerRadius: 8),
-        .init(id: "right_oblique",   slug: "obliques",        displayName: "Pravé šikmé svaly",  isFrontSide: true,  relX: 0.68, relY: 0.38, relW: 0.11, relH: 0.10, cornerRadius: 8),
+        .init(id: "left_oblique",    slug: "obliques",        displayName: "Levé šikmé svaly",   isFrontSide: true,  relX: 0.33, relY: 0.36, relW: 0.10, relH: 0.08, cornerRadius: 8),
+        .init(id: "right_oblique",   slug: "obliques",        displayName: "Pravé šikmé svaly",  isFrontSide: true,  relX: 0.67, relY: 0.36, relW: 0.10, relH: 0.08, cornerRadius: 8),
         // Břicho
-        .init(id: "abs",             slug: "abdominals",      displayName: "Břicho",              isFrontSide: true,  relX: 0.50, relY: 0.38, relW: 0.22, relH: 0.11),
+        .init(id: "abs",             slug: "abdominals",      displayName: "Břicho",              isFrontSide: true,  relX: 0.50, relY: 0.35, relW: 0.20, relH: 0.10),
         // Přední stehna
-        .init(id: "left_quad",       slug: "quads",           displayName: "Levý kvadriceps",     isFrontSide: true,  relX: 0.34, relY: 0.66, relW: 0.18, relH: 0.16, cornerRadius: 10),
-        .init(id: "right_quad",      slug: "quads",           displayName: "Pravý kvadriceps",    isFrontSide: true,  relX: 0.66, relY: 0.66, relW: 0.18, relH: 0.16, cornerRadius: 10),
+        .init(id: "left_quad",       slug: "quads",           displayName: "Levý kvadriceps",     isFrontSide: true,  relX: 0.39, relY: 0.58, relW: 0.14, relH: 0.18, cornerRadius: 12),
+        .init(id: "right_quad",      slug: "quads",           displayName: "Pravý kvadriceps",    isFrontSide: true,  relX: 0.61, relY: 0.58, relW: 0.14, relH: 0.18, cornerRadius: 12),
         // Lýtka (přední)
-        .init(id: "left_calf_f",     slug: "calves",          displayName: "Levé lýtko",          isFrontSide: true,  relX: 0.34, relY: 0.89, relW: 0.14, relH: 0.09, cornerRadius: 8),
-        .init(id: "right_calf_f",    slug: "calves",          displayName: "Pravé lýtko",         isFrontSide: true,  relX: 0.66, relY: 0.89, relW: 0.14, relH: 0.09, cornerRadius: 8),
+        .init(id: "left_calf_f",     slug: "calves",          displayName: "Levé lýtko",          isFrontSide: true,  relX: 0.39, relY: 0.82, relW: 0.10, relH: 0.12, cornerRadius: 10),
+        .init(id: "right_calf_f",    slug: "calves",          displayName: "Pravé lýtko",         isFrontSide: true,  relX: 0.61, relY: 0.82, relW: 0.10, relH: 0.12, cornerRadius: 10),
     ]
 
     static let backAreas: [MuscleArea] = [
         // Trapézy (vrchní)
-        .init(id: "traps",            slug: "traps",           displayName: "Trapézy",             isFrontSide: false, relX: 0.50, relY: 0.20, relW: 0.36, relH: 0.07),
+        .init(id: "traps",            slug: "traps",           displayName: "Trapézy",             isFrontSide: false, relX: 0.50, relY: 0.17, relW: 0.32, relH: 0.06),
         // Zadní ramena
-        .init(id: "l_rear_shoulder",  slug: "rear-shoulders",  displayName: "L. zadní rameno",    isFrontSide: false, relX: 0.22, relY: 0.22, relW: 0.13, relH: 0.07, cornerRadius: 20),
-        .init(id: "r_rear_shoulder",  slug: "rear-shoulders",  displayName: "P. zadní rameno",    isFrontSide: false, relX: 0.78, relY: 0.22, relW: 0.13, relH: 0.07, cornerRadius: 20),
+        .init(id: "l_rear_shoulder",  slug: "rear-shoulders",  displayName: "L. zadní rameno",    isFrontSide: false, relX: 0.24, relY: 0.17, relW: 0.11, relH: 0.06, cornerRadius: 16),
+        .init(id: "r_rear_shoulder",  slug: "rear-shoulders",  displayName: "P. zadní rameno",    isFrontSide: false, relX: 0.76, relY: 0.17, relW: 0.11, relH: 0.06, cornerRadius: 16),
         // Tricepsy
-        .init(id: "left_tricep",      slug: "triceps",         displayName: "Levý triceps",        isFrontSide: false, relX: 0.11, relY: 0.30, relW: 0.10, relH: 0.10, cornerRadius: 10),
-        .init(id: "right_tricep",     slug: "triceps",         displayName: "Pravý triceps",       isFrontSide: false, relX: 0.89, relY: 0.30, relW: 0.10, relH: 0.10, cornerRadius: 10),
+        .init(id: "left_tricep",      slug: "triceps",         displayName: "Levý triceps",        isFrontSide: false, relX: 0.18, relY: 0.27, relW: 0.09, relH: 0.12, cornerRadius: 10),
+        .init(id: "right_tricep",     slug: "triceps",         displayName: "Pravý triceps",       isFrontSide: false, relX: 0.82, relY: 0.27, relW: 0.09, relH: 0.12, cornerRadius: 10),
         // Latissimus dorsi (boční záda)
-        .init(id: "left_lat",         slug: "lats",            displayName: "Lats (levé záda)",    isFrontSide: false, relX: 0.27, relY: 0.29, relW: 0.20, relH: 0.12, cornerRadius: 8),
-        .init(id: "right_lat",        slug: "lats",            displayName: "Lats (pravé záda)",   isFrontSide: false, relX: 0.73, relY: 0.29, relW: 0.20, relH: 0.12, cornerRadius: 8),
+        .init(id: "left_lat",         slug: "lats",            displayName: "Lats (levé záda)",    isFrontSide: false, relX: 0.32, relY: 0.26, relW: 0.16, relH: 0.10, cornerRadius: 8),
+        .init(id: "right_lat",        slug: "lats",            displayName: "Lats (pravé záda)",   isFrontSide: false, relX: 0.68, relY: 0.26, relW: 0.16, relH: 0.10, cornerRadius: 8),
         // Střední záda (rhomboid + mid-trap)
-        .init(id: "traps_middle",     slug: "traps-middle",    displayName: "Střední záda",        isFrontSide: false, relX: 0.50, relY: 0.29, relW: 0.26, relH: 0.09),
+        .init(id: "traps_middle",     slug: "traps-middle",    displayName: "Střední záda",        isFrontSide: false, relX: 0.50, relY: 0.27, relW: 0.22, relH: 0.08),
         // Spodní záda
-        .init(id: "lower_back",       slug: "lowerback",       displayName: "Spodní záda",         isFrontSide: false, relX: 0.50, relY: 0.42, relW: 0.28, relH: 0.08),
+        .init(id: "lower_back",       slug: "lowerback",       displayName: "Spodní záda",         isFrontSide: false, relX: 0.50, relY: 0.39, relW: 0.24, relH: 0.07),
         // Hýždě
-        .init(id: "glutes",           slug: "glutes",          displayName: "Hýždě",               isFrontSide: false, relX: 0.50, relY: 0.52, relW: 0.38, relH: 0.09),
+        .init(id: "glutes",           slug: "glutes",          displayName: "Hýždě",               isFrontSide: false, relX: 0.50, relY: 0.47, relW: 0.30, relH: 0.07),
         // Zadní stehna
-        .init(id: "left_hamstring",   slug: "hamstrings",      displayName: "Levý hamstring",      isFrontSide: false, relX: 0.34, relY: 0.66, relW: 0.18, relH: 0.15, cornerRadius: 10),
-        .init(id: "right_hamstring",  slug: "hamstrings",      displayName: "Pravý hamstring",     isFrontSide: false, relX: 0.66, relY: 0.66, relW: 0.18, relH: 0.15, cornerRadius: 10),
+        .init(id: "left_hamstring",   slug: "hamstrings",      displayName: "Levý hamstring",      isFrontSide: false, relX: 0.39, relY: 0.58, relW: 0.14, relH: 0.17, cornerRadius: 12),
+        .init(id: "right_hamstring",  slug: "hamstrings",      displayName: "Pravý hamstring",     isFrontSide: false, relX: 0.61, relY: 0.58, relW: 0.14, relH: 0.17, cornerRadius: 12),
         // Lýtka (zadní)
-        .init(id: "left_calf_b",      slug: "calves",          displayName: "Levé lýtko",          isFrontSide: false, relX: 0.34, relY: 0.89, relW: 0.14, relH: 0.09, cornerRadius: 8),
-        .init(id: "right_calf_b",     slug: "calves",          displayName: "Pravé lýtko",         isFrontSide: false, relX: 0.66, relY: 0.89, relW: 0.14, relH: 0.09, cornerRadius: 8),
+        .init(id: "left_calf_b",      slug: "calves",          displayName: "Levé lýtko",          isFrontSide: false, relX: 0.39, relY: 0.82, relW: 0.10, relH: 0.12, cornerRadius: 10),
+        .init(id: "right_calf_b",     slug: "calves",          displayName: "Pravé lýtko",         isFrontSide: false, relX: 0.61, relY: 0.82, relW: 0.10, relH: 0.12, cornerRadius: 10),
     ]
 }

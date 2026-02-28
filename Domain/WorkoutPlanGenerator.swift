@@ -57,6 +57,8 @@ enum WorkoutPlanGenerator {
                 let plannedEx = PlannedExercise(
                     order: idx,
                     exercise: config.exercise,
+                    fallbackSlug: config.fallbackSlug,
+                    fallbackName: config.fallbackName,
                     targetSets: config.sets,
                     targetRepsMin: config.repsMin,
                     targetRepsMax: config.repsMax,
@@ -83,6 +85,8 @@ enum WorkoutPlanGenerator {
 
     private struct ExerciseConfig {
         let exercise: Exercise?
+        let fallbackSlug: String?
+        let fallbackName: String?
         let sets: Int
         let repsMin: Int
         let repsMax: Int
@@ -247,24 +251,24 @@ enum WorkoutPlanGenerator {
         }
 
         return slugs.compactMap { slug -> ExerciseConfig? in
-            guard let exercise = allExercises.first(where: { $0.slug == slug }) else {
+            let exercise = allExercises.first(where: { $0.slug == slug })
+            
+            if exercise == nil {
                 AppLogger.warning("⚠️ [WorkoutPlanGenerator] Slug '\(slug)' nenalezen v DB — přidej cvik do ExerciseDatabase.json")
-                return nil
-            }
-
-            // Přeskočí cviky vyžadující vybavení které uživatel nemá
-            if !exercise.equipment.isEmpty {
-                let hasEquipment = exercise.equipment.contains { availableEquipment.contains($0) }
+            } else if !exercise!.equipment.isEmpty {
+                let hasEquipment = exercise!.equipment.contains { availableEquipment.contains($0) }
                 if !hasEquipment {
-                    AppLogger.info("ℹ️ [WorkoutPlanGenerator] Přeskakuji '\(exercise.name)' — chybí: \(exercise.equipment.map(\.rawValue))")
+                    AppLogger.info("ℹ️ [WorkoutPlanGenerator] Přeskakuji '\(exercise!.name)' — chybí: \(exercise!.equipment.map(\.rawValue))")
                     return nil
                 }
             }
 
-            let isCompound = [MovementPattern.push, .pull, .hinge, .squat].contains(exercise.movementPattern)
+            let isCompound = exercise.map { [MovementPattern.push, .pull, .hinge, .squat].contains($0.movementPattern) } ?? false
 
             return ExerciseConfig(
                 exercise: exercise,
+                fallbackSlug: slug,
+                fallbackName: nil,
                 sets: isCompound ? baseSets : max(baseSets - 1, 2),
                 repsMin: isCompound ? repsMin : repsMin + 2,
                 repsMax: isCompound ? repsMax : repsMax + 4,

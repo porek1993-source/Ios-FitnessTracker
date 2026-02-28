@@ -165,21 +165,39 @@ private struct PlannedExerciseRow: View {
 
     var body: some View {
         HStack(spacing: 14) {
-            // Index badge
+            // Index badge with muscle icon
             ZStack {
                 Circle()
                     .fill(AppColors.primaryAccent.opacity(0.15))
-                    .frame(width: 32, height: 32)
-                Text("\(index)")
-                    .font(.system(size: 14, weight: .bold, design: .rounded))
-                    .foregroundStyle(AppColors.primaryAccent)
+                    .frame(width: 36, height: 36)
+                
+                if let firstTarget = exercise.exercise?.musclesTarget.first {
+                    // Try to display muscle icon
+                    if let icon = MuscleWikiDTO.muscleGroupIcons[firstTarget.rawValue] {
+                        Text(icon)
+                            .font(.system(size: 16))
+                    } else {
+                        Text("\(index)")
+                            .font(.system(size: 14, weight: .bold, design: .rounded))
+                            .foregroundStyle(AppColors.primaryAccent)
+                    }
+                } else {
+                    Text("\(index)")
+                        .font(.system(size: 14, weight: .bold, design: .rounded))
+                        .foregroundStyle(AppColors.primaryAccent)
+                }
             }
 
             // Exercise info
             VStack(alignment: .leading, spacing: 4) {
-                Text(exercise.exercise?.name ?? exercise.exercise?.nameEN ?? "Cvik \(index)")
+                let displayName = exercise.exercise?.name ?? 
+                                  exercise.fallbackName ?? 
+                                  exercise.fallbackSlug.map { "🔍 Nastavuji... (\($0))" } ?? 
+                                  "Neznámý cvik \(index)"
+                
+                Text(displayName)
                     .font(.system(size: 15, weight: .semibold))
-                    .foregroundStyle(exercise.exercise != nil ? .white : .white.opacity(0.5))
+                    .foregroundStyle(exercise.exercise != nil ? .white : .orange.opacity(0.9))
                     .lineLimit(2)
 
                 HStack(spacing: 10) {

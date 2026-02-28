@@ -184,61 +184,39 @@ struct ExerciseAnimationView: View {
                     .padding(.trailing, 12)
                 }
             } else {
-                // ── SF SYMBOL FALLBACK (bez video URL) ────────────────────
+                // ── FALLBACK (bez video URL) — čistý gradient + YouTube ──
                 LinearGradient(
-                    colors: [Color(white: 0.08), Color.black],
+                    colors: [exerciseColor(slug).opacity(0.15), Color.black],
                     startPoint: .top, endPoint: .bottom
                 )
-                VStack(spacing: 16) {
+                VStack(spacing: 12) {
                     Spacer()
-                    ZStack(alignment: .bottomTrailing) {
-                        Circle()
-                            .fill(exerciseColor(slug).opacity(0.12))
-                            .frame(width: 130, height: 130)
-                        Circle()
-                            .stroke(exerciseColor(slug).opacity(0.2), lineWidth: 1)
-                            .frame(width: 130, height: 130)
-                        Image(systemName: exerciseIcon(slug))
-                            .font(.system(size: 58, weight: .light))
-                            .foregroundStyle(
-                                LinearGradient(
-                                    colors: [exerciseColor(slug), exerciseColor(slug).opacity(0.6)],
-                                    startPoint: .topLeading, endPoint: .bottomTrailing
-                                )
-                            )
-                            .symbolEffect(.pulse)
-                    }
+                    Text(exerciseCategoryLabel(slug))
+                        .font(.system(size: 13, weight: .bold))
+                        .foregroundStyle(exerciseColor(slug).opacity(0.8))
+                        .kerning(1.5)
+                        .textCase(.uppercase)
 
-                    VStack(spacing: 4) {
-                        Text(exerciseCategoryLabel(slug))
-                            .font(.system(size: 11, weight: .semibold))
-                            .foregroundStyle(exerciseColor(slug).opacity(0.6))
-                            .kerning(1.5)
-                            .textCase(.uppercase)
-
-                        Button {
-                            HapticManager.shared.playMediumClick()
-                            let url = YouTubeLinkGenerator.searchURL(nameEn: nameEn, nameCz: nameCz)
-                            openURL(url)
-                        } label: {
-                            HStack(spacing: 6) {
-                                Image(systemName: "play.rectangle.fill")
-                                    .font(.system(size: 12))
-                                Text("Technika")
-                                    .font(.system(size: 13, weight: .bold))
-                            }
-                            .foregroundStyle(.white)
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 6)
-                            .background(
-                                Capsule()
-                                    .fill(Color.red.opacity(0.8))
-                                    .shadow(color: .red.opacity(0.3), radius: 4, y: 2)
-                            )
+                    Button {
+                        HapticManager.shared.playMediumClick()
+                        let url = YouTubeLinkGenerator.searchURL(nameEn: nameEn, nameCz: nameCz)
+                        openURL(url)
+                    } label: {
+                        HStack(spacing: 8) {
+                            Image(systemName: "play.rectangle.fill")
+                                .font(.system(size: 14))
+                            Text("Podívej se na techniku")
+                                .font(.system(size: 14, weight: .bold))
                         }
-                        .padding(.top, 4)
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 18)
+                        .padding(.vertical, 10)
+                        .background(
+                            Capsule()
+                                .fill(Color.red.opacity(0.8))
+                                .shadow(color: .red.opacity(0.3), radius: 6, y: 3)
+                        )
                     }
-
                     Spacer()
                 }
                 LinearGradient(
