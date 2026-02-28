@@ -88,6 +88,9 @@ final class AppEnvironment: ObservableObject {
     ///  4. HealthKit auth + foreground sync (neblokující, paralelně)
     func performStartup(modelContext: ModelContext) async {
 
+        // 0. Seed databáze (pokud je prázdná) — naprosto kritické pro generování plánů
+        ExerciseDatabaseLoader.seedIfNeeded(modelContext: modelContext)
+
         // 1. SwiftData závislosti
         configure(modelContext: modelContext)
 

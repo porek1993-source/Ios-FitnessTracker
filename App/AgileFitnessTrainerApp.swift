@@ -144,6 +144,10 @@ struct RootView: View {
         // Okamžitě vložíme do SwiftData. Aplikace díky @Query[UserProfile] automaticky pochopí,
         // že profiles.isEmpty == false a zobrazí MainTabView s vynecháním AI onboarding.
         modelContext.insert(mockProfile)
+        
+        // KRITICKÉ: Musíme vygenerovat plán, jinak bude aplikace prázdná
+        WorkoutPlanGenerator.generate(for: mockProfile, in: modelContext)
+        
         try? modelContext.save()
     }
 }

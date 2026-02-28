@@ -10,7 +10,7 @@ struct DetailedBodyFigureView: View {
     var onTapMuscle: ((MuscleGroup) -> Void)? = nil
     
     // Základní barvy
-    private let baseFill = Color(white: 0.15)
+    private let baseFill = Color(white: 0.25)
     
     var body: some View {
         GeometryReader { geo in
@@ -39,7 +39,7 @@ struct DetailedBodyFigureView: View {
                             .fill(getColor(for: part.muscleGroups))
                             .overlay(
                                 SVGShape(path: part.path, viewBox: part.viewBox)
-                                    .stroke(Color.black.opacity(0.8), lineWidth: 1.5)
+                                    .stroke(Color.white.opacity(0.35), lineWidth: 1.2)
                             )
                             .frame(width: part.size.width, height: part.size.height)
                             // Offset pro absolutní posun vůči středu v neškálovaném kontextu (X) a vršku (Y)
@@ -104,7 +104,6 @@ struct SVGShape: Shape {
         
         return svgPath
             .applying(CGAffineTransform(scaleX: scale, y: scale))
-            .path(in: rect)
     }
 }
 
