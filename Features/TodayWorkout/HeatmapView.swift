@@ -165,7 +165,7 @@ struct BodyFigureView: View {
                         )
                 }
             }
-            .frame(width: 220, height: 420)
+            .frame(width: 250, height: 390)
             .frame(maxWidth: .infinity)
         }
     }

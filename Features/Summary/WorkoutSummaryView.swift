@@ -110,7 +110,7 @@ struct WorkoutSummaryView: View {
                         // Muscle figure (left)
                         GainsMuscleMapView(gains: topGains, animProgress: muscleAnimProgress)
                             .frame(maxWidth: 170)
-                            .aspectRatio(0.58, contentMode: .fit)
+                            .aspectRatio(0.68, contentMode: .fit)
 
                         // XP bars (right)
                         VStack(spacing: 10) {

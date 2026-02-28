@@ -45,18 +45,12 @@ struct ExerciseMediaView: View {
                     }
                     // Fallback pokud načtení GIFu selhalo
                     if loadFailed {
-                        YouTubeFallbackView(
-                            exerciseName:   exerciseName,
-                            exerciseNameEn: exerciseNameEn
-                        )
+                        MissingMediaView()
                     }
                 }
             } else {
-                // ── YouTube fallback (žádný GIF) ───────────────────────────
-                YouTubeFallbackView(
-                    exerciseName:   exerciseName,
-                    exerciseNameEn: exerciseNameEn
-                )
+                // ── Obrázek nenalezen Fallback (žádný GIF) ───────────────────────────
+                MissingMediaView()
             }
         }
         .frame(height: 260)
@@ -128,7 +122,25 @@ struct GIFPlayerView: UIViewRepresentable {
     // MARK: HTML šablona pro GIF
 
     private func loadGIF(in webView: WKWebView) {
-        // Inline HTML: GIF vyplní celý prostor, žádné okraje, plynulá smyčka
+        let urlString = gifURL.absoluteString
+        let isVideo = urlString.lowercased().hasSuffix(".mp4") || urlString.lowercased().hasSuffix(".mov")
+
+        let mediaTag: String
+        if isVideo {
+            mediaTag = """
+            <video autoplay loop muted playsinline>
+                <source src="\(urlString)" type="video/mp4">
+            </video>
+            """
+        } else {
+            mediaTag = """
+            <img src="\(urlString)"
+                 alt="Animace cviku"
+                 onload="document.title='loaded'"
+                 onerror="document.title='error'" />
+            """
+        }
+
         let html = """
         <!DOCTYPE html>
         <html>
@@ -137,7 +149,7 @@ struct GIFPlayerView: UIViewRepresentable {
         <style>
           * { margin: 0; padding: 0; box-sizing: border-box; }
           html, body { width: 100%; height: 100%; background: #0D1117; overflow: hidden; }
-          img {
+          img, video {
             width: 100%;
             height: 100%;
             object-fit: cover;
@@ -148,11 +160,16 @@ struct GIFPlayerView: UIViewRepresentable {
         </style>
         </head>
         <body>
-          <img src="\(gifURL.absoluteString)"
-               alt="Animace cviku"
-               onload="document.title='loaded'"
-               onerror="document.title='error'" />
+          \(mediaTag)
         </body>
+        <script>
+            if (\(isVideo.description)) {
+                let v = document.querySelector('video');
+                v.addEventListener('loadeddata', () => { document.title='loaded'; });
+                v.addEventListener('error', () => { document.title='error'; });
+                v.play().catch(e => { document.title='error'; });
+            }
+        </script>
         </html>
         """
 
@@ -201,112 +218,73 @@ struct GIFPlayerView: UIViewRepresentable {
 }
 
 // MARK: ═══════════════════════════════════════════════════════════════════════
-// MARK: YouTubeFallbackView  — karta pro otevření YouTube
+// MARK: MissingMediaView  — karta pro zobrazení chyby média
 // MARK: ═══════════════════════════════════════════════════════════════════════
 
-struct YouTubeFallbackView: View {
-    let exerciseName:   String
-    let exerciseNameEn: String?
-
-    @Environment(\.openURL) private var openURL
-    @State private var isPressed = false
+struct MissingMediaView: View {
     @State private var glowPulse = false
 
-    private var youtubeURL: URL {
-        YouTubeLinkGenerator.searchURL(nameEn: exerciseNameEn, nameCz: exerciseName)
-    }
-
     var body: some View {
-        Button {
-            UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-            openURL(youtubeURL)
-        } label: {
-            ZStack {
-                // ── Pozadí s gradientem ──────────────────────────────────────
-                LinearGradient(
-                    colors: [
-                        Color(hue: 0.62, saturation: 0.30, brightness: 0.14),
-                        Color(hue: 0.62, saturation: 0.20, brightness: 0.08)
-                    ],
-                    startPoint: .topLeading,
-                    endPoint:   .bottomTrailing
+        ZStack {
+            // ── Pozadí s gradientem ──────────────────────────────────────
+            LinearGradient(
+                colors: [
+                    Color(hue: 0.62, saturation: 0.30, brightness: 0.14),
+                    Color(hue: 0.62, saturation: 0.20, brightness: 0.08)
+                ],
+                startPoint: .topLeading,
+                endPoint:   .bottomTrailing
+            )
+
+            // ── Dekorativní mřížka ───────────────────────────────────────
+            GridPattern()
+                .stroke(Color.white.opacity(0.04), lineWidth: 0.5)
+                .ignoresSafeArea()
+
+            // ── Glow kruh za ikonou ──────────────────────────────────────
+            Circle()
+                .fill(Color.orange.opacity(0.12))
+                .frame(width: 110, height: 110)
+                .blur(radius: glowPulse ? 24 : 14)
+                .scaleEffect(glowPulse ? 1.20 : 0.85)
+                .animation(
+                    .easeInOut(duration: 2.2).repeatForever(autoreverses: true),
+                    value: glowPulse
                 )
-
-                // ── Dekorativní mřížka ───────────────────────────────────────
-                GridPattern()
-                    .stroke(Color.white.opacity(0.04), lineWidth: 0.5)
-                    .ignoresSafeArea()
-
-                // ── Glow kruh za ikonou ──────────────────────────────────────
-                Circle()
-                    .fill(Color.red.opacity(0.12))
-                    .frame(width: 110, height: 110)
-                    .blur(radius: glowPulse ? 24 : 14)
-                    .scaleEffect(glowPulse ? 1.20 : 0.85)
-                    .animation(
-                        .easeInOut(duration: 2.2).repeatForever(autoreverses: true),
-                        value: glowPulse
-                    )
 
                 // ── Obsah ────────────────────────────────────────────────────
                 VStack(spacing: 18) {
 
-                    // Play ikona + YouTube branding
+                    // Ikona
                     ZStack {
                         Circle()
-                            .fill(Color.red.opacity(0.18))
+                            .fill(Color.orange.opacity(0.18))
                             .frame(width: 72, height: 72)
                             .overlay(
                                 Circle()
-                                    .stroke(Color.red.opacity(0.35), lineWidth: 1.5)
+                                    .stroke(Color.orange.opacity(0.35), lineWidth: 1.5)
                             )
 
-                        Image(systemName: "play.fill")
+                        Image(systemName: "video.slash.fill")
                             .font(.system(size: 28, weight: .bold))
                             .foregroundStyle(.white.opacity(0.90))
-                            .offset(x: 2) // optické vycentrování play ikony
                     }
-                    .scaleEffect(isPressed ? 0.92 : 1.0)
-                    .animation(.spring(response: 0.22, dampingFraction: 0.6), value: isPressed)
 
                     // Text
                     VStack(spacing: 6) {
-                        Text("🎥 Ukázka není k dispozici")
-                            .font(.system(size: 14, weight: .bold, design: .rounded))
+                        Text("Ukázka chybí")
+                            .font(.system(size: 16, weight: .bold, design: .rounded))
                             .foregroundStyle(.white.opacity(0.85))
 
-                        Text("Klikni pro zhlédnutí správné techniky na YouTube.")
-                            .font(.system(size: 12, weight: .medium))
+                        Text("Animaci pro tento cvik\\npřidáme do databáze později.")
+                            .font(.system(size: 13, weight: .medium))
                             .foregroundStyle(.white.opacity(0.45))
                             .multilineTextAlignment(.center)
                             .lineSpacing(2)
                     }
-
-                    // YouTube badge
-                    HStack(spacing: 6) {
-                        Image(systemName: "arrow.up.right.square.fill")
-                            .font(.system(size: 11))
-                            .foregroundStyle(.red.opacity(0.80))
-
-                        Text("Otevřít v YouTube")
-                            .font(.system(size: 12, weight: .semibold))
-                            .foregroundStyle(.red.opacity(0.75))
-                    }
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 7)
-                    .background(
-                        Capsule()
-                            .fill(Color.red.opacity(0.10))
-                            .overlay(Capsule().stroke(Color.red.opacity(0.25), lineWidth: 1))
-                    )
                 }
                 .padding(.horizontal, 24)
-            }
         }
-        .buttonStyle(.plain)
-        ._onButtonGesture(pressing: { pressing in
-            withAnimation(.spring(response: 0.18)) { isPressed = pressing }
-        }, perform: {})
         .onAppear { glowPulse = true }
     }
 }
@@ -342,14 +320,14 @@ private struct GridPattern: Shape {
 // MARK: Preview
 // MARK: ═══════════════════════════════════════════════════════════════════════
 
-#Preview("GIF přehrávač + YouTube fallback") {
+#Preview("Video přehrávač + Missing Fallback") {
     ZStack {
         Color.black.ignoresSafeArea()
 
         ScrollView {
             VStack(spacing: 24) {
 
-                // ── Scénář 1: Validní GIF URL ────────────────────────────────
+                // ── Scénář 1: Validní GIF/Video URL ────────────────────────────────
                 VStack(alignment: .leading, spacing: 8) {
                     Text("S GIF animací")
                         .font(.caption).foregroundStyle(.white.opacity(0.4))
@@ -361,9 +339,9 @@ private struct GridPattern: Shape {
                     )
                 }
 
-                // ── Scénář 2: nil GIF → YouTube fallback ────────────────────
+                // ── Scénář 2: nil GIF → Missing fallback ────────────────────
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("YouTube fallback (gifURL = nil)")
+                    Text("Missing fallback (gifURL = nil)")
                         .font(.caption).foregroundStyle(.white.opacity(0.4))
 
                     ExerciseMediaView(
@@ -373,7 +351,7 @@ private struct GridPattern: Shape {
                     )
                 }
 
-                // ── Scénář 3: Špatná URL → GIF selže → fallback ─────────────
+                // ── Scénář 3: Špatná URL → load selže → fallback ─────────────
                 VStack(alignment: .leading, spacing: 8) {
                     Text("Broken URL → fallback")
                         .font(.caption).foregroundStyle(.white.opacity(0.4))

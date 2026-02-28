@@ -635,7 +635,7 @@ struct WeekDayExerciseDetailView: View {
                         }
                         // Info
                         VStack(alignment: .leading, spacing: 2) {
-                            Text(ex.exercise?.name ?? ex.exercise?.nameEN ?? "Cvik \(idx + 1)")
+                            Text(ex.exercise?.name ?? ex.fallbackName ?? ex.fallbackSlug?.components(separatedBy: "-").map(\.capitalized).joined(separator: " ") ?? "Cvik \(idx + 1)")
                                 .font(.system(size: 14, weight: .semibold))
                                 .foregroundStyle(ex.exercise == nil ? .white.opacity(0.4) : .white)
                             Text("\(ex.targetSets)× \(ex.targetRepsMin)–\(ex.targetRepsMax) rep · \(ex.restSeconds / 60)m \(ex.restSeconds % 60)s pauza")
@@ -651,6 +651,35 @@ struct WeekDayExerciseDetailView: View {
                     }
                     if idx < exercises.count - 1 {
                         Divider().background(Color.white.opacity(0.05))
+                    }
+                }
+
+                // Tlačítko pro vygenerování přes AI, pokud jsou v plánu "kostry" (prázdné cviky)
+                if exercises.contains(where: { $0.exercise == nil }) && previewExercises.isEmpty {
+                    VStack(spacing: 8) {
+                        if isGeneratingPreview {
+                            HStack {
+                                ProgressView().tint(.blue).scaleEffect(0.8)
+                                Text("Generuji náhled...")
+                                    .font(.system(size: 11, weight: .medium))
+                                    .foregroundStyle(.blue)
+                            }
+                            .padding(.top, 8)
+                        } else {
+                            Button(action: generatePreview) {
+                                HStack {
+                                    Image(systemName: "wand.and.sparkles")
+                                    Text("Získat AI rozpis přesně na míru")
+                                }
+                                .font(.system(size: 13, weight: .semibold))
+                                .foregroundStyle(.blue)
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 10)
+                                .background(RoundedRectangle(cornerRadius: 10).fill(Color.blue.opacity(0.1)))
+                                .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.blue.opacity(0.3), lineWidth: 1))
+                            }
+                            .padding(.top, 8)
+                        }
                     }
                 }
             }
