@@ -3,6 +3,7 @@
 
 import XCTest
 import SwiftUI
+import SwiftData
 @testable import AgileTrainer
 
 // MARK: ═══════════════════════════════════════════════════════════════════════

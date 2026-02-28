@@ -61,8 +61,8 @@ struct XPGain: Identifiable {
 @MainActor
 final class GamificationEngine: ObservableObject {
 
-    @Published private(set) var xpGains: [XPGain] = []
-    @Published private(set) var muscleRecords: [MuscleGroup: MuscleXPRecord] = [:]
+    @Published var xpGains: [XPGain] = []
+    @Published var muscleRecords: [MuscleGroup: MuscleXPRecord] = [:]
 
     // XP koeficienty
     private enum XPCoeff {
