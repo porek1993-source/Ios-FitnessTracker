@@ -74,23 +74,53 @@ struct ProfileSettingsForm: View {
     @State private var draftDuration: Int = 60
     @State private var draftSport: String = ""
     @State private var draftEquipment: Set<Equipment> = [.barbell, .dumbbell, .cable, .machine]
+    @State private var draftWeightKg: Double = 75.0
+    @State private var draftWeightText: String = "75"
     @EnvironmentObject private var healthKitService: HealthKitService
 
     var body: some View {
         ScrollView(showsIndicators: false) {
             VStack(spacing: 20) {
 
-                // MARK: — Jméno
+                // MARK: — Jméno + Váha
                 settingsSection(title: "Profil", icon: "person.fill") {
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Jméno").font(.caption).foregroundStyle(.white.opacity(0.5))
-                        TextField("Tvoje jméno", text: $draftName)
-                            .textFieldStyle(.plain)
-                            .font(.system(size: 16))
-                            .foregroundStyle(.white)
-                            .padding(12)
-                            .background(Color.white.opacity(0.08))
-                            .clipShape(RoundedRectangle(cornerRadius: 10))
+                    VStack(alignment: .leading, spacing: 12) {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Jméno").font(.caption).foregroundStyle(.white.opacity(0.5))
+                            TextField("Tvoje jméno", text: $draftName)
+                                .textFieldStyle(.plain)
+                                .font(.system(size: 16))
+                                .foregroundStyle(.white)
+                                .padding(12)
+                                .background(Color.white.opacity(0.08))
+                                .clipShape(RoundedRectangle(cornerRadius: 10))
+                        }
+
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Tělesná váha").font(.caption).foregroundStyle(.white.opacity(0.5))
+                            HStack(spacing: 8) {
+                                TextField("75", text: $draftWeightText)
+                                    .textFieldStyle(.plain)
+                                    .keyboardType(.decimalPad)
+                                    .font(.system(size: 16))
+                                    .foregroundStyle(.white)
+                                    .padding(12)
+                                    .background(Color.white.opacity(0.08))
+                                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                                    .onChange(of: draftWeightText) { _, v in
+                                        let normalized = v.replacingOccurrences(of: ",", with: ".")
+                                        if let kg = Double(normalized), kg > 0 {
+                                            draftWeightKg = kg
+                                        }
+                                    }
+                                Text("kg")
+                                    .font(.system(size: 15, weight: .medium))
+                                    .foregroundStyle(.white.opacity(0.5))
+                            }
+                            Text("Používá se pro přesný výpočet kalorií v Apple Health.")
+                                .font(.caption)
+                                .foregroundStyle(.white.opacity(0.4))
+                        }
                     }
                 }
 
@@ -338,6 +368,10 @@ struct ProfileSettingsForm: View {
         draftDuration = profile.sessionDurationMinutes
         draftSport = profile.primarySport ?? ""
         draftEquipment = Set(profile.availableEquipment)
+        draftWeightKg = profile.weightKg
+        draftWeightText = profile.weightKg.truncatingRemainder(dividingBy: 1) == 0
+            ? String(format: "%.0f", profile.weightKg)
+            : String(format: "%.1f", profile.weightKg)
     }
 
     private func saveProfile() {
@@ -349,6 +383,7 @@ struct ProfileSettingsForm: View {
         profile.sessionDurationMinutes = draftDuration
         profile.primarySport = draftSport.trimmingCharacters(in: .whitespaces).isEmpty ? nil : draftSport
         profile.availableEquipment = Array(draftEquipment)
+        if draftWeightKg > 0 { profile.weightKg = draftWeightKg }
         profile.updatedAt = .now
         onSave()
     }

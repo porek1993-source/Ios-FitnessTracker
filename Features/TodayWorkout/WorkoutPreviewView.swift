@@ -2,12 +2,53 @@
 // Agilní Fitness Trenér — Náhled tréninkového plánu (bez startu session)
 
 import SwiftUI
+import SwiftData
 
 /// Modální sheet zobrazující náhled dnešního plánu (cviky, série, cíle).
 struct WorkoutPreviewView: View {
 
     @ObservedObject var vm: DashboardViewModel
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.modelContext) private var modelContext
+
+    // Opravit chybějící exercise relationships při zobrazení
+    private var repairedExercises: [PlannedExercise] {
+        let exs = vm.todayPlannedExercises
+        if exs.contains(where: { $0.exercise == nil }) {
+            repairExercises(exs)
+        }
+        return exs
+    }
+
+    private func repairExercises(_ exs: [PlannedExercise]) {
+        let label = vm.todayPlanLabel
+        let slugMap: [String: [String]] = [
+            "Push": ["barbell-bench-press", "overhead-press", "incline-dumbbell-press", "lateral-raise", "tricep-pushdown", "cable-fly-low"],
+            "Pull": ["pull-up", "barbell-row", "lat-pulldown", "face-pull", "barbell-curl", "hammer-curl"],
+            "Legs": ["barbell-squat", "romanian-deadlift", "leg-press", "lying-leg-curl", "leg-extension", "calf-raise"],
+            "Upper A": ["barbell-bench-press", "barbell-row", "dumbbell-shoulder-press", "cable-row", "tricep-pushdown", "barbell-curl"],
+            "Upper B": ["overhead-press", "pull-up", "incline-dumbbell-press", "lat-pulldown", "lateral-raise", "dumbbell-curl"],
+            "Upper C": ["dumbbell-bench-press", "chest-supported-row", "arnold-press", "cable-chest-fly", "skull-crusher", "incline-dumbbell-curl"],
+            "Upper": ["barbell-bench-press", "barbell-row", "dumbbell-shoulder-press", "cable-row", "tricep-pushdown", "barbell-curl"],
+            "Lower A": ["barbell-squat", "romanian-deadlift", "leg-press", "lying-leg-curl", "leg-extension", "calf-raise"],
+            "Lower B": ["conventional-deadlift", "bulgarian-split-squat", "hip-thrust", "lying-leg-curl", "goblet-squat", "seated-calf-raise"],
+            "Lower": ["barbell-squat", "romanian-deadlift", "leg-press", "lying-leg-curl", "leg-extension", "calf-raise"],
+            "Fullbody A": ["barbell-squat", "barbell-bench-press", "barbell-row", "dumbbell-shoulder-press", "plank"],
+            "Fullbody B": ["romanian-deadlift", "dumbbell-bench-press", "pull-up", "lateral-raise", "ab-crunch"],
+            "Fullbody C": ["goblet-squat", "incline-dumbbell-press", "cable-row", "overhead-press", "russian-twist"],
+            "Fullbody": ["barbell-squat", "barbell-bench-press", "barbell-row", "dumbbell-shoulder-press", "plank"]
+        ]
+        let normalized = label.contains(" ") ? label : (label.components(separatedBy: " ").first ?? label)
+        let lookupKey = slugMap[label] != nil ? label : normalized
+        guard let slugs = slugMap[lookupKey] else { return }
+        let allExercises = (try? modelContext.fetch(FetchDescriptor<Exercise>())) ?? []
+        for (i, ex) in exs.enumerated() where ex.exercise == nil && i < slugs.count {
+            if let found = allExercises.first(where: { $0.slug == slugs[i] }) {
+                ex.exercise = found
+            }
+        }
+        try? modelContext.save()
+    }
 
     var body: some View {
         NavigationStack {
@@ -43,9 +84,9 @@ struct WorkoutPreviewView: View {
                         .padding(.bottom, 24)
 
                         // Exercise list
-                        if !vm.todayPlannedExercises.isEmpty {
+                        if !repairedExercises.isEmpty {
                             VStack(spacing: 12) {
-                                ForEach(Array(vm.todayPlannedExercises.enumerated()), id: \.offset) { idx, ex in
+                                ForEach(Array(repairedExercises.enumerated()), id: \.offset) { idx, ex in
                                     PlannedExerciseRow(index: idx + 1, exercise: ex)
                                 }
                             }
@@ -138,7 +179,7 @@ private struct PlannedExerciseRow: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text(exercise.exercise?.name ?? exercise.exercise?.nameEN ?? "Cvik \(index)")
                     .font(.system(size: 15, weight: .semibold))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(exercise.exercise != nil ? .white : .white.opacity(0.5))
                     .lineLimit(2)
 
                 HStack(spacing: 10) {

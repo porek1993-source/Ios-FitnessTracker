@@ -427,7 +427,7 @@ private struct StatPill: View {
     }
 }
 
-// MARK: - Muscle Map (simplified SVG-style figure)
+// MARK: - Muscle Map (clean outlined figure)
 
 private struct GainsMuscleMapView: View {
     let gains: [XPGain]
@@ -435,7 +435,7 @@ private struct GainsMuscleMapView: View {
 
     private func color(for muscle: MuscleGroup) -> Color {
         guard let gain = gains.first(where: { $0.muscleGroup == muscle }) else {
-            return Color.white.opacity(0.08)
+            return Color.white.opacity(0.10)
         }
         let progress = animProgress[muscle] ?? 0
         let level = gain.newLevel
@@ -444,161 +444,277 @@ private struct GainsMuscleMapView: View {
             red:   c.r * progress,
             green: c.g * progress,
             blue:  c.b * progress
-        ).opacity(0.3 + 0.7 * progress)
+        ).opacity(0.35 + 0.65 * progress)
     }
 
     var body: some View {
-        Canvas { ctx, size in
-            let w = size.width
-            let h = size.height
+        GeometryReader { geo in
+            let w = geo.size.width
+            let h = geo.size.height
             let cx = w / 2
 
-            // ── HEAD ──
-            let headR: CGFloat = w * 0.12
-            let headCenter = CGPoint(x: cx, y: h * 0.07)
-            ctx.fill(
-                Path(ellipseIn: CGRect(
-                    x: headCenter.x - headR, y: headCenter.y - headR,
-                    width: headR * 2, height: headR * 2.1
-                )),
-                with: .color(Color.white.opacity(0.2))
-            )
+            ZStack {
+                // ── Bílá silueta (obrys) ──────────────────────────────────
+                CleanBodySilhouette()
+                    .stroke(Color.white.opacity(0.14), lineWidth: 0.9)
 
-            // ── NECK ──
-            ctx.fill(
-                Path(CGRect(x: cx - w*0.045, y: h*0.16, width: w*0.09, height: h*0.05)),
-                with: .color(Color.white.opacity(0.15))
-            )
+                // ── Barevné svaly ─────────────────────────────────────────
+                Canvas { ctx, size in
+                    let W = size.width
+                    let H = size.height
+                    let CX = W / 2
 
-            // ── CHEST (pecs) ──
-            let chestColor = color(for: .pecs)
-            let chestPath = Path { p in
-                p.move(to: CGPoint(x: cx - w*0.28, y: h*0.21))
-                p.addCurve(
-                    to:        CGPoint(x: cx + w*0.28, y: h*0.21),
-                    control1:  CGPoint(x: cx - w*0.10, y: h*0.18),
-                    control2:  CGPoint(x: cx + w*0.10, y: h*0.18)
-                )
-                p.addLine(to: CGPoint(x: cx + w*0.26, y: h*0.34))
-                p.addCurve(
-                    to:        CGPoint(x: cx - w*0.26, y: h*0.34),
-                    control1:  CGPoint(x: cx + w*0.06, y: h*0.36),
-                    control2:  CGPoint(x: cx - w*0.06, y: h*0.36)
-                )
-                p.closeSubpath()
-            }
-            ctx.fill(chestPath, with: .color(chestColor))
+                    // Hrudník
+                    let chestPath = Path { p in
+                        p.move(to: CGPoint(x: CX - W*0.235, y: H*0.215))
+                        p.addCurve(to: CGPoint(x: CX + W*0.235, y: H*0.215),
+                                   control1: CGPoint(x: CX - W*0.08, y: H*0.188),
+                                   control2: CGPoint(x: CX + W*0.08, y: H*0.188))
+                        p.addLine(to: CGPoint(x: CX + W*0.215, y: H*0.330))
+                        p.addCurve(to: CGPoint(x: CX - W*0.215, y: H*0.330),
+                                   control1: CGPoint(x: CX + W*0.055, y: H*0.348),
+                                   control2: CGPoint(x: CX - W*0.055, y: H*0.348))
+                        p.closeSubpath()
+                    }
+                    ctx.fill(chestPath, with: .color(color(for: .pecs)))
 
-            // ── SHOULDERS (delts) ──
-            let deltColor = color(for: .delts)
-            for side in [-1.0, 1.0] as [CGFloat] {
-                let deltPath = Path(ellipseIn: CGRect(
-                    x: cx + side*(w*0.22) - w*0.09,
-                    y: h*0.19,
-                    width: w*0.12, height: h*0.09
-                ))
-                ctx.fill(deltPath, with: .color(deltColor))
-            }
+                    // Ramena
+                    for side in [-1.0, 1.0] as [CGFloat] {
+                        let delt = Path(ellipseIn: CGRect(
+                            x: CX + side*(W*0.195) - W*0.075,
+                            y: H*0.188, width: W*0.100, height: H*0.078
+                        ))
+                        ctx.fill(delt, with: .color(color(for: .delts)))
+                    }
 
-            // ── LATS / BACK ──
-            let latColor = color(for: .lats)
-            let latPath = Path { p in
-                p.move(to: CGPoint(x: cx - w*0.27, y: h*0.22))
-                p.addCurve(
-                    to:        CGPoint(x: cx - w*0.18, y: h*0.42),
-                    control1:  CGPoint(x: cx - w*0.32, y: h*0.30),
-                    control2:  CGPoint(x: cx - w*0.24, y: h*0.38)
-                )
-                p.addLine(to: CGPoint(x: cx, y: h*0.43))
-                p.addLine(to: CGPoint(x: cx, y: h*0.22))
-                p.closeSubpath()
-            }
-            ctx.fill(latPath, with: .color(latColor))
-            let latPathR = Path { p in
-                p.move(to: CGPoint(x: cx + w*0.27, y: h*0.22))
-                p.addCurve(
-                    to:        CGPoint(x: cx + w*0.18, y: h*0.42),
-                    control1:  CGPoint(x: cx + w*0.32, y: h*0.30),
-                    control2:  CGPoint(x: cx + w*0.24, y: h*0.38)
-                )
-                p.addLine(to: CGPoint(x: cx, y: h*0.43))
-                p.addLine(to: CGPoint(x: cx, y: h*0.22))
-                p.closeSubpath()
-            }
-            ctx.fill(latPathR, with: .color(latColor))
+                    // Bicepsy
+                    for side in [-1.0, 1.0] as [CGFloat] {
+                        let bicepPath = Path(ellipseIn: CGRect(
+                            x: CX + side*(W*0.265) - W*0.048,
+                            y: H*0.268, width: W*0.068, height: H*0.145
+                        ))
+                        ctx.fill(bicepPath, with: .color(color(for: .biceps)))
+                    }
 
-            // ── ARMS (biceps/triceps) ──
-            let armMuscle: MuscleGroup = gains.contains(where: { $0.muscleGroup == .biceps }) ? .biceps : .triceps
-            let armColor = color(for: armMuscle)
-            for side in [-1.0, 1.0] as [CGFloat] {
-                let armPath = Path(ellipseIn: CGRect(
-                    x: cx + side*(w*0.27) - w*0.055,
-                    y: h*0.28,
-                    width: w*0.08, height: h*0.18
-                ))
-                ctx.fill(armPath, with: .color(armColor))
+                    // Tricepsy (mírně za bicepsy)
+                    for side in [-1.0, 1.0] as [CGFloat] {
+                        let tricepPath = Path(ellipseIn: CGRect(
+                            x: CX + side*(W*0.270) - W*0.042,
+                            y: H*0.278, width: W*0.060, height: H*0.125
+                        ))
+                        ctx.fill(tricepPath, with: .color(color(for: .triceps).opacity(0.6)))
+                    }
 
-                // Forearms
-                let forearmPath = Path(ellipseIn: CGRect(
-                    x: cx + side*(w*0.28) - w*0.045,
-                    y: h*0.46,
-                    width: w*0.07, height: h*0.15
-                ))
-                ctx.fill(forearmPath, with: .color(color(for: .forearms)))
-            }
+                    // Abs — sixpack segmenty
+                    let absColor = color(for: .abs)
+                    for row in 0..<3 {
+                        for col in 0..<2 {
+                            let segX = CX + CGFloat(col == 0 ? -1 : 1) * W*0.038 - W*0.033
+                            let segY = H*(0.348 + Double(row)*0.040)
+                            let rect = CGRect(x: segX, y: segY, width: W*0.062, height: H*0.030)
+                            ctx.fill(Path(roundedRect: rect, cornerRadius: 4), with: .color(absColor))
+                        }
+                    }
 
-            // ── ABS / CORE ──
-            let absColor = color(for: .abs)
-            for row in 0..<3 {
-                for col in 0..<2 {
-                    let rect = CGRect(
-                        x: cx + CGFloat(col == 0 ? -1 : 0) * w*0.09 - w*0.04,
-                        y: h*(0.36 + Double(row)*0.038),
-                        width: w*0.075,
-                        height: h*0.030
-                    )
-                    ctx.fill(
-                        Path(roundedRect: rect, cornerRadius: 3),
-                        with: .color(absColor)
-                    )
+                    // Quads
+                    let quadColor = color(for: .quads)
+                    for side in [-1.0, 1.0] as [CGFloat] {
+                        let quadPath = Path { p in
+                            let qx = CX + side * W*0.048 - W*0.082
+                            p.move(to: CGPoint(x: qx + W*0.082, y: H*0.530))
+                            p.addCurve(to: CGPoint(x: qx + W*0.130, y: H*0.730),
+                                       control1: CGPoint(x: qx + W*0.162, y: H*0.580),
+                                       control2: CGPoint(x: qx + W*0.150, y: H*0.680))
+                            p.addCurve(to: CGPoint(x: qx + W*0.034, y: H*0.730),
+                                       control1: CGPoint(x: qx + W*0.100, y: H*0.748),
+                                       control2: CGPoint(x: qx + W*0.065, y: H*0.748))
+                            p.addCurve(to: CGPoint(x: qx + W*0.082, y: H*0.530),
+                                       control1: CGPoint(x: qx + W*0.015, y: H*0.680),
+                                       control2: CGPoint(x: qx + W*0.004, y: H*0.580))
+                            p.closeSubpath()
+                        }
+                        ctx.fill(quadPath, with: .color(quadColor))
+                    }
+
+                    // Hamstrings (za quady — mírně překrývají)
+                    let hamColor = color(for: .hamstrings)
+                    for side in [-1.0, 1.0] as [CGFloat] {
+                        let hamPath = Path { p in
+                            let qx = CX + side * W*0.048 - W*0.082
+                            p.move(to: CGPoint(x: qx + W*0.082, y: H*0.545))
+                            p.addCurve(to: CGPoint(x: qx + W*0.128, y: H*0.725),
+                                       control1: CGPoint(x: qx + W*0.155, y: H*0.598),
+                                       control2: CGPoint(x: qx + W*0.148, y: H*0.672))
+                            p.addCurve(to: CGPoint(x: qx + W*0.036, y: H*0.725),
+                                       control1: CGPoint(x: qx + W*0.095, y: H*0.742),
+                                       control2: CGPoint(x: qx + W*0.062, y: H*0.742))
+                            p.addCurve(to: CGPoint(x: qx + W*0.082, y: H*0.545),
+                                       control1: CGPoint(x: qx + W*0.018, y: H*0.670),
+                                       control2: CGPoint(x: qx + W*0.010, y: H*0.595))
+                            p.closeSubpath()
+                        }
+                        ctx.fill(hamPath, with: .color(hamColor.opacity(0.7)))
+                    }
+
+                    // Glutes (uprostřed spodní části trupu)
+                    let gluteColor = color(for: .glutes)
+                    for side in [-1.0, 1.0] as [CGFloat] {
+                        let glutePath = Path(ellipseIn: CGRect(
+                            x: CX + side*(W*0.012) - W*0.078,
+                            y: H*0.482, width: W*0.118, height: H*0.068
+                        ))
+                        ctx.fill(glutePath, with: .color(gluteColor.opacity(0.65)))
+                    }
+
+                    // Lats (záda — boky trupu)
+                    let latsColor = color(for: .lats)
+                    for side in [-1.0, 1.0] as [CGFloat] {
+                        let latsPath = Path { p in
+                            p.move(to: CGPoint(x: CX + side*W*0.195, y: H*0.248))
+                            p.addCurve(to: CGPoint(x: CX + side*W*0.248, y: H*0.400),
+                                       control1: CGPoint(x: CX + side*W*0.255, y: H*0.290),
+                                       control2: CGPoint(x: CX + side*W*0.268, y: H*0.355))
+                            p.addCurve(to: CGPoint(x: CX + side*W*0.148, y: H*0.468),
+                                       control1: CGPoint(x: CX + side*W*0.238, y: H*0.448),
+                                       control2: CGPoint(x: CX + side*W*0.195, y: H*0.468))
+                            p.addCurve(to: CGPoint(x: CX + side*W*0.170, y: H*0.248),
+                                       control1: CGPoint(x: CX + side*W*0.145, y: H*0.390),
+                                       control2: CGPoint(x: CX + side*W*0.148, y: H*0.308))
+                            p.closeSubpath()
+                        }
+                        ctx.fill(latsPath, with: .color(latsColor.opacity(0.72)))
+                    }
+
+                    // Traps (horní část zad / trapézius)
+                    let trapsColor = color(for: .traps)
+                    let trapsPath = Path { p in
+                        p.move(to: CGPoint(x: CX - W*0.068, y: H*0.155))
+                        p.addCurve(to: CGPoint(x: CX + W*0.068, y: H*0.155),
+                                   control1: CGPoint(x: CX - W*0.015, y: H*0.138),
+                                   control2: CGPoint(x: CX + W*0.015, y: H*0.138))
+                        p.addCurve(to: CGPoint(x: CX + W*0.185, y: H*0.248),
+                                   control1: CGPoint(x: CX + W*0.128, y: H*0.162),
+                                   control2: CGPoint(x: CX + W*0.178, y: H*0.205))
+                        p.addCurve(to: CGPoint(x: CX - W*0.185, y: H*0.248),
+                                   control1: CGPoint(x: CX + W*0.042, y: H*0.278),
+                                   control2: CGPoint(x: CX - W*0.042, y: H*0.278))
+                        p.addCurve(to: CGPoint(x: CX - W*0.068, y: H*0.155),
+                                   control1: CGPoint(x: CX - W*0.178, y: H*0.205),
+                                   control2: CGPoint(x: CX - W*0.128, y: H*0.162))
+                        p.closeSubpath()
+                    }
+                    ctx.fill(trapsPath, with: .color(trapsColor.opacity(0.60)))
+
+                    // Calves
+                    let calfColor = color(for: .calves)
+                    for side in [-1.0, 1.0] as [CGFloat] {
+                        let calfPath = Path(ellipseIn: CGRect(
+                            x: CX + side*(W*0.048) - W*0.058,
+                            y: H*0.768, width: W*0.092, height: H*0.148
+                        ))
+                        ctx.fill(calfPath, with: .color(calfColor))
+                    }
                 }
             }
-
-            // ── QUADS ──
-            let quadColor = color(for: .quads)
-            for side in [-1.0, 1.0] as [CGFloat] {
-                let quadPath = Path(ellipseIn: CGRect(
-                    x: cx + side*(w*0.05) - w*0.10,
-                    y: h*0.55,
-                    width: w*0.14, height: h*0.22
-                ))
-                ctx.fill(quadPath, with: .color(quadColor))
-            }
-
-            // ── HAMSTRINGS (behind quads, slightly offset) ──
-            let hamColor = color(for: .hamstrings)
-            for side in [-1.0, 1.0] as [CGFloat] {
-                let hamPath = Path(ellipseIn: CGRect(
-                    x: cx + side*(w*0.05) - w*0.085,
-                    y: h*0.57,
-                    width: w*0.11, height: h*0.18
-                ))
-                ctx.fill(hamPath, with: .color(hamColor.opacity(0.6)))
-            }
-
-            // ── CALVES ──
-            let calfColor = color(for: .calves)
-            for side in [-1.0, 1.0] as [CGFloat] {
-                let calfPath = Path(ellipseIn: CGRect(
-                    x: cx + side*(w*0.05) - w*0.08,
-                    y: h*0.77,
-                    width: w*0.11, height: h*0.16
-                ))
-                ctx.fill(calfPath, with: .color(calfColor))
-            }
-
         }
-        .animation(.spring(response: 0.6), value: animProgress.count)
+    }
+}
+
+// Čistá bílá silueta pro summary panáčka
+private struct CleanBodySilhouette: Shape {
+    func path(in rect: CGRect) -> Path {
+        var p = Path()
+        let w = rect.width
+        let h = rect.height
+        let cx = w * 0.5
+
+        // Hlava
+        p.addEllipse(in: CGRect(x: cx - w*0.135, y: h*0.008, width: w*0.270, height: h*0.110))
+
+        // Krk
+        p.addRoundedRect(
+            in: CGRect(x: cx - w*0.050, y: h*0.115, width: w*0.100, height: h*0.048),
+            cornerSize: CGSize(width: 8, height: 8), style: .continuous
+        )
+
+        // Torso
+        var torso = Path()
+        torso.move(to: CGPoint(x: w*0.185, y: h*0.163))
+        torso.addCurve(to: CGPoint(x: w*0.815, y: h*0.163),
+                       control1: CGPoint(x: w*0.295, y: h*0.148), control2: CGPoint(x: w*0.705, y: h*0.148))
+        torso.addCurve(to: CGPoint(x: w*0.775, y: h*0.440),
+                       control1: CGPoint(x: w*0.855, y: h*0.215), control2: CGPoint(x: w*0.805, y: h*0.370))
+        torso.addCurve(to: CGPoint(x: w*0.225, y: h*0.440),
+                       control1: CGPoint(x: w*0.700, y: h*0.458), control2: CGPoint(x: w*0.300, y: h*0.458))
+        torso.addCurve(to: CGPoint(x: w*0.185, y: h*0.163),
+                       control1: CGPoint(x: w*0.195, y: h*0.370), control2: CGPoint(x: w*0.145, y: h*0.215))
+        torso.closeSubpath()
+        p.addPath(torso)
+
+        // Ramena
+        for side in [-1.0, 1.0] as [CGFloat] {
+            let cx2 = cx + side * w * 0.295
+            p.addEllipse(in: CGRect(x: cx2 - w*0.068, y: h*0.182, width: w*0.092, height: h*0.068))
+        }
+
+        // Paže
+        for side in [-1.0, 1.0] as [CGFloat] {
+            let cx2 = cx + side * w * 0.320
+            p.addRoundedRect(
+                in: CGRect(x: cx2 - w*0.050, y: h*0.248, width: w*0.072, height: h*0.168),
+                cornerSize: CGSize(width: 14, height: 14), style: .continuous
+            )
+            // Předloktí
+            p.addRoundedRect(
+                in: CGRect(x: cx2 - w*0.042, y: h*0.420, width: w*0.062, height: h*0.145),
+                cornerSize: CGSize(width: 12, height: 12), style: .continuous
+            )
+        }
+
+        // Pánev
+        p.addRoundedRect(
+            in: CGRect(x: w*0.220, y: h*0.440, width: w*0.560, height: h*0.062),
+            cornerSize: CGSize(width: 14, height: 14), style: .continuous
+        )
+
+        // Stehna
+        for side in [-1.0, 1.0] as [CGFloat] {
+            let cx2 = cx + side * w * 0.095
+            p.addRoundedRect(
+                in: CGRect(x: cx2 - w*0.085, y: h*0.500, width: w*0.130, height: h*0.210),
+                cornerSize: CGSize(width: 18, height: 18), style: .continuous
+            )
+        }
+
+        // Kolena
+        for side in [-1.0, 1.0] as [CGFloat] {
+            let cx2 = cx + side * w * 0.095
+            p.addRoundedRect(
+                in: CGRect(x: cx2 - w*0.070, y: h*0.718, width: w*0.108, height: h*0.042),
+                cornerSize: CGSize(width: 10, height: 10), style: .continuous
+            )
+        }
+
+        // Lýtka
+        for side in [-1.0, 1.0] as [CGFloat] {
+            let cx2 = cx + side * w * 0.090
+            p.addRoundedRect(
+                in: CGRect(x: cx2 - w*0.060, y: h*0.762, width: w*0.092, height: h*0.165),
+                cornerSize: CGSize(width: 16, height: 16), style: .continuous
+            )
+        }
+
+        // Chodidla
+        p.addRoundedRect(
+            in: CGRect(x: w*0.180, y: h*0.932, width: w*0.168, height: h*0.050),
+            cornerSize: CGSize(width: 8, height: 8), style: .continuous
+        )
+        p.addRoundedRect(
+            in: CGRect(x: w*0.652, y: h*0.932, width: w*0.168, height: h*0.050),
+            cornerSize: CGSize(width: 8, height: 8), style: .continuous
+        )
+
+        return p
     }
 }
 

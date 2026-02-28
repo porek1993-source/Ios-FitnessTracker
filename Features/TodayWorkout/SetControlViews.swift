@@ -102,6 +102,8 @@ struct SetRowView: View {
             }
             .disabled(!isActive && !setData.isCompleted)
             .animation(.spring(response: 0.25), value: setData.isCompleted)
+            .accessibilityLabel(setData.isCompleted ? "Série \(setNumber) dokončena" : "Dokončit sérii \(setNumber)")
+            .accessibilityHint(canComplete ? "Klepni pro zaznamenání série" : "Zadej počet opakování")
         }
         .padding(.horizontal, 4)
         .padding(.vertical, 2)

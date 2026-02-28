@@ -154,9 +154,8 @@ final class DashboardViewModel: ObservableObject {
             hasPlanToday = false; return
         }
 
-        let todayWeekday = Calendar.current.component(.weekday, from: .now)
-        // Convert: Swift weekday (1=Sun) → our convention (1=Mon)
-        let dayIndex = todayWeekday == 1 ? 7 : todayWeekday - 1
+        // Date.weekday extension vrací naši konvenci: 1=Pondělí … 7=Neděle
+        let dayIndex = Date.now.weekday
 
         if let day = activePlan.scheduledDays.first(where: { $0.dayOfWeek == dayIndex && !$0.isRestDay }) {
             hasPlanToday              = true
@@ -833,68 +832,101 @@ private struct MiniBodyCanvas: View {
     @ObservedObject var vm: HeatmapViewModel
 
     var body: some View {
-        Canvas { ctx, size in
-            let w = size.width, h = size.height
+        GeometryReader { geo in
+            ZStack {
+                // Čistá obrysová silueta
+                CleanMiniSilhouette()
+                    .stroke(Color.white.opacity(0.22), lineWidth: 0.8)
 
-            // Silhouette
-            drawSilhouette(ctx: ctx, w: w, h: h)
-
-            // Fatigue zones
-            for entry in vm.affectedAreas {
-                let area = entry.area
-                guard area.isFrontSide else { continue }
-                let r = area.relativeRect(in: size)
-                let color = entry.isJointPain
-                    ? Color.red.opacity(0.65)
-                    : Color.orange.opacity(0.55)
-                ctx.fill(
-                    Path(roundedRect: r, cornerRadius: area.cornerRadius * 0.6),
-                    with: .color(color)
-                )
+                // Barevné zóny únavy
+                Canvas { ctx, size in
+                    for entry in vm.affectedAreas {
+                        let area = entry.area
+                        guard area.isFrontSide else { continue }
+                        let r = area.relativeRect(in: size)
+                        let color = entry.isJointPain
+                            ? Color.red.opacity(0.60)
+                            : Color.orange.opacity(0.50)
+                        ctx.fill(
+                            Path(ellipseIn: r),
+                            with: .color(color)
+                        )
+                    }
+                }
             }
         }
     }
+}
 
-    private func drawSilhouette(ctx: GraphicsContext, w: CGFloat, h: CGFloat) {
-        // Head
-        ctx.fill(
-            Path(ellipseIn: CGRect(x: w*0.35, y: h*0.00, width: w*0.30, height: h*0.12)),
-            with: .color(.white.opacity(0.08))
+// Mini silueta s čistými organickými liniemi pro dashboard kartu
+private struct CleanMiniSilhouette: Shape {
+    func path(in rect: CGRect) -> Path {
+        var p = Path()
+        let w = rect.width
+        let h = rect.height
+        let cx = w * 0.5
+
+        // Hlava
+        p.addEllipse(in: CGRect(x: cx - w*0.145, y: h*0.005, width: w*0.290, height: h*0.120))
+
+        // Torso — organický tvar
+        var torso = Path()
+        torso.move(to: CGPoint(x: w*0.18, y: h*0.160))
+        torso.addCurve(to: CGPoint(x: w*0.82, y: h*0.160),
+                       control1: CGPoint(x: w*0.295, y: h*0.145), control2: CGPoint(x: w*0.705, y: h*0.145))
+        torso.addCurve(to: CGPoint(x: w*0.775, y: h*0.450),
+                       control1: CGPoint(x: w*0.858, y: h*0.212), control2: CGPoint(x: w*0.808, y: h*0.375))
+        torso.addCurve(to: CGPoint(x: w*0.225, y: h*0.450),
+                       control1: CGPoint(x: w*0.702, y: h*0.468), control2: CGPoint(x: w*0.298, y: h*0.468))
+        torso.addCurve(to: CGPoint(x: w*0.18, y: h*0.160),
+                       control1: CGPoint(x: w*0.192, y: h*0.375), control2: CGPoint(x: w*0.142, y: h*0.212))
+        torso.closeSubpath()
+        p.addPath(torso)
+
+        // Ramena
+        p.addEllipse(in: CGRect(x: w*0.060, y: h*0.172, width: w*0.105, height: h*0.078))
+        p.addEllipse(in: CGRect(x: w*0.835, y: h*0.172, width: w*0.105, height: h*0.078))
+
+        // Paže
+        addR(&p, cx: w*0.072, cy: h*0.290, hw: w*0.058, hh: h*0.100)
+        addR(&p, cx: w*0.928, cy: h*0.290, hw: w*0.058, hh: h*0.100)
+
+        // Předloktí
+        addR(&p, cx: w*0.065, cy: h*0.425, hw: w*0.048, hh: h*0.082)
+        addR(&p, cx: w*0.935, cy: h*0.425, hw: w*0.048, hh: h*0.082)
+
+        // Pánev
+        p.addRoundedRect(
+            in: CGRect(x: w*0.218, y: h*0.450, width: w*0.564, height: h*0.065),
+            cornerSize: CGSize(width: 14, height: 14), style: .continuous
         )
-        // Torso
-        ctx.fill(
-            Path(roundedRect: CGRect(x: w*0.22, y: h*0.13, width: w*0.56, height: h*0.32), cornerRadius: 4),
-            with: .color(.white.opacity(0.08))
+
+        // Stehna
+        addR(&p, cx: w*0.316, cy: h*0.600, hw: w*0.092, hh: h*0.105)
+        addR(&p, cx: w*0.684, cy: h*0.600, hw: w*0.092, hh: h*0.105)
+
+        // Lýtka
+        addR(&p, cx: w*0.316, cy: h*0.820, hw: w*0.068, hh: h*0.085)
+        addR(&p, cx: w*0.684, cy: h*0.820, hw: w*0.068, hh: h*0.085)
+
+        // Chodidla
+        p.addRoundedRect(
+            in: CGRect(x: w*0.220, y: h*0.918, width: w*0.195, height: h*0.045),
+            cornerSize: CGSize(width: 8, height: 8), style: .continuous
         )
-        // Left arm
-        ctx.fill(
-            Path(roundedRect: CGRect(x: w*0.03, y: h*0.13, width: w*0.17, height: h*0.28), cornerRadius: 3),
-            with: .color(.white.opacity(0.06))
+        p.addRoundedRect(
+            in: CGRect(x: w*0.585, y: h*0.918, width: w*0.195, height: h*0.045),
+            cornerSize: CGSize(width: 8, height: 8), style: .continuous
         )
-        // Right arm
-        ctx.fill(
-            Path(roundedRect: CGRect(x: w*0.80, y: h*0.13, width: w*0.17, height: h*0.28), cornerRadius: 3),
-            with: .color(.white.opacity(0.06))
-        )
-        // Left leg
-        ctx.fill(
-            Path(roundedRect: CGRect(x: w*0.22, y: h*0.48, width: w*0.24, height: h*0.36), cornerRadius: 4),
-            with: .color(.white.opacity(0.07))
-        )
-        // Right leg
-        ctx.fill(
-            Path(roundedRect: CGRect(x: w*0.54, y: h*0.48, width: w*0.24, height: h*0.36), cornerRadius: 4),
-            with: .color(.white.opacity(0.07))
-        )
-        // Left calf
-        ctx.fill(
-            Path(roundedRect: CGRect(x: w*0.23, y: h*0.85, width: w*0.22, height: h*0.14), cornerRadius: 4),
-            with: .color(.white.opacity(0.06))
-        )
-        // Right calf
-        ctx.fill(
-            Path(roundedRect: CGRect(x: w*0.55, y: h*0.85, width: w*0.22, height: h*0.14), cornerRadius: 4),
-            with: .color(.white.opacity(0.06))
+
+        return p
+    }
+
+    private func addR(_ p: inout Path, cx: CGFloat, cy: CGFloat, hw: CGFloat, hh: CGFloat) {
+        let r = min(hw, hh)
+        p.addRoundedRect(
+            in: CGRect(x: cx - hw, y: cy - hh, width: hw * 2, height: hh * 2),
+            cornerSize: CGSize(width: r, height: r), style: .continuous
         )
     }
 }
@@ -1209,8 +1241,8 @@ struct TodayWorkoutLaunchWrapper: View {
             errorMessage = "Nemáš aktivní tréninkový plán."
             return
         }
-        let todayWeekday = Calendar.current.component(.weekday, from: .now)
-        let dayIndex = todayWeekday == 1 ? 7 : todayWeekday - 1
+        // Date.weekday extension vrací naši konvenci: 1=Pondělí … 7=Neděle
+        let dayIndex = Date.now.weekday
         guard let found = plan.scheduledDays.first(where: { $0.dayOfWeek == dayIndex && !$0.isRestDay }) else {
             errorMessage = "Dnešek je odpočinkový den. Odpočinek je součástí plánu — tělo roste při zotavení! 💪"
             return

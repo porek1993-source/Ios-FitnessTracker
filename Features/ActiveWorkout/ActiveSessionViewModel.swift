@@ -69,6 +69,7 @@ final class ActiveSessionViewModel: ObservableObject {
     // MARK: - Dependencies
     let session:   WorkoutSession
     let planLabel: String
+    private let bodyWeightKg: Double          // Váha uživatele pro kalkulaci kalorií v HealthKit
     private weak var appEnv: AppEnvironment?  // ⚠️ weak: zabraňuje retain cycle ViewModel ↔ AppEnvironment
     private var audioCoach: AudioCoachService?
 
@@ -79,11 +80,13 @@ final class ActiveSessionViewModel: ObservableObject {
         plan:      PlannedWorkoutDay,
         planLabel: String,
         aiResponse: TrainerResponse? = nil,
-        appEnv:    AppEnvironment? = nil
+        appEnv:    AppEnvironment? = nil,
+        bodyWeightKg: Double = 75.0
     ) {
-        self.session   = session
-        self.planLabel = planLabel
-        self.appEnv    = appEnv
+        self.session      = session
+        self.planLabel    = planLabel
+        self.appEnv       = appEnv
+        self.bodyWeightKg = bodyWeightKg
 
         buildExerciseStates(from: plan, aiResponse: aiResponse)
         startElapsedTimer()
@@ -328,8 +331,19 @@ final class ActiveSessionViewModel: ObservableObject {
     }
 
     func adjustRest(by delta: Int) {
-        restSecondsRemaining = max(0, restSecondsRemaining + delta)
+        let updated = max(0, restSecondsRemaining + delta)
+        restSecondsRemaining = updated
         totalRestSeconds     = max(totalRestSeconds, restSecondsRemaining)
+        // Pokud se pauza vyčerpala, přeskočíme ji
+        if updated == 0 { skipRest(); return }
+        // Synchronizuj Live Activity s novou délkou pauzy
+        let newEndsAt = Date.now.addingTimeInterval(Double(updated))
+        Task {
+            await LiveActivityManager.shared.updateRestTimer(
+                newEndsAt: newEndsAt,
+                totalSeconds: updated
+            )
+        }
     }
 
     @Published var allExercisesDone = false
@@ -337,7 +351,7 @@ final class ActiveSessionViewModel: ObservableObject {
     func skipExercise() {
         guard currentExerciseIndex < exercises.count - 1 else {
             withAnimation { allExercisesDone = true }
-            if audioEnabled { audioCoach?.speak(.sessionStart) }
+            if audioEnabled { audioCoach?.speak(.sessionEnd) }
             UINotificationFeedbackGenerator().notificationOccurred(.success)
             return
         }
@@ -408,7 +422,7 @@ final class ActiveSessionViewModel: ObservableObject {
 
     private func writeToHealthKit(session: WorkoutSession) async -> WorkoutWriteResult {
         let writer = HealthKitWorkoutWriter()
-        let result = await writer.write(session: session)
+        let result = await writer.write(session: session, bodyWeightKg: bodyWeightKg)
         if result.success {
             return .success
         } else {
@@ -499,17 +513,118 @@ final class ActiveSessionViewModel: ObservableObject {
         var states: [SessionExerciseState] = []
 
         if let response = aiResponse, !response.mainBlocks.isEmpty {
+            // Warmup
             for wu in response.warmUp {
                 states.append(SessionExerciseState.warmupExercise(wu))
             }
+
+            // Main blocks — napáruj Exercise DB referenci a progressive overload
+            let allPlanned = plan.plannedExercises
+            var isFirstWorkingExercise = true
+
             for block in response.mainBlocks {
                 for ex in block.exercises {
-                    states.append(SessionExerciseState(from: ex))
+                    var state = SessionExerciseState(from: ex)
+
+                    // Najdi odpovídající Exercise v DB podle slug nebo názvu
+                    let matchedExercise = allPlanned.first(where: {
+                        let dbSlug = $0.exercise?.slug ?? ""
+                        let normalizedEx = FallbackWorkoutGenerator.normalizedSlug(ex.slug)
+                        return dbSlug == normalizedEx || dbSlug == ex.slug
+                    })?.exercise
+
+                    if let exercise = matchedExercise {
+                        state.exercise = exercise
+
+                        // Video URL z DB
+                        if let videoURL = exercise.videoURL {
+                            state.videoUrl = videoURL
+                        }
+
+                        // Progressive overload — výpočet doporučené váhy
+                        let history = exercise.weightHistory
+                            .sorted { $0.loggedAt > $1.loggedAt }
+                            .prefix(12)
+                        let completedSets = history.map {
+                            CompletedSet(
+                                setNumber: $0.setNumber,
+                                weightKg: $0.weightKg,
+                                reps: $0.reps,
+                                rpe: $0.rpe,
+                                isWarmupSet: false
+                            )
+                        }
+
+                        if let suggestion = ProgressionEngine.calculateNextTarget(
+                            previousSets: Array(completedSets),
+                            programRepsMin: ex.repsMin,
+                            programRepsMax: ex.repsMax
+                        ) {
+                            for j in 0..<state.sets.count {
+                                state.sets[j].previousWeightKg = suggestion.weight
+                            }
+                        }
+
+                        // Warmup série pro první pracovní cvik
+                        if isFirstWorkingExercise {
+                            isFirstWorkingExercise = false
+                            let targetWeight = state.sets.first?.previousWeightKg
+                                ?? exercise.lastUsedWeight
+                                ?? ex.weightKg ?? 0
+                            let warmups = WarmupCalculator.generateWarmups(
+                                targetWeight: targetWeight,
+                                targetRepsMin: ex.repsMin
+                            )
+                            state.sets.insert(contentsOf: warmups, at: 0)
+                        }
+                    }
+
+                    states.append(state)
                 }
             }
         } else {
-            for plannedEx in plan.plannedExercises.sorted(by: { $0.order < $1.order }) {
-                states.append(SessionExerciseState(from: plannedEx))
+            // Fallback — PlannedExercises z DB
+            // SessionExerciseState(from: planned) již načítá lastUsedWeight jako previousWeightKg
+            for (index, plannedEx) in plan.plannedExercises.sorted(by: { $0.order < $1.order }).enumerated() {
+                var state = SessionExerciseState(from: plannedEx)
+
+                // Progressive overload — přepočítej pokud máme historii (přesnější než lastUsedWeight)
+                if let exercise = plannedEx.exercise, !exercise.weightHistory.isEmpty {
+                    let history = exercise.weightHistory
+                        .sorted { $0.loggedAt > $1.loggedAt }
+                        .prefix(12)
+                    let completedSets = history.map {
+                        CompletedSet(
+                            setNumber: $0.setNumber,
+                            weightKg: $0.weightKg,
+                            reps: $0.reps,
+                            rpe: $0.rpe,
+                            isWarmupSet: false
+                        )
+                    }
+                    if let suggestion = ProgressionEngine.calculateNextTarget(
+                        previousSets: Array(completedSets),
+                        programRepsMin: plannedEx.targetRepsMin,
+                        programRepsMax: plannedEx.targetRepsMax
+                    ) {
+                        for j in 0..<state.sets.count {
+                            state.sets[j].previousWeightKg = suggestion.weight
+                        }
+                    }
+
+                    // Warmup pro první cvik
+                    if index == 0 {
+                        let targetWeight = state.sets.first?.previousWeightKg
+                            ?? exercise.lastUsedWeight ?? 0
+                        let warmups = WarmupCalculator.generateWarmups(
+                            targetWeight: targetWeight,
+                            targetRepsMin: plannedEx.targetRepsMin
+                        )
+                        state.sets.insert(contentsOf: warmups, at: 0)
+                    }
+                }
+
+                states.append(state)
             }
         }
 

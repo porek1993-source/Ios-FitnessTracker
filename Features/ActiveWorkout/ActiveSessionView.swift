@@ -22,9 +22,9 @@ struct ActiveSessionView: View {
     @State private var showFinishDlg  = false
     @State private var showCancelDlg  = false
 
-    init(session: WorkoutSession, plan: PlannedWorkoutDay, planLabel: String) {
+    init(session: WorkoutSession, plan: PlannedWorkoutDay, planLabel: String, bodyWeightKg: Double = 75.0) {
         _vm = StateObject(wrappedValue: WorkoutViewModel(
-            session: session, plan: plan, planLabel: planLabel
+            session: session, plan: plan, planLabel: planLabel, bodyWeightKg: bodyWeightKg
         ))
     }
 

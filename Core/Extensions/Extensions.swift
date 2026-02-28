@@ -3,8 +3,12 @@
 import Foundation
 
 extension Date {
+    /// Vrátí den týdne v naší konvenci: 1=Pondělí … 7=Neděle
+    /// (Swift .weekday vrací 1=Neděle, proto konvertujeme)
     var weekday: Int {
-        Calendar.current.component(.weekday, from: self)
+        let swiftWeekday = Calendar.current.component(.weekday, from: self)
+        // Swift: 1=Sun, 2=Mon … 7=Sat → naše: 1=Mon … 7=Sun
+        return swiftWeekday == 1 ? 7 : swiftWeekday - 1
     }
 
     var startOfDay: Date {

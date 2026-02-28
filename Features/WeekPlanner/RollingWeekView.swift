@@ -456,6 +456,7 @@ struct WeekDayExerciseDetailView: View {
     let plan: WorkoutPlan?
     var onStartWorkout: (() -> Void)? = nil
     @Environment(\.modelContext) private var modelContext
+    @State private var refreshID = UUID()  // Force SwiftUI refresh po repair
 
     // Mapování WeekDay.date → dayOfWeek (1=Po...7=Ne)
     private var ourDayIndex: Int {
@@ -481,15 +482,24 @@ struct WeekDayExerciseDetailView: View {
     private func repairMissingExercises(_ exs: [PlannedExercise]) {
         guard let label = plannedDay?.label else { return }
         let slugMap: [String: [String]] = [
-            "Push": ["barbell-bench-press", "overhead-press", "lateral-raise", "tricep-pushdown"],
-            "Pull": ["pull-up", "barbell-row", "face-pull", "barbell-curl"],
-            "Legs": ["barbell-squat", "romanian-deadlift", "leg-extension", "calf-raise"],
-            "Upper": ["dumbbell-bench-press", "cable-row", "dumbbell-shoulder-press", "tricep-dip"],
-            "Lower": ["leg-press", "lying-leg-curl", "goblet-squat", "hip-thrust"],
-            "Fullbody": ["barbell-squat", "barbell-bench-press", "barbell-row", "plank"]
+            "Push": ["barbell-bench-press", "overhead-press", "incline-dumbbell-press", "lateral-raise", "tricep-pushdown", "cable-fly-low"],
+            "Pull": ["pull-up", "barbell-row", "lat-pulldown", "face-pull", "barbell-curl", "hammer-curl"],
+            "Legs": ["barbell-squat", "romanian-deadlift", "leg-press", "lying-leg-curl", "leg-extension", "calf-raise"],
+            "Upper A": ["barbell-bench-press", "barbell-row", "dumbbell-shoulder-press", "cable-row", "tricep-pushdown", "barbell-curl"],
+            "Upper B": ["overhead-press", "pull-up", "incline-dumbbell-press", "lat-pulldown", "lateral-raise", "dumbbell-curl"],
+            "Upper C": ["dumbbell-bench-press", "chest-supported-row", "arnold-press", "cable-chest-fly", "skull-crusher", "incline-dumbbell-curl"],
+            "Upper": ["barbell-bench-press", "barbell-row", "dumbbell-shoulder-press", "cable-row", "tricep-pushdown", "barbell-curl"],
+            "Lower A": ["barbell-squat", "romanian-deadlift", "leg-press", "lying-leg-curl", "leg-extension", "calf-raise"],
+            "Lower B": ["conventional-deadlift", "bulgarian-split-squat", "hip-thrust", "lying-leg-curl", "goblet-squat", "seated-calf-raise"],
+            "Lower": ["barbell-squat", "romanian-deadlift", "leg-press", "lying-leg-curl", "leg-extension", "calf-raise"],
+            "Fullbody A": ["barbell-squat", "barbell-bench-press", "barbell-row", "dumbbell-shoulder-press", "plank"],
+            "Fullbody B": ["romanian-deadlift", "dumbbell-bench-press", "pull-up", "lateral-raise", "ab-crunch"],
+            "Fullbody C": ["goblet-squat", "incline-dumbbell-press", "cable-row", "overhead-press", "russian-twist"],
+            "Fullbody": ["barbell-squat", "barbell-bench-press", "barbell-row", "dumbbell-shoulder-press", "plank"]
         ]
-        let normalized = label.components(separatedBy: " ").first ?? label
-        guard let slugs = slugMap[normalized] else { return }
+        // Použij přesný label pokud existuje, jinak první slovo
+        let lookupKey = slugMap[label] != nil ? label : (label.components(separatedBy: " ").first ?? label)
+        guard let slugs = slugMap[lookupKey] else { return }
         let allExercises = (try? modelContext.fetch(FetchDescriptor<Exercise>())) ?? []
         for (i, ex) in exs.enumerated() where ex.exercise == nil && i < slugs.count {
             if let found = allExercises.first(where: { $0.slug == slugs[i] }) {
@@ -609,6 +619,17 @@ struct WeekDayExerciseDetailView: View {
                 .overlay(RoundedRectangle(cornerRadius: 16)
                     .stroke(Color.appPrimaryAccent.opacity(0.2), lineWidth: 1))
         )
+        .id(refreshID)
+        .onAppear {
+            // Pokud máme cviky s nil exercise, oprav a refreshni view
+            let exs = (plannedDay?.plannedExercises ?? []).sorted { $0.order < $1.order }
+            if exs.contains(where: { $0.exercise == nil }) {
+                repairMissingExercises(exs)
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                    refreshID = UUID()
+                }
+            }
+        }
     }
 }
 

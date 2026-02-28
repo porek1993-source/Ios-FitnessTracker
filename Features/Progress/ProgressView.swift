@@ -21,23 +21,33 @@ struct AppProgressView: View {
 
     private var volumeByWeek: [(label: String, volume: Double)] {
         let calendar = Calendar.current
+        // FIX: Použij (yearForWeekOfYear * 100 + weekOfYear) jako klíč
+        // Zabraňuje kolizi T01/T52 přes hranici roku (bug: T52 2024 vs T52 2025 = stejný klíč)
         var grouped: [Int: Double] = [:]
+
+        func yearWeekKey(from date: Date) -> Int {
+            let comps = calendar.dateComponents([.yearForWeekOfYear, .weekOfYear], from: date)
+            return (comps.yearForWeekOfYear ?? 0) * 100 + (comps.weekOfYear ?? 0)
+        }
+
         // Použij WeightEntry (přesná data ze všech typů tréninků)
         for entry in weightEntries {
-            let week = calendar.component(.weekOfYear, from: entry.loggedAt)
-            grouped[week, default: 0] += entry.weightKg * Double(entry.reps)
+            grouped[yearWeekKey(from: entry.loggedAt), default: 0] += entry.weightKg * Double(entry.reps)
         }
         // Fallback na session.exercises pro zpětnou kompatibilitu
         if grouped.isEmpty {
             for session in completedSessions {
-                let week = calendar.component(.weekOfYear, from: session.startedAt)
+                let key = yearWeekKey(from: session.startedAt)
                 let vol = session.exercises
                     .flatMap { $0.completedSets }
                     .reduce(0.0) { $0 + $1.weightKg * Double($1.reps) }
-                grouped[week, default: 0] += vol
+                grouped[key, default: 0] += vol
             }
         }
-        return grouped.sorted { $0.key < $1.key }.suffix(6).map { ("T\($0.key)", $0.value) }
+        // Seřaď chronologicky (YYYYWW), vezmi posledních 6 týdnů, zobraz jen číslo týdne v popisku
+        return grouped.sorted { $0.key < $1.key }.suffix(6).map { (key, vol) in
+            ("T\(key % 100)", vol)
+        }
     }
 
     private var exerciseHistory: [(date: Date, weight: Double)] {

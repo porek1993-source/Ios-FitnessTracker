@@ -28,13 +28,9 @@ struct MuscleMapView: View {
             GeometryReader { geo in
                 ZStack {
 
-                    // Anatomická silueta na pozadí
+                    // Anatomická silueta — čistý bílý obrys
                     AnatomicalSilhouette(isFront: showingFront)
-                        .fill(silhouetteGradient)
-                        .overlay(
-                            AnatomicalSilhouette(isFront: showingFront)
-                                .stroke(Color.white.opacity(0.08), lineWidth: 0.8)
-                        )
+                        .stroke(Color.white.opacity(0.18), lineWidth: 1.0)
                         .scaleEffect(silhouetteAppeared ? 1 : 0.92)
                         .opacity(silhouetteAppeared ? 1 : 0)
                         .animation(.spring(response: 0.55, dampingFraction: 0.78), value: silhouetteAppeared)
@@ -635,100 +631,202 @@ struct AnatomicalSilhouette: Shape {
     let isFront: Bool
 
     func path(in rect: CGRect) -> Path {
+        isFront ? frontPath(in: rect) : backPath(in: rect)
+    }
+
+    // MARK: - Přední pohled (anatomická bílá silueta)
+
+    private func frontPath(in rect: CGRect) -> Path {
         var p = Path()
         let w = rect.width
         let h = rect.height
         let cx = w * 0.5
 
-        // ── Hlava ──────────────────────────────────────────
+        // Hlava — elipsa
         p.addEllipse(in: CGRect(
-            x: cx - w * 0.148, y: h * 0.005,
-            width: w * 0.296, height: h * 0.125
+            x: cx - w * 0.14, y: h * 0.005,
+            width: w * 0.28, height: h * 0.115
         ))
 
-        // ── Krk ────────────────────────────────────────────
-        p.addEllipse(in: CGRect(
-            x: cx - w * 0.06, y: h * 0.12,
-            width: w * 0.12, height: h * 0.055
-        ))
+        // Krk
+        addCapsule(&p, cx: cx, cy: h * 0.128, halfW: w * 0.055, halfH: h * 0.028)
 
-        // ── Torso: hlavní obrys pomocí Bézier ──────────────
+        // Torso — organický obrys
         var torso = Path()
-        // Horní obrys — ramena
-        torso.move(to: CGPoint(x: w * 0.14, y: h * 0.175))
+        torso.move(to: CGPoint(x: w * 0.18, y: h * 0.165))
         torso.addCurve(
-            to: CGPoint(x: w * 0.86, y: h * 0.175),
-            control1: CGPoint(x: w * 0.28, y: h * 0.155),
-            control2: CGPoint(x: w * 0.72, y: h * 0.155)
+            to: CGPoint(x: w * 0.82, y: h * 0.165),
+            control1: CGPoint(x: w * 0.30, y: h * 0.150),
+            control2: CGPoint(x: w * 0.70, y: h * 0.150)
         )
-        // Pravá strana — od ramene po bok
         torso.addCurve(
-            to: CGPoint(x: w * 0.76, y: h * 0.46),
-            control1: CGPoint(x: w * 0.88, y: h * 0.22),
-            control2: CGPoint(x: w * 0.82, y: h * 0.38)
+            to: CGPoint(x: w * 0.77, y: h * 0.445),
+            control1: CGPoint(x: w * 0.86, y: h * 0.215),
+            control2: CGPoint(x: w * 0.80, y: h * 0.370)
         )
-        // Spodek — přes boky
         torso.addCurve(
-            to: CGPoint(x: w * 0.24, y: h * 0.46),
-            control1: CGPoint(x: w * 0.70, y: h * 0.48),
-            control2: CGPoint(x: w * 0.30, y: h * 0.48)
+            to: CGPoint(x: w * 0.23, y: h * 0.445),
+            control1: CGPoint(x: w * 0.695, y: h * 0.465),
+            control2: CGPoint(x: w * 0.305, y: h * 0.465)
         )
-        // Levá strana — od boku po rameno
         torso.addCurve(
-            to: CGPoint(x: w * 0.14, y: h * 0.175),
-            control1: CGPoint(x: w * 0.18, y: h * 0.38),
-            control2: CGPoint(x: w * 0.12, y: h * 0.22)
+            to: CGPoint(x: w * 0.18, y: h * 0.165),
+            control1: CGPoint(x: w * 0.20, y: h * 0.370),
+            control2: CGPoint(x: w * 0.14, y: h * 0.215)
         )
         torso.closeSubpath()
         p.addPath(torso)
 
-        // ── Ramena (oválné kupolky) ────────────────────────
-        addCapsule(&p, cx: w * 0.11, cy: h * 0.195,   halfW: w * 0.085, halfH: h * 0.050)
-        addCapsule(&p, cx: w * 0.89, cy: h * 0.195,   halfW: w * 0.085, halfH: h * 0.050)
+        // Ramena
+        addCapsule(&p, cx: w * 0.115, cy: h * 0.190, halfW: w * 0.076, halfH: h * 0.044)
+        addCapsule(&p, cx: w * 0.885, cy: h * 0.190, halfW: w * 0.076, halfH: h * 0.044)
 
-        // ── Paže horní ─────────────────────────────────────
-        addCapsule(&p, cx: w * 0.065, cy: h * 0.295,  halfW: w * 0.062, halfH: h * 0.100)
-        addCapsule(&p, cx: w * 0.935, cy: h * 0.295,  halfW: w * 0.062, halfH: h * 0.100)
+        // Paže horní (biceps/triceps zóna)
+        addCapsule(&p, cx: w * 0.068, cy: h * 0.290, halfW: w * 0.058, halfH: h * 0.092)
+        addCapsule(&p, cx: w * 0.932, cy: h * 0.290, halfW: w * 0.058, halfH: h * 0.092)
 
-        // ── Předloktí ──────────────────────────────────────
-        addCapsule(&p, cx: w * 0.055, cy: h * 0.430,  halfW: w * 0.050, halfH: h * 0.088)
-        addCapsule(&p, cx: w * 0.945, cy: h * 0.430,  halfW: w * 0.050, halfH: h * 0.088)
+        // Předloktí
+        addCapsule(&p, cx: w * 0.060, cy: h * 0.420, halfW: w * 0.046, halfH: h * 0.082)
+        addCapsule(&p, cx: w * 0.940, cy: h * 0.420, halfW: w * 0.046, halfH: h * 0.082)
 
-        // ── Ruce ───────────────────────────────────────────
-        addCapsule(&p, cx: w * 0.050, cy: h * 0.545,  halfW: w * 0.042, halfH: h * 0.035)
-        addCapsule(&p, cx: w * 0.950, cy: h * 0.545,  halfW: w * 0.042, halfH: h * 0.035)
+        // Ruce
+        addCapsule(&p, cx: w * 0.058, cy: h * 0.528, halfW: w * 0.038, halfH: h * 0.032)
+        addCapsule(&p, cx: w * 0.942, cy: h * 0.528, halfW: w * 0.038, halfH: h * 0.032)
 
-        // ── Pánev / boky ───────────────────────────────────
+        // Pánev
         var pelvis = Path()
         pelvis.addRoundedRect(
-            in: CGRect(x: w * 0.20, y: h * 0.455, width: w * 0.60, height: h * 0.075),
-            cornerSize: CGSize(width: 18, height: 18),
+            in: CGRect(x: w * 0.215, y: h * 0.444, width: w * 0.57, height: h * 0.068),
+            cornerSize: CGSize(width: 16, height: 16),
             style: .continuous
         )
         p.addPath(pelvis)
 
-        // ── Stehna ─────────────────────────────────────────
-        addCapsule(&p, cx: w * 0.32, cy: h * 0.63,    halfW: w * 0.105, halfH: h * 0.120)
-        addCapsule(&p, cx: w * 0.68, cy: h * 0.63,    halfW: w * 0.105, halfH: h * 0.120)
+        // Stehna (quad zóna)
+        addCapsule(&p, cx: w * 0.315, cy: h * 0.610, halfW: w * 0.098, halfH: h * 0.108)
+        addCapsule(&p, cx: w * 0.685, cy: h * 0.610, halfW: w * 0.098, halfH: h * 0.108)
 
-        // ── Kolena ─────────────────────────────────────────
-        addCapsule(&p, cx: w * 0.32, cy: h * 0.775,   halfW: w * 0.085, halfH: h * 0.035)
-        addCapsule(&p, cx: w * 0.68, cy: h * 0.775,   halfW: w * 0.085, halfH: h * 0.035)
+        // Kolena
+        addCapsule(&p, cx: w * 0.315, cy: h * 0.748, halfW: w * 0.078, halfH: h * 0.032)
+        addCapsule(&p, cx: w * 0.685, cy: h * 0.748, halfW: w * 0.078, halfH: h * 0.032)
 
-        // ── Lýtka ──────────────────────────────────────────
-        addCapsule(&p, cx: w * 0.315, cy: h * 0.855,  halfW: w * 0.075, halfH: h * 0.098)
-        addCapsule(&p, cx: w * 0.685, cy: h * 0.855,  halfW: w * 0.075, halfH: h * 0.098)
+        // Lýtka
+        addCapsule(&p, cx: w * 0.315, cy: h * 0.832, halfW: w * 0.068, halfH: h * 0.088)
+        addCapsule(&p, cx: w * 0.685, cy: h * 0.832, halfW: w * 0.068, halfH: h * 0.088)
 
-        // ── Chodidla ───────────────────────────────────────
+        // Kotníky
+        addCapsule(&p, cx: w * 0.315, cy: h * 0.936, halfW: w * 0.050, halfH: h * 0.022)
+        addCapsule(&p, cx: w * 0.685, cy: h * 0.936, halfW: w * 0.050, halfH: h * 0.022)
+
+        // Chodidla
         p.addRoundedRect(
-            in: CGRect(x: w * 0.21, y: h * 0.955, width: w * 0.21, height: h * 0.040),
-            cornerSize: CGSize(width: 10, height: 10),
-            style: .continuous
+            in: CGRect(x: w * 0.225, y: h * 0.958, width: w * 0.186, height: h * 0.036),
+            cornerSize: CGSize(width: 9, height: 9), style: .continuous
         )
         p.addRoundedRect(
-            in: CGRect(x: w * 0.58, y: h * 0.955, width: w * 0.21, height: h * 0.040),
-            cornerSize: CGSize(width: 10, height: 10),
+            in: CGRect(x: w * 0.589, y: h * 0.958, width: w * 0.186, height: h * 0.036),
+            cornerSize: CGSize(width: 9, height: 9), style: .continuous
+        )
+
+        return p
+    }
+
+    // MARK: - Zadní pohled
+
+    private func backPath(in rect: CGRect) -> Path {
+        var p = Path()
+        let w = rect.width
+        let h = rect.height
+        let cx = w * 0.5
+
+        // Hlava
+        p.addEllipse(in: CGRect(
+            x: cx - w * 0.14, y: h * 0.005,
+            width: w * 0.28, height: h * 0.115
+        ))
+
+        // Krk
+        addCapsule(&p, cx: cx, cy: h * 0.128, halfW: w * 0.052, halfH: h * 0.026)
+
+        // Trapézy / záda — torso
+        var torso = Path()
+        torso.move(to: CGPoint(x: w * 0.18, y: h * 0.165))
+        torso.addCurve(
+            to: CGPoint(x: w * 0.82, y: h * 0.165),
+            control1: CGPoint(x: w * 0.28, y: h * 0.148),
+            control2: CGPoint(x: w * 0.72, y: h * 0.148)
+        )
+        torso.addCurve(
+            to: CGPoint(x: w * 0.78, y: h * 0.445),
+            control1: CGPoint(x: w * 0.87, y: h * 0.22),
+            control2: CGPoint(x: w * 0.81, y: h * 0.375)
+        )
+        torso.addCurve(
+            to: CGPoint(x: w * 0.22, y: h * 0.445),
+            control1: CGPoint(x: w * 0.70, y: h * 0.465),
+            control2: CGPoint(x: w * 0.30, y: h * 0.465)
+        )
+        torso.addCurve(
+            to: CGPoint(x: w * 0.18, y: h * 0.165),
+            control1: CGPoint(x: w * 0.19, y: h * 0.375),
+            control2: CGPoint(x: w * 0.13, y: h * 0.22)
+        )
+        torso.closeSubpath()
+        p.addPath(torso)
+
+        // Ramena (zadní pohled — větší)
+        addCapsule(&p, cx: w * 0.112, cy: h * 0.192, halfW: w * 0.080, halfH: h * 0.046)
+        addCapsule(&p, cx: w * 0.888, cy: h * 0.192, halfW: w * 0.080, halfH: h * 0.046)
+
+        // Paže zadní
+        addCapsule(&p, cx: w * 0.065, cy: h * 0.292, halfW: w * 0.058, halfH: h * 0.092)
+        addCapsule(&p, cx: w * 0.935, cy: h * 0.292, halfW: w * 0.058, halfH: h * 0.092)
+
+        // Předloktí
+        addCapsule(&p, cx: w * 0.058, cy: h * 0.420, halfW: w * 0.046, halfH: h * 0.082)
+        addCapsule(&p, cx: w * 0.942, cy: h * 0.420, halfW: w * 0.046, halfH: h * 0.082)
+
+        // Ruce
+        addCapsule(&p, cx: w * 0.057, cy: h * 0.528, halfW: w * 0.038, halfH: h * 0.032)
+        addCapsule(&p, cx: w * 0.943, cy: h * 0.528, halfW: w * 0.038, halfH: h * 0.032)
+
+        // Pánev / hýždě
+        var pelvis = Path()
+        pelvis.addRoundedRect(
+            in: CGRect(x: w * 0.215, y: h * 0.444, width: w * 0.57, height: h * 0.072),
+            cornerSize: CGSize(width: 16, height: 16),
             style: .continuous
+        )
+        p.addPath(pelvis)
+
+        // Hýždě (zadní pohled — výraznější)
+        addCapsule(&p, cx: w * 0.316, cy: h * 0.562, halfW: w * 0.095, halfH: h * 0.062)
+        addCapsule(&p, cx: w * 0.684, cy: h * 0.562, halfW: w * 0.095, halfH: h * 0.062)
+
+        // Hamstringy / stehna
+        addCapsule(&p, cx: w * 0.316, cy: h * 0.650, halfW: w * 0.090, halfH: h * 0.082)
+        addCapsule(&p, cx: w * 0.684, cy: h * 0.650, halfW: w * 0.090, halfH: h * 0.082)
+
+        // Kolena
+        addCapsule(&p, cx: w * 0.316, cy: h * 0.750, halfW: w * 0.078, halfH: h * 0.030)
+        addCapsule(&p, cx: w * 0.684, cy: h * 0.750, halfW: w * 0.078, halfH: h * 0.030)
+
+        // Lýtka
+        addCapsule(&p, cx: w * 0.316, cy: h * 0.832, halfW: w * 0.068, halfH: h * 0.088)
+        addCapsule(&p, cx: w * 0.684, cy: h * 0.832, halfW: w * 0.068, halfH: h * 0.088)
+
+        // Kotníky
+        addCapsule(&p, cx: w * 0.316, cy: h * 0.938, halfW: w * 0.050, halfH: h * 0.020)
+        addCapsule(&p, cx: w * 0.684, cy: h * 0.938, halfW: w * 0.050, halfH: h * 0.020)
+
+        // Chodidla
+        p.addRoundedRect(
+            in: CGRect(x: w * 0.226, y: h * 0.958, width: w * 0.186, height: h * 0.036),
+            cornerSize: CGSize(width: 9, height: 9), style: .continuous
+        )
+        p.addRoundedRect(
+            in: CGRect(x: w * 0.588, y: h * 0.958, width: w * 0.186, height: h * 0.036),
+            cornerSize: CGSize(width: 9, height: 9), style: .continuous
         )
 
         return p

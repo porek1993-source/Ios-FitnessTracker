@@ -15,22 +15,27 @@ final class WorkoutViewModel: ObservableObject {
     @Published var audioEnabled = false
     @Published var hkWriteResult: HealthKitWriteResult?
 
-    nonisolated(unsafe) private var restTimer: Timer?
-    nonisolated(unsafe) private var elapsedTimer: Timer?
+    // Timery jsou bezpečně spravovány jako Task (cancelovatelné, bez nonisolated(unsafe))
+    private var restTimerTask:    Task<Void, Never>?
+    private var elapsedTimerTask: Task<Void, Never>?
+    private var advanceTask:      Task<Void, Never>?
     private var audioCoach: AudioCoachService?
 
     let session: WorkoutSession
     let planLabel: String
+    private let bodyWeightKg: Double  // Váha uživatele pro HealthKit kalorie
 
     deinit {
-        restTimer?.invalidate()
-        elapsedTimer?.invalidate()
+        restTimerTask?.cancel()
+        elapsedTimerTask?.cancel()
+        advanceTask?.cancel()
     }
 
-    init(session: WorkoutSession, plan: PlannedWorkoutDay, planLabel: String, aiResponse: TrainerResponse? = nil) {
+    init(session: WorkoutSession, plan: PlannedWorkoutDay, planLabel: String, aiResponse: TrainerResponse? = nil, bodyWeightKg: Double = 75.0) {
         self.exercises = []
         self.session   = session
         self.planLabel = planLabel
+        self.bodyWeightKg = bodyWeightKg
 
         // Priorita: AI response > PlannedExercises z databáze
         if let response = aiResponse, !response.mainBlocks.isEmpty {
@@ -48,9 +53,13 @@ final class WorkoutViewModel: ObservableObject {
                     var state = SessionExerciseState(from: ex)
 
                     // Progressive overload: načti historii z PlannedExercises
+                    // ⚠️ Důležité: ex.slug je raw slug z AI/fallback, DB slug je normalizovaný
+                    let normalizedSlug = FallbackWorkoutGenerator.normalizedSlug(ex.slug)
                     var exerciseRef: Exercise? = nil
                     if let plannedEx = plan.plannedExercises.first(where: {
-                        $0.exercise?.slug == ex.slug || $0.exercise?.nameEN.lowercased() == ex.slug.lowercased()
+                        let dbSlug = $0.exercise?.slug ?? ""
+                        return dbSlug == normalizedSlug || dbSlug == ex.slug
+                            || $0.exercise?.nameEN.lowercased() == ex.name.lowercased()
                     }) {
                         exerciseRef = plannedEx.exercise
                         if let exercise = exerciseRef {
@@ -183,8 +192,13 @@ final class WorkoutViewModel: ObservableObject {
     // MARK: - Timer
 
     private func startElapsedTimer() {
-        elapsedTimer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
-            Task { @MainActor [weak self] in self?.elapsedSeconds += 1 }
+        elapsedTimerTask?.cancel()
+        elapsedTimerTask = Task {
+            while !Task.isCancelled {
+                try? await Task.sleep(nanoseconds: 1_000_000_000)
+                guard !Task.isCancelled else { break }
+                elapsedSeconds += 1
+            }
         }
     }
 
@@ -227,8 +241,13 @@ final class WorkoutViewModel: ObservableObject {
 
         let allDone = exercises[exerciseIndex].sets.allSatisfy(\.isCompleted)
         if allDone {
-            DispatchQueue.main.asyncAfter(deadline: .now() + Double(restSeconds) + 0.5) { [weak self] in
-                self?.advanceToNextExercise()
+            advanceTask?.cancel()
+            advanceTask = Task { @MainActor [weak self] in
+                guard let self else { return }
+                // Krátký delay aby uživatel viděl zelený checkmark
+                try? await Task.sleep(nanoseconds: UInt64((Double(restSeconds) + 0.5) * 1_000_000_000))
+                guard !Task.isCancelled else { return }
+                self.advanceToNextExercise()
             }
         }
     }
@@ -248,7 +267,7 @@ final class WorkoutViewModel: ObservableObject {
 
     private func startRestTimer(seconds: Int) {
         guard seconds > 0 else { return }
-        restTimer?.invalidate()
+        restTimerTask?.cancel()
         totalRestSeconds     = seconds
         restSecondsRemaining = seconds
         withAnimation { isResting = true }
@@ -257,37 +276,55 @@ final class WorkoutViewModel: ObservableObject {
             audioCoach?.speak(.restStarted(seconds))
         }
 
-        restTimer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
-            Task { @MainActor [weak self] in
-                guard let self else { return }
-                if self.restSecondsRemaining > 1 {
-                    self.restSecondsRemaining -= 1
-                    // Varování 10 sekund před koncem
-                    if self.restSecondsRemaining == 10 && self.audioEnabled {
-                        self.audioCoach?.speak(.restWarning(10))
+        restTimerTask = Task {
+            while !Task.isCancelled {
+                try? await Task.sleep(nanoseconds: 1_000_000_000)
+                guard !Task.isCancelled else { break }
+                if restSecondsRemaining > 1 {
+                    restSecondsRemaining -= 1
+                    if restSecondsRemaining == 10 && audioEnabled {
+                        audioCoach?.speak(.restWarning(10))
                     }
                 } else {
-                    if self.audioEnabled { self.audioCoach?.speak(.restEnd) }
-                    self.skipRest()
+                    if audioEnabled { audioCoach?.speak(.restEnd) }
+                    skipRest()
+                    break
                 }
             }
         }
     }
 
     func skipRest() {
-        restTimer?.invalidate()
+        restTimerTask?.cancel()
+        restTimerTask = nil
         withAnimation(.spring(response: 0.35)) { isResting = false }
         Task { await LiveActivityManager.shared.endWithDismissalDelay(2) }
+
+        // Pokud bylo naplánované automatické přejití na další cvik (po dokončení všech sérií),
+        // zruš čekání a přejdi okamžitě.
+        if let task = advanceTask {
+            task.cancel()
+            advanceTask = nil
+            Task { @MainActor [weak self] in
+                try? await Task.sleep(nanoseconds: 300_000_000) // 0.3s — krátký delay pro UI feedback
+                self?.advanceToNextExercise()
+            }
+        }
     }
 
     func adjustRest(by delta: Int) {
-        restSecondsRemaining = max(0, restSecondsRemaining + delta)
-        if restSecondsRemaining == 0 { skipRest(); return }
-        let newEndsAt = Date.now.addingTimeInterval(Double(restSecondsRemaining))
+        let updated = max(0, restSecondsRemaining + delta)
+        restSecondsRemaining = updated
+        // Při prodloužení pauzy upravíme i totalRestSeconds (zobrazení v progress baru)
+        if delta > 0 {
+            totalRestSeconds = max(totalRestSeconds, updated)
+        }
+        if updated == 0 { skipRest(); return }
+        let newEndsAt = Date.now.addingTimeInterval(Double(updated))
         Task {
             await LiveActivityManager.shared.updateRestTimer(
                 newEndsAt: newEndsAt,
-                totalSeconds: restSecondsRemaining
+                totalSeconds: updated
             )
         }
     }
@@ -300,7 +337,7 @@ final class WorkoutViewModel: ObservableObject {
         guard currentExerciseIndex < exercises.count - 1 else {
             // Všechny cviky dokončeny — upozorni UI
             withAnimation { allExercisesDone = true }
-            if audioEnabled { audioCoach?.speak(.greatSet) }  // trénink dokončen
+            if audioEnabled { audioCoach?.speak(.sessionEnd) }  // ✅ Dedikovaná zpráva pro konec tréninku
             UINotificationFeedbackGenerator().notificationOccurred(.success)
             return
         }
@@ -358,9 +395,11 @@ final class WorkoutViewModel: ObservableObject {
     // MARK: - Finish — ukládá WeightEntry do SwiftData pro progressive overload
 
     @discardableResult
-    func finishWorkout(modelContext: ModelContext, bodyWeightKg: Double = 75.0) -> ([XPGain], [PREvent]) {
-        restTimer?.invalidate()
-        elapsedTimer?.invalidate()
+    func finishWorkout(modelContext: ModelContext) -> ([XPGain], [PREvent]) {
+        restTimerTask?.cancel()
+        elapsedTimerTask?.cancel()
+        advanceTask?.cancel()
+        advanceTask = nil
         session.durationMinutes = elapsedSeconds / 60
         session.status = .completed
         session.finishedAt = .now
@@ -426,8 +465,8 @@ final class WorkoutViewModel: ObservableObject {
     // MARK: - Cancel — smaže session bez uložení
 
     func cancelWorkout(modelContext: ModelContext) {
-        restTimer?.invalidate()
-        elapsedTimer?.invalidate()
+        restTimerTask?.cancel()
+        elapsedTimerTask?.cancel()
         session.status = .skipped
         modelContext.delete(session)
         do {

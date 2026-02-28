@@ -31,7 +31,8 @@ struct WorkoutView: View {
             session: session,
             plan: plan,
             planLabel: planLabel,
-            aiResponse: aiResponse
+            aiResponse: aiResponse,
+            bodyWeightKg: bodyWeightKg
         ))
         self.bodyWeightKg = bodyWeightKg
         self.onFinish = onFinish
@@ -260,8 +261,7 @@ struct WorkoutView: View {
     private func finishWorkout() {
         // Dokončení tréninku + zápis do DB (předáme skutečnou váhu uživatele)
         let (xpGains, prEvents) = vm.finishWorkout(
-            modelContext: modelContext,
-            bodyWeightKg: bodyWeightKg
+            modelContext: modelContext
         )
 
         // Sestavíme coach message pro summary
@@ -311,6 +311,8 @@ struct WorkoutChatView: View {
         (role: "assistant", text: "Ahoj! Tady jsem — cokoliv tě bolí, chybí vybavení, nebo chceš vyměnit cvik, jen napiš. 💬")
     ]
     @State private var isLoading = false
+    // ✅ Jeden sdílený klient pro celou životnost sheetu — efektivnější než per-zpráva instanciace
+    private let geminiClient = GeminiAPIClient(apiKey: AppConstants.geminiAPIKey)
 
     var body: some View {
         NavigationStack {
@@ -373,7 +375,7 @@ struct WorkoutChatView: View {
     }
 
     private func fetchGeminiResponse(userText: String) async -> String {
-        let client = GeminiAPIClient(apiKey: AppConstants.geminiAPIKey)
+        let client = geminiClient  // ✅ Sdílený klient
         let systemPrompt = """
         Jsi iKorba, elitní, lehce drsný, ale motivující silový trenér (Agilní Fitness Trenér). 
         Uživatel má právě trénink a napsal ti do chatu. 

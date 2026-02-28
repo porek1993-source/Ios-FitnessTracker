@@ -140,8 +140,14 @@ final class AppEnvironment: ObservableObject {
             toast = AppToastError(message: "Chyba při kódování dat. Zkus to znovu.", icon: "exclamationmark.triangle.fill", severity: .error)
         case .internalError(let desc):
             toast = AppToastError(message: "Interní chyba: \(desc)", icon: "ladybug.fill", severity: .error)
-        default:
-            toast = AppToastError(message: appError.localizedDescription, icon: "exclamationmark.circle.fill", severity: .warning)
+        case .healthKitUnavailable:
+            toast = AppToastError(message: "Apple Health není dostupný na tomto zařízení.", icon: "heart.slash.fill", severity: .warning)
+        case .noPlanForToday:
+            toast = AppToastError(message: "Pro dnešní den není naplánovaný trénink.", icon: "calendar.badge.exclamationmark", severity: .info)
+        case .noActiveProfile:
+            toast = AppToastError(message: "Nenalezen aktivní profil. Vytvoř si profil v nastavení.", icon: "person.badge.minus.fill", severity: .error)
+        case .unknown:
+            toast = AppToastError(message: "Nastala neznámá chyba. Zkus aplikaci restartovat.", icon: "exclamationmark.circle.fill", severity: .warning)
         }
         globalError = toast
     }
