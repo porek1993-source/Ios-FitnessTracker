@@ -10,4 +10,8 @@ struct FatigueEntry: Identifiable, Codable {
     let areaSlug: String
     let severity: Int
     let isJointPain: Bool
+
+    var area: MuscleArea? {
+        MuscleArea.all.first(where: { $0.slug == areaSlug })
+    }
 }

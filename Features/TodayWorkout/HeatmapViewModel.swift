@@ -13,7 +13,7 @@ final class HeatmapViewModel: ObservableObject {
     var muscleGroupIntensity: [MuscleGroup: Double] {
         var intensity: [MuscleGroup: Double] = [:]
         for entry in affectedAreas {
-            if let group = MuscleGroup.from(supabaseKey: entry.area.slug) {
+            if let group = MuscleGroup.from(supabaseKey: entry.areaSlug) {
                 let severityVal = Double(entry.severity) / 5.0
                 let current = intensity[group] ?? 0
                 intensity[group] = max(current, severityVal)
@@ -57,7 +57,7 @@ final class HeatmapViewModel: ObservableObject {
     }
 
     func state(for area: MuscleArea) -> MuscleState {
-        guard let entry = affectedAreas.first(where: { $0.area.id == area.id }) else { return .healthy }
+        guard let entry = affectedAreas.first(where: { $0.areaSlug == area.slug }) else { return .healthy }
         if entry.isJointPain   { return .jointPain }
         if entry.severity >= 4 { return .fatigued }
         return .sore
@@ -69,7 +69,7 @@ final class HeatmapViewModel: ObservableObject {
 
     func confirmFatigue(area: MuscleArea, severity: Int, isJointPain: Bool) {
         withAnimation(.spring(response: 0.4)) {
-            if let idx = affectedAreas.firstIndex(where: { $0.area.id == area.id }) {
+            if let idx = affectedAreas.firstIndex(where: { $0.areaSlug == area.slug }) {
                 affectedAreas[idx] = FatigueEntry(areaSlug: area.slug, severity: severity, isJointPain: isJointPain)
             } else {
                 affectedAreas.append(FatigueEntry(areaSlug: area.slug, severity: severity, isJointPain: isJointPain))

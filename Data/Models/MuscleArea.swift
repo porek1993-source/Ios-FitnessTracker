@@ -70,4 +70,6 @@ struct MuscleArea: Identifiable {
         .init(id: "left_calf_b",      slug: "calves",          displayName: "Levé lýtko",          isFrontSide: false, relX: 0.36, relY: 0.79, relW: 0.10, relH: 0.16, cornerRadius: 10),
         .init(id: "right_calf_b",     slug: "calves",          displayName: "Pravé lýtko",         isFrontSide: false, relX: 0.64, relY: 0.79, relW: 0.10, relH: 0.16, cornerRadius: 10),
     ]
+
+    static let all: [MuscleArea] = frontAreas + backAreas
 }

@@ -210,12 +210,19 @@ struct ActiveRestrictionsView: View {
             ForEach(vm.affectedAreas) { entry in
                 HStack(spacing: 12) {
                     Circle().fill(entry.isJointPain ? Color.red : Color.orange).frame(width: 8, height: 8)
-                    Text(entry.area.displayName).font(.system(size: 15, weight: .semibold)).foregroundStyle(.white)
+                    Text(entry.area?.displayName ?? "Neznámý sval").font(.system(size: 15, weight: .semibold)).foregroundStyle(.white)
                     Spacer()
                     Text(entry.isJointPain ? "Kloub/šlacha" : "Únava \(entry.severity)/5")
                         .font(.system(size: 12)).foregroundStyle(.white.opacity(0.5))
-                    Button { withAnimation { vm.removeFatigue(area: entry.area) } } label: {
-                        Image(systemName: "xmark.circle.fill").foregroundStyle(.white.opacity(0.3))
+                    
+                    if let area = entry.area {
+                        Button { withAnimation { vm.removeFatigue(area: area) } } label: {
+                            Image(systemName: "xmark.circle.fill").foregroundStyle(.white.opacity(0.3))
+                        }
+                    } else {
+                        Button { withAnimation { vm.affectedAreas.removeAll { $0.id == entry.id } } } label: {
+                            Image(systemName: "xmark.circle.fill").foregroundStyle(.white.opacity(0.3))
+                        }
                     }
                 }
                 .padding(.horizontal, 14).padding(.vertical, 10)
