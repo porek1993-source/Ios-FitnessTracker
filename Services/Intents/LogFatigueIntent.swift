@@ -34,7 +34,7 @@ struct LogFatigueIntent: AppIntent {
             isFrontSide: true,
             relX: 0.5, relY: 0.5, relW: 0.1, relH: 0.1
         )
-        let entry = FatigueEntry(area: area, severity: clampedSeverity, isJointPain: clampedSeverity >= 4)
+        let entry = FatigueEntry(areaSlug: area.slug, severity: clampedSeverity, isJointPain: clampedSeverity >= 4)
         FatigueStore.save([entry])
 
         let severityText = switch clampedSeverity {
