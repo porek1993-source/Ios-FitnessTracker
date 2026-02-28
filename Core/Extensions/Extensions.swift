@@ -15,8 +15,13 @@ extension Date {
         Calendar.current.startOfDay(for: self)
     }
 
+    /// Konec dne — DST-bezpečná implementace pomocí Calendar.
+    /// ✅ FIX #16: addingTimeInterval(86_400) je špatné pro dny se změnou letního času (DST),
+    /// kde má den 23 nebo 25 hodin. Calendar.date(byAdding:) respektuje DST správně.
     var endOfDay: Date {
-        startOfDay.addingTimeInterval(86_400)
+        // Přidáme 1 den a vezmeme startOfDay — výsledek je přesně začátek zítřka = konec dneška
+        let tomorrow = Calendar.current.date(byAdding: .day, value: 1, to: startOfDay) ?? startOfDay.addingTimeInterval(86_400)
+        return tomorrow
     }
 
     func isSameDay(as other: Date) -> Bool {
@@ -28,11 +33,17 @@ extension Date {
 
 extension Double {
 
-
     var kgFormatted: String {
         self.truncatingRemainder(dividingBy: 1) == 0
             ? String(format: "%.0f kg", self)
             : String(format: "%.1f kg", self)
+    }
+
+    /// Zaokrouhlí číslo na nejbližší násobek `toNearest`.
+    /// Příklad: 102.3.rounded(toNearest: 2.5) → 102.5
+    /// ✅ Přesunuto z WorkoutViewModel.swift do Extensions.swift — sdílená utility
+    func rounded(toNearest value: Double) -> Double {
+        (self / value).rounded() * value
     }
 }
 

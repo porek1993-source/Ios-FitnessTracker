@@ -83,13 +83,8 @@ final class WorkoutViewModel: ObservableObject {
                             .sorted { $0.loggedAt > $1.loggedAt }
                             .prefix(6)
                             .map { entry in
-                                CompletedSet(
-                                    setNumber: entry.setNumber,
-                                    weightKg: entry.weightKg,
-                                    reps: entry.reps,
-                                    rpe: entry.rpe,
-                                    isWarmupSet: false
-                                )
+                                // ✅ FIX: Používáme SetSnapshot (ValueType) místo @Model CompletedSet
+                                SetSnapshot(from: entry)
                             }
                         
                         if let suggestion = ProgressionEngine.calculateNextTarget(
@@ -140,13 +135,8 @@ final class WorkoutViewModel: ObservableObject {
                         .sorted { $0.loggedAt > $1.loggedAt }
                         .prefix(6)
                         .map { entry in
-                            CompletedSet(
-                                setNumber: entry.setNumber,
-                                weightKg: entry.weightKg,
-                                reps: entry.reps,
-                                rpe: entry.rpe,
-                                isWarmupSet: false
-                            )
+                            // ✅ FIX: Používáme SetSnapshot (ValueType) místo @Model CompletedSet
+                            SetSnapshot(from: entry)
                         }
                     
                     let suggestion = ProgressionEngine.calculateNextTarget(
@@ -724,10 +714,4 @@ struct SetState {
     }
 }
 
-// MARK: - Helpers
-
-extension Double {
-    func rounded(toNearest: Double) -> Double {
-        (self / toNearest).rounded() * toNearest
-    }
-}
+// Double.rounded(toNearest:) přesunuto do Core/Extensions/Extensions.swift

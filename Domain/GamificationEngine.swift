@@ -159,7 +159,9 @@ final class GamificationEngine: ObservableObject {
         guard let record = muscleRecords[muscle] else { return 0 }
         let level = record.level
         let nextLevel = MuscleLevel(rawValue: level.rawValue + 1) ?? level
-        let xpInCurrentLevel = record.totalXP - level.xpThreshold
+        // ✅ FIX #11: xpInCurrentLevel může být záporné pro .elite (není nextLevel),
+        // proto max(0, ...) zabraňuje záporné hodnotě u max levelu.
+        let xpInCurrentLevel = max(0, record.totalXP - level.xpThreshold)
         let xpNeeded = nextLevel.xpThreshold - level.xpThreshold
         guard xpNeeded > 0 else { return 1.0 }
         return min(xpInCurrentLevel / xpNeeded, 1.0)

@@ -74,9 +74,10 @@ enum WorkoutPlanGenerator {
         do {
             try context.save()
         } catch {
-            Task { @MainActor in
-                AppLogger.error("WorkoutPlanGenerator: Chyba při ukládání plánu: \(error)")
-            }
+            // ✅ FIX #18: AppLogger.error je nonisolated static func — nevyžaduje Task { @MainActor }.
+            // Původní Task wrapper byl zbytečný a mohl způsobit, že chybová zpráva
+            // se zobrazila se zpožděním (po návratu volajícího).
+            AppLogger.error("WorkoutPlanGenerator: Chyba při ukládání plánu: \(error)")
         }
         return plan
     }

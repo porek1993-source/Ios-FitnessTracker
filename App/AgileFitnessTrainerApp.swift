@@ -21,6 +21,9 @@ struct AgileFitnessTrainerApp: App {
     /// Centrální DI kontejner — životní cyklus svázaný s App, ne s View
     @StateObject private var appEnv = AppEnvironment()
 
+    // ✅ FIX #17: scenePhase sledujeme pro clearBadge() při přechodu do popředí
+    @Environment(\.scenePhase) private var scenePhase
+
     var body: some Scene {
         WindowGroup {
             RootView()
@@ -36,6 +39,13 @@ struct AgileFitnessTrainerApp: App {
                         modelContext: Self.container.mainContext
                     )
                 }
+        }
+        // ✅ FIX #17: Vynuluj badge při každém přechodu aplikace do popředí.
+        // Bez toho zůstával badge na ikoně navždy po doručení notifikace.
+        .onChange(of: scenePhase) { _, newPhase in
+            if newPhase == .active {
+                NotificationService.shared.clearBadge()
+            }
         }
     }
 }

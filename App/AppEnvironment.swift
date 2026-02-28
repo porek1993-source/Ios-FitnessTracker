@@ -125,14 +125,19 @@ final class AppEnvironment: ObservableObject {
     /// Synchronizuje video URL ze Supabase do lokální SwiftData DB.
     /// ✅ OPRAVA: Řeší problém "ukázka není k dispozici" v tréninku vylepšením fuzzy matching logiky.
     func syncExerciseVideos(modelContext: ModelContext) {
+        // ✅ FIX: ModelContext je @MainActor-bound a NELZE ho předávat do Task.detached.
+        // Místo toho vytvoříme nový background context z SharedModelContainer.
+        // modelContext parametr je zachován pro API kompatibilitu (může být odstraněn v budoucí verzi).
         Task.detached(priority: .utility) { [weak self] in
             guard let self = self else { return }
             do {
                 AppLogger.info("⏳ [AppEnvironment] Startuji synchronizaci videí cviků...")
                 let wikiExercises = try await self.exerciseRepository.fetchMuscleWikiAll()
-                
+
+                // Bezpečné: nový ModelContext pro background task
+                let bgContext = ModelContext(SharedModelContainer.container)
                 let descriptor = FetchDescriptor<Exercise>()
-                let localExercises = try modelContext.fetch(descriptor)
+                let localExercises = try bgContext.fetch(descriptor)
                 
                 var updatedCount = 0
                 for local in localExercises {
@@ -164,7 +169,7 @@ final class AppEnvironment: ObservableObject {
                 }
                 
                 if updatedCount > 0 {
-                    try modelContext.save()
+                    try bgContext.save()
                     AppLogger.info("✅ [AppEnvironment] Synchronizováno \(updatedCount) videí cviků.")
                 } else {
                     AppLogger.info("ℹ️ [AppEnvironment] Žádná nová videa k synchronizaci.")

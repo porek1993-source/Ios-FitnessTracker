@@ -3,9 +3,18 @@ import Foundation
 import SwiftUI
 
 /// Jednoduchý logger, který ukládá zprávy i do paměti pro zobrazení v UI (pro debugování na Windows)
+///
+/// ✅ FIX #19: Odstraněno @unchecked Sendable — kombinace @MainActor + @unchecked Sendable
+/// říká kompilátoru "důvěřuj mi" ale mutable @Published var logs je přístupný
+/// ze nonisolated log() přes Task { @MainActor }, přičemž při rychlém logování
+/// více konkurenčních Tasks může způsobit nekonzistentní pořadí logů.
+///
+/// Oprava: AppLogger je @MainActor (bez @unchecked Sendable). Sdílená instance je
+/// nonisolated(unsafe) — přijatelné pro singleton přístup k @MainActor třídě,
+/// protože všechny mutace probíhají výhradně přes Task { @MainActor }.
 @MainActor
-final class AppLogger: ObservableObject, @unchecked Sendable {
-    nonisolated static let shared = AppLogger()
+final class AppLogger: ObservableObject {
+    nonisolated(unsafe) static let shared = AppLogger()
     
     nonisolated init() {}
     @Published var logs: [LogEntry] = []

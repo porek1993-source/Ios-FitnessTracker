@@ -105,7 +105,8 @@ final class ActiveSessionViewModel: ObservableObject {
         coachTipTask?.cancel()
         finishTask?.cancel()
 
-        Task { @MainActor in AppLogger.info("[ActiveSessionViewModel] deinit — vše vyčištěno.") }
+        // ✅ FIX: deinit nemůže použít @MainActor ani Task — AppLogger je nonisolated OK
+        AppLogger.info("[ActiveSessionViewModel] deinit — vše vyčištěno.")
     }
 
     // MARK: ═══════════════════════════════════════════════════════════════════
@@ -132,11 +133,11 @@ final class ActiveSessionViewModel: ObservableObject {
 
             self.isLoadingCoachTip = true
             defer {
-                // defer se spustí i při Task cancellation — zajistí reset stavu
-                // ⚠️ V defer MUSÍME znovu ověřit, že self existuje
-                Task { @MainActor [weak self] in
-                    self?.isLoadingCoachTip = false
-                }
+                // ✅ FIX #8: Task je @MainActor-isolated, proto defer může přímo přiřadit
+                // Vnitřní Task { @MainActor } byl zbytečný a mohl způsobit race condition:
+                // defer se spustí synchronně při opuštění scope, ale vnořený Task byl
+                // naplánován asynchronně — isLoadingCoachTip zůstal true déle než bylo nutné.
+                self.isLoadingCoachTip = false
             }
 
             // Kontrola Task cancellation před heavyweight operací
@@ -191,10 +192,12 @@ final class ActiveSessionViewModel: ObservableObject {
             // Gamifikace a PR Detection
             let prEvents = self.detectPersonalRecords(exercises: exercisesCopy)
             let gamificationInput = self.buildGamificationInput(from: exercisesCopy, prEvents: prEvents)
-            let engine = GamificationEngine()
+            // ✅ FIX #9: GamificationEngine je @MainActor třída — nelze ji instancovat
+            // mimo MainActor. Přesunuto dovnitř MainActor.run { }.
             
             await MainActor.run { [weak self] in
                 guard let self else { return }
+                let engine = GamificationEngine()
                 engine.loadRecords(from: modelContext)
                 let gains = engine.process(input: gamificationInput, context: modelContext)
                 
@@ -558,13 +561,8 @@ final class ActiveSessionViewModel: ObservableObject {
                             .sorted { $0.loggedAt > $1.loggedAt }
                             .prefix(12)
                         let completedSets = history.map {
-                            CompletedSet(
-                                setNumber: $0.setNumber,
-                                weightKg: $0.weightKg,
-                                reps: $0.reps,
-                                rpe: $0.rpe,
-                                isWarmupSet: false
-                            )
+                            // ✅ FIX: Používáme SetSnapshot (ValueType) místo @Model CompletedSet
+                            SetSnapshot(from: $0)
                         }
 
                         if let suggestion = ProgressionEngine.calculateNextTarget(
@@ -606,13 +604,8 @@ final class ActiveSessionViewModel: ObservableObject {
                         .sorted { $0.loggedAt > $1.loggedAt }
                         .prefix(12)
                     let completedSets = history.map {
-                        CompletedSet(
-                            setNumber: $0.setNumber,
-                            weightKg: $0.weightKg,
-                            reps: $0.reps,
-                            rpe: $0.rpe,
-                            isWarmupSet: false
-                        )
+                        // ✅ FIX: Používáme SetSnapshot (ValueType) místo @Model CompletedSet
+                        SetSnapshot(from: $0)
                     }
                     if let suggestion = ProgressionEngine.calculateNextTarget(
                         previousSets: Array(completedSets),
