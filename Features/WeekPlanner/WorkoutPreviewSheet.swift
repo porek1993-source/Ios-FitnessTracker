@@ -4,6 +4,9 @@ import SwiftData
 
 struct WorkoutPreviewSheet: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.modelContext) private var modelContext
+    @Query private var allExercises: [Exercise]
+    
     let day: PlannedWorkoutDay
     
     var body: some View {
@@ -43,6 +46,9 @@ struct WorkoutPreviewSheet: View {
                     .padding(.vertical, 24)
                 }
             }
+            .onAppear {
+                repairMissingExercises()
+            }
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
@@ -67,6 +73,22 @@ struct WorkoutPreviewSheet: View {
         }
         .frame(maxWidth: .infinity)
         .padding(.top, 40)
+    }
+
+    private func repairMissingExercises() {
+        var didRepair = false
+        for planned in day.plannedExercises {
+            if planned.exercise == nil {
+                if let slug = planned.fallbackSlug,
+                   let matching = allExercises.first(where: { $0.slug == slug }) {
+                    planned.exercise = matching
+                    didRepair = true
+                }
+            }
+        }
+        if didRepair {
+            try? modelContext.save()
+        }
     }
 }
 

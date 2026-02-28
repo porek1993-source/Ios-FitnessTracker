@@ -166,7 +166,17 @@ struct GIFPlayerView: UIViewRepresentable {
                 let v = document.querySelector('video');
                 v.addEventListener('loadeddata', () => { document.title='loaded'; });
                 v.addEventListener('error', () => { document.title='error'; });
-                v.play().catch(e => { document.title='error'; });
+                
+                // Místo document.title='error' při zamítnutí autoplay (např. Low Power Mode),
+                // povolíme ovládací prvky a nahlásíme úspěšné načtení.
+                v.play().catch(e => { 
+                    if (e.name === 'NotAllowedError') {
+                        v.controls = true;
+                        document.title = 'loaded';
+                    } else {
+                        document.title = 'error'; 
+                    }
+                });
             }
         </script>
         </html>

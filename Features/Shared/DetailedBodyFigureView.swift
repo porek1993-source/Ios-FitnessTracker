@@ -90,30 +90,96 @@ extension Path {
     }
 }
 
-// Helper pro parsování SVG stringu
 extension UIBezierPath {
     convenience init(svgPath: String) {
         self.init()
-        let commands = svgPath.split(whereSeparator: { "MLHVZmlhvz ".contains($0) })
-        let types = svgPath.filter { "MLHVZmlhvz".contains($0) }
+        let commandChars = "MLHVZCQSamlhvzcqs"
         
-        var typeIndex = 0
-        for cmd in commands {
-            let coords = cmd.split(separator: " ").compactMap { Double($0) }
-            guard typeIndex < types.count else { break }
-            let type = types[types.index(types.startIndex, offsetBy: typeIndex)]
+        var commands: [String] = []
+        var currentCmd = ""
+        
+        for char in svgPath {
+            if commandChars.contains(char) {
+                if !currentCmd.isEmpty { commands.append(currentCmd) }
+                currentCmd = String(char)
+            } else {
+                currentCmd.append(char)
+            }
+        }
+        if !currentCmd.isEmpty { commands.append(currentCmd) }
+        
+        var currentPoint = CGPoint.zero
+        
+        for cmdStr in commands {
+            guard let firstChar = cmdStr.first else { continue }
+            let type = String(firstChar)
+            
+            // Extract numbers keeping minus signs
+            let numStr = cmdStr.dropFirst()
+                .replacingOccurrences(of: "-", with: " -")
+                .replacingOccurrences(of: ",", with: " ")
+            let coords = numStr.split(separator: " ").compactMap { Double($0) }
             
             switch type {
-            case "M", "m":
-                if coords.count >= 2 { self.move(to: CGPoint(x: coords[0], y: coords[1])) }
-            case "L", "l":
-                if coords.count >= 2 { self.addLine(to: CGPoint(x: coords[0], y: coords[1])) }
+            case "M":
+                if coords.count >= 2 { 
+                    currentPoint = CGPoint(x: coords[0], y: coords[1])
+                    self.move(to: currentPoint) 
+                }
+            case "m":
+                if coords.count >= 2 { 
+                    currentPoint = CGPoint(x: currentPoint.x + coords[0], y: currentPoint.y + coords[1])
+                    self.move(to: currentPoint) 
+                }
+            case "L":
+                if coords.count >= 2 { 
+                    currentPoint = CGPoint(x: coords[0], y: coords[1])
+                    self.addLine(to: currentPoint) 
+                }
+            case "l":
+                if coords.count >= 2 { 
+                    currentPoint = CGPoint(x: currentPoint.x + coords[0], y: currentPoint.y + coords[1])
+                    self.addLine(to: currentPoint) 
+                }
+            case "H":
+                if coords.count >= 1 {
+                    currentPoint = CGPoint(x: coords[0], y: currentPoint.y)
+                    self.addLine(to: currentPoint)
+                }
+            case "h":
+                if coords.count >= 1 {
+                    currentPoint = CGPoint(x: currentPoint.x + coords[0], y: currentPoint.y)
+                    self.addLine(to: currentPoint)
+                }
+            case "V":
+                if coords.count >= 1 {
+                    currentPoint = CGPoint(x: currentPoint.x, y: coords[0])
+                    self.addLine(to: currentPoint)
+                }
+            case "v":
+                if coords.count >= 1 {
+                    currentPoint = CGPoint(x: currentPoint.x, y: currentPoint.y + coords[0])
+                    self.addLine(to: currentPoint)
+                }
+            case "C":
+                if coords.count >= 6 {
+                    let cp1 = CGPoint(x: coords[0], y: coords[1])
+                    let cp2 = CGPoint(x: coords[2], y: coords[3])
+                    currentPoint = CGPoint(x: coords[4], y: coords[5])
+                    self.addCurve(to: currentPoint, controlPoint1: cp1, controlPoint2: cp2)
+                }
+            case "c":
+                if coords.count >= 6 {
+                    let cp1 = CGPoint(x: currentPoint.x + coords[0], y: currentPoint.y + coords[1])
+                    let cp2 = CGPoint(x: currentPoint.x + coords[2], y: currentPoint.y + coords[3])
+                    currentPoint = CGPoint(x: currentPoint.x + coords[4], y: currentPoint.y + coords[5])
+                    self.addCurve(to: currentPoint, controlPoint1: cp1, controlPoint2: cp2)
+                }
             case "Z", "z":
                 self.close()
             default:
                 break
             }
-            typeIndex += 1
         }
     }
 }
