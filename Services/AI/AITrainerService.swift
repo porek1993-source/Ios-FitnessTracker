@@ -156,15 +156,13 @@ final class AITrainerService: ObservableObject {
             
             if shouldCallAI {
                 AppLogger.info("🧠 [AITrainer] Zjištěna odchylka (Jiná aktivita / Spánek / Vynechané dny). Volám Gemini API s 30s timeoutem!")
-                // Vybudujeme prompt
-                let userMessage = try await contextBuilder.buildMainPrompt(
+                finalResponse = try await callGeminiWithTimeout(
+                    date: date,
                     profile: profile,
-                    targetDate: date,
                     plannedDay: plannedDay,
                     equipmentOverride: equipmentOverride,
                     timeLimitMinutes: timeLimitMinutes
                 )
-                finalResponse = try await callGeminiWithTimeout(userMessage: userMessage)
             } else {
                 AppLogger.info("⚡️ [AITrainer] Běžný tréninkový den bez komplikací -> Vracím offline plán (šetření klíčů API).")
                 let fallback = FallbackWorkoutGenerator.generateFallbackPlan(
@@ -180,22 +178,21 @@ final class AITrainerService: ObservableObject {
             // ale my jen kontrolujeme minimální limit pro jistotu.
             let validatedResponse = AIExerciseCountValidator.validate(finalResponse)
 
-            // Uložíme do lokální paměti pro Background Thread SwiftData přístup
-            if let responseSnapshot = ResponseSnapshot(from: validatedResponse) {
-                let planIDSnapshot = plannedDay.id
-                let dateSnapshot = date
-                
-                // Zápis musí proběhnout na background threadu (BackgroundContext)
-                Task.detached {
-                    let container = SharedModelContainer.container
-                    let bgContext = ModelContext(container)
-                    await WorkoutCache.save(
-                        response: responseSnapshot,
-                        for: dateSnapshot,
-                        plannedDayID: planIDSnapshot,
-                        context: bgContext
-                    )
-                }
+            // ── KROK 3: Asynchronní uložení do cache (neblokuje UI) ──────────
+            let responseSnapshot = validatedResponse
+            let dateSnapshot     = date
+            let planIDSnapshot   = plannedDay.id
+            
+            // Zápis musí proběhnout na background threadu (BackgroundContext)
+            let container = SharedModelContainer.container
+            Task.detached {
+                let bgContext = ModelContext(container)
+                await WorkoutCache.save(
+                    response: responseSnapshot,
+                    for: dateSnapshot,
+                    plannedDayID: planIDSnapshot,
+                    context: bgContext
+                )
             }
 
             return validatedResponse
@@ -285,14 +282,14 @@ private extension AITrainerService {
         }
 
         // 3. Zkontrolujeme kalendář (vynechané dny)
-        if let activePlan = profile.activePlan {
+        if let activePlan = profile.workoutPlans.first(where: \.isActive) {
             // Kolik % plánu má hotovo? Pokud má v plánu 4 dny a do konce týdne zbývají 2 dny a on odcvičil jen 1.
-            let daysInWeekComplete = activePlan.progressHistory.filter { history in
+            let daysInWeekComplete = activePlan.sessions.filter { history in
                 // Je to ze současného týdne?
-                Calendar.current.isDate(history.date, equalTo: date, toGranularity: .weekOfYear)
+                Calendar.current.isDate(history.startedAt, equalTo: date, toGranularity: .weekOfYear)
             }.count
             
-            let plannedDaysPerWeek = activePlan.plannedDays.count
+            let plannedDaysPerWeek = activePlan.scheduledDays.count
             
             // Kolik dnů zbývá do konce týdne (Neděle jako konec)
             let weekday = Calendar.current.component(.weekday, from: date) // Neděle = 1, Pondělí = 2...
@@ -395,16 +392,9 @@ private extension AITrainerService {
         }
         
         // 3. Zpoždění v tréninkovém plánu
-        let todayDate = Date()
-        let weekday = Calendar.current.component(.weekday, from: todayDate)
-        let adjustedWeekday = weekday == 1 ? 7 : weekday - 1
-        let daysRemainingInWeek = 7 - adjustedWeekday
-        
-        // Let's deduce how many workouts they've 'completed' from the context profile history...
-        // Wait, TrainerRequestContext doesn't have progressHistory.
-        // I will add a simple flag to the TrainerRequestContext instead or deduce it.
-        // Actually, to keep it simple, let's just use a general prompt if they are behind.
-        promptStr += "⚠️ POKYNY K ADAPTACI (pokud je potřeba): Pokud je uživatel ve skluzu (např. vynechal trénink), chytře spoj nevycvičené svalové partie do dnešního tréninku.\n"
+        if let workouts = context.workoutsRemainingInWeek, let days = context.daysRemainingInWeek, workouts > days && workouts > 0 {
+            promptStr += "⚠️ POKYNY K ADAPTACI (Zpoždění): Uživatel je ve skluzu. Chybí mu odcvičit \(workouts) tréninků, ale do konce týdne zbývá už jen \(days) dní. Chytře spoj nevycvičené svalové partie do dnešního tréninku, ať dožene ztrátu.\n"
+        }
                 
         return promptStr
     }
