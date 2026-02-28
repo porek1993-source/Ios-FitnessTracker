@@ -52,6 +52,9 @@ Každý trénink musí mít 3 bloky v tomto pořadí:
    • Blok B "Objem / Izolace": 3–5 izolovaných cviků
      - sets: 3–4 × reps: 10–20, pauza: 45–90s, RIR: 0–1
 
+   MINIMÁLNÍ POČET CVIKŮ: Blok A + Blok B dohromady musí mít VŽDY alespoň 5 cviků,
+   ideálně 6–8. I při ORANGE/RED readiness udržuj minimálně 5 cviků v mainBlocks.
+
    PRAVIDLO POŘADÍ: compound první, izolace poslední — VŽDY!
    Nikdy nezačínaj izolací (předkopávání, bicepsový zdvih) před compound cviky.
 

@@ -98,23 +98,71 @@ final class TrainerContextBuilder {
     }
 
     private func buildPlannedDay(day: PlannedWorkoutDay, plan: WorkoutPlan) -> PlannedDayContext {
-        PlannedDayContext(
+        // Pokud jsou exercise relationships nil (SwiftData lazy loading race condition),
+        // pokusíme se je opravit z DB před sestavením kontextu
+        let exercises = day.plannedExercises.sorted { $0.order < $1.order }
+        let hasNilExercises = exercises.contains { $0.exercise == nil }
+        if hasNilExercises {
+            repairNilExercises(for: day)
+        }
+
+        return PlannedDayContext(
             label: day.label,
             splitType: plan.splitType.rawValue,
             plannedExercises: day.plannedExercises
                 .sorted { $0.order < $1.order }
-                .map {
-                    PlannedExerciseContext(
-                        slug: $0.exercise?.slug ?? "",
-                        name: $0.exercise?.name ?? "",
-                        targetSets: $0.targetSets,
-                        targetRepsMin: $0.targetRepsMin,
-                        targetRepsMax: $0.targetRepsMax,
-                        targetRIR: $0.targetRIR,
-                        restSeconds: $0.restSeconds
+                .compactMap { planned -> PlannedExerciseContext? in
+                    guard let exercise = planned.exercise, !exercise.slug.isEmpty else {
+                        return nil  // Vynech cviky bez exercise reference (AI dostane čistý seznam)
+                    }
+                    return PlannedExerciseContext(
+                        slug: exercise.slug,
+                        name: exercise.name,
+                        targetSets: planned.targetSets,
+                        targetRepsMin: planned.targetRepsMin,
+                        targetRepsMax: planned.targetRepsMax,
+                        targetRIR: planned.targetRIR,
+                        restSeconds: planned.restSeconds
                     )
                 }
         )
+    }
+
+    /// Opravuje nil exercise relace v PlannedExercise (SwiftData race condition při seeding)
+    private func repairNilExercises(for day: PlannedWorkoutDay) {
+        let slugTemplates: [String: [String]] = [
+            "Push": ["barbell-bench-press", "overhead-press", "incline-dumbbell-press", "lateral-raise", "tricep-pushdown", "cable-fly-low"],
+            "Pull": ["pull-up", "barbell-row", "lat-pulldown", "face-pull", "barbell-curl", "hammer-curl"],
+            "Legs": ["barbell-squat", "romanian-deadlift", "leg-press", "lying-leg-curl", "leg-extension", "calf-raise"],
+            "Upper A": ["barbell-bench-press", "barbell-row", "dumbbell-shoulder-press", "cable-row", "tricep-pushdown", "barbell-curl"],
+            "Upper B": ["overhead-press", "pull-up", "incline-dumbbell-press", "lat-pulldown", "lateral-raise", "dumbbell-curl"],
+            "Upper C": ["dumbbell-bench-press", "chest-supported-row", "arnold-press", "cable-chest-fly", "skull-crusher", "incline-dumbbell-curl"],
+            "Lower A": ["barbell-squat", "romanian-deadlift", "leg-press", "lying-leg-curl", "leg-extension", "calf-raise"],
+            "Lower B": ["conventional-deadlift", "bulgarian-split-squat", "hip-thrust", "lying-leg-curl", "goblet-squat", "seated-calf-raise"],
+            "Fullbody A": ["barbell-squat", "barbell-bench-press", "barbell-row", "dumbbell-shoulder-press", "plank"],
+            "Fullbody B": ["romanian-deadlift", "dumbbell-bench-press", "pull-up", "lateral-raise", "ab-crunch"],
+            "Fullbody C": ["goblet-squat", "incline-dumbbell-press", "cable-row", "overhead-press", "russian-twist"],
+            "Fullbody": ["barbell-squat", "barbell-bench-press", "barbell-row", "dumbbell-shoulder-press", "plank"]
+        ]
+
+        let label = day.label
+        let normalized: String
+        if slugTemplates[label] != nil {
+            normalized = label
+        } else {
+            normalized = label.components(separatedBy: " ").first ?? label
+        }
+
+        guard let slugs = slugTemplates[normalized] else { return }
+        let allExercises = (try? modelContext.fetch(FetchDescriptor<Exercise>())) ?? []
+
+        for (i, ex) in day.plannedExercises.sorted(by: { $0.order < $1.order }).enumerated() {
+            guard ex.exercise == nil, i < slugs.count else { continue }
+            if let found = allExercises.first(where: { $0.slug == slugs[i] }) {
+                ex.exercise = found
+            }
+        }
+        try? modelContext.save()
     }
 
     private func buildHealthContext(

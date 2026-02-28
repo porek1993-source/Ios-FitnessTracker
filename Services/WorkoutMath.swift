@@ -19,43 +19,35 @@ enum WeightRounder {
 // MARK: - Warmup Calculator
 
 struct WarmupCalculator {
-    /// Generuje přesně 3 zahřívací série vypočítané na základě cílové pracovní váhy.
+    /// Generuje zahřívací série vypočítané na základě cílové pracovní váhy.
     /// Pravidla: 1. série 20kg (osa), 2. série 50%, 3. série 75%.
+    /// Pokud je cílová váha ≤ 20 kg (bodyweight/velmi lehký cvik), warmup série se přeskočí.
     static func generateWarmups(targetWeight: Double, targetRepsMin: Int) -> [SetState] {
-        var warmups: [SetState] = []
-        
-        // 1. Série (Vždy 20 kg - standardní osa, nebo pracovní váha pokud je pod 20kg)
-        let firstWeight = min(20.0, targetWeight)
-        warmups.append(SetState(
-            targetRepsMin: 10,
-            targetRepsMax: 12,
-            weightKg: WeightRounder.roundToNearestPlates(weight: firstWeight),
-            reps: 10,
-            isCompleted: false,
-            isWarmup: true
-        ))
-        
-        // 2. Série (50 % pracovní váhy)
-        warmups.append(SetState(
-            targetRepsMin: 5,
-            targetRepsMax: 5,
-            weightKg: WeightRounder.roundToNearestPlates(weight: targetWeight * 0.5),
-            reps: 5,
-            isCompleted: false,
-            isWarmup: true
-        ))
-        
-        // 3. Série (75 % pracovní váhy)
-        warmups.append(SetState(
-            targetRepsMin: 3,
-            targetRepsMax: 3,
-            weightKg: WeightRounder.roundToNearestPlates(weight: targetWeight * 0.75),
-            reps: 3,
-            isCompleted: false,
-            isWarmup: true
-        ))
-        
-        return warmups
+        // ✅ Guard: není smysl dělat warmup pokud je pracovní váha nižší nebo rovna ose
+        guard targetWeight > 20 else { return [] }
+
+        let firstWeight = max(5.0, min(20.0, targetWeight))   // ✅ Min 5 kg (zabraňuje záporným hodnotám)
+
+        return [
+            // 1. Série (osa 20 kg nebo méně)
+            SetState(
+                targetRepsMin: 10, targetRepsMax: 12,
+                weightKg: WeightRounder.roundToNearestPlates(weight: firstWeight),
+                reps: 10, isCompleted: false, isWarmup: true
+            ),
+            // 2. Série (50 % pracovní váhy, min 5 kg)
+            SetState(
+                targetRepsMin: 5, targetRepsMax: 5,
+                weightKg: max(5.0, WeightRounder.roundToNearestPlates(weight: targetWeight * 0.5)),
+                reps: 5, isCompleted: false, isWarmup: true
+            ),
+            // 3. Série (75 % pracovní váhy, min 5 kg)
+            SetState(
+                targetRepsMin: 3, targetRepsMax: 3,
+                weightKg: max(5.0, WeightRounder.roundToNearestPlates(weight: targetWeight * 0.75)),
+                reps: 3, isCompleted: false, isWarmup: true
+            )
+        ]
     }
 }
 

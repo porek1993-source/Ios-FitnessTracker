@@ -126,7 +126,8 @@ final class AITrainerService: ObservableObject {
         if let cached = WorkoutCache.load(for: date, plannedDayID: plannedDay.id, context: modelContext) {
             AppLogger.info("✅ [AITrainer] Cache HIT → \(date.formatted(date: .abbreviated, time: .omitted)) — Gemini se nevolá.")
             cacheHit = true
-            return cached
+            // Validace i pro cachovane odpovedi - cache mohla obsahovat starsi plan s malo cviky
+            return AIExerciseCountValidator.validate(cached)
         }
 
         AppLogger.info("ℹ️ [AITrainer] Cache MISS → volám Gemini API…")
@@ -142,11 +143,11 @@ final class AITrainerService: ObservableObject {
                 timeLimitMinutes: timeLimitMinutes
             )
 
-            // Validace počtu cviků (nekritická — pouze warning)
-            AIExerciseCountValidator.validate(response)
+            // Validace a oprava počtu cviků (doplní chybějící izolace pokud AI vygenerovalo méně)
+            let validatedResponse = AIExerciseCountValidator.validate(response)
 
             // ── KROK 3: Asynchronní uložení do cache (neblokuje UI) ──────────
-            let responseSnapshot = response
+            let responseSnapshot = validatedResponse
             let dateSnapshot     = date
             let planIDSnapshot   = plannedDay.id
 
@@ -166,10 +167,10 @@ final class AITrainerService: ObservableObject {
             // Persistuj AI metadata na pozadí (neblokuje return)
             Task { [weak self] in
                 guard let self else { return }
-                await self.persistAIMetadata(response: response, date: date, profile: profile)
+                await self.persistAIMetadata(response: validatedResponse, date: date, profile: profile)
             }
 
-            return response
+            return validatedResponse
 
         } catch {
             // ── KROK 4: Graceful degradation ────────────────────────────────
@@ -525,24 +526,133 @@ enum WorkoutCache {
 
 enum AIExerciseCountValidator {
 
-    static let minimum = 6
+    static let minimum = 5  // Sníženo z 6 → více flexibility pro readiness adaptaci
+    static let ideal   = 6  // Ideální minimum
     static let maximum = 8
 
-    /// Zkontroluje počet cviků v odpovědi a zaloguje varování.
-    /// NEKRITICKÁ — pouze loguje, nepadá aplikace.
+    /// Zkontroluje počet cviků v odpovědi.
+    /// Pokud je méně než minimum, doplní chybějící cviky z druhého bloku.
     @discardableResult
     static func validate(_ response: TrainerResponse) -> TrainerResponse {
         let total = response.mainBlocks.reduce(0) { $0 + $1.exercises.count }
 
         switch total {
         case ..<minimum:
-            AppLogger.warning("⚠️ [Validator] Pouze \(total) cviků (min \(minimum)). AI nedodrželo pravidlo objemu.")
+            AppLogger.warning("⚠️ [Validator] Pouze \(total) cviků (min \(minimum)) — doplním izolační cviky.")
+            return padWithIsolationExercises(response: response, currentCount: total)
         case (maximum + 1)...:
-            AppLogger.warning("⚠️ [Validator] \(total) cviků (max \(maximum)). Zvažte oříznutí posledních \(total - maximum) cviků.")
+            AppLogger.warning("⚠️ [Validator] \(total) cviků (max \(maximum)). Ořezávám na \(maximum).")
+            return trimExercises(response: response, toMax: maximum)
         default:
             AppLogger.info("✅ [Validator] \(total) cviků — v pořádku (\(minimum)–\(maximum)).")
+            return response
+        }
+    }
+
+    /// Doplní chybějící izolační cviky na základě sessionLabel
+    private static func padWithIsolationExercises(response: TrainerResponse, currentCount: Int) -> TrainerResponse {
+        let needed = minimum - currentCount
+        guard needed > 0 else { return response }
+
+        // Detekuj typ tréninku z sessionLabel
+        let label = response.sessionLabel.lowercased()
+        let extra: [ResponseExercise]
+
+        if label.contains("push") || label.contains("prsa") || label.contains("hrudník") {
+            extra = pushIsolations.prefix(needed).map { $0 }
+        } else if label.contains("pull") || label.contains("záda") {
+            extra = pullIsolations.prefix(needed).map { $0 }
+        } else if label.contains("leg") || label.contains("noh") || label.contains("lower") {
+            extra = legIsolations.prefix(needed).map { $0 }
+        } else {
+            extra = genericIsolations.prefix(needed).map { $0 }
         }
 
-        return response
+        // Přidej do posledního bloku (Objem/Izolace)
+        var blocks = response.mainBlocks
+        if blocks.isEmpty {
+            blocks = [MainBlock(blockLabel: "Doplňkové cviky", exercises: Array(extra))]
+        } else {
+            let lastIdx = blocks.count - 1
+            let updatedExercises = blocks[lastIdx].exercises + Array(extra)
+            blocks[lastIdx] = MainBlock(blockLabel: blocks[lastIdx].blockLabel, exercises: updatedExercises)
+        }
+
+        return TrainerResponse(
+            coachMessage: response.coachMessage,
+            sessionLabel: response.sessionLabel,
+            readinessLevel: response.readinessLevel,
+            adaptationReason: response.adaptationReason,
+            estimatedDurationMinutes: response.estimatedDurationMinutes + needed * 8,
+            warmUp: response.warmUp,
+            mainBlocks: blocks,
+            coolDown: response.coolDown
+        )
     }
+
+    /// Ořeže cviky z posledního bloku
+    private static func trimExercises(response: TrainerResponse, toMax: Int) -> TrainerResponse {
+        var blocks = response.mainBlocks
+        var count = response.mainBlocks.reduce(0) { $0 + $1.exercises.count }
+        var lastIdx = blocks.count - 1
+        while count > toMax && lastIdx >= 0 {
+            if blocks[lastIdx].exercises.count > 1 {
+                var updated = blocks[lastIdx].exercises
+                updated.removeLast()
+                blocks[lastIdx] = MainBlock(blockLabel: blocks[lastIdx].blockLabel, exercises: updated)
+                count -= 1
+            } else {
+                lastIdx -= 1
+            }
+        }
+        return TrainerResponse(
+            coachMessage: response.coachMessage,
+            sessionLabel: response.sessionLabel,
+            readinessLevel: response.readinessLevel,
+            adaptationReason: response.adaptationReason,
+            estimatedDurationMinutes: response.estimatedDurationMinutes,
+            warmUp: response.warmUp,
+            mainBlocks: blocks,
+            coolDown: response.coolDown
+        )
+    }
+
+    // MARK: - Fallback Isolation Exercises
+
+    private static let pushIsolations: [ResponseExercise] = [
+        ResponseExercise(name: "Rozpažování s jednoručkami (Lateral raise)", slug: "lateral-raise",
+            sets: 3, repsMin: 12, repsMax: 15, weightKg: nil, rir: 1, rpe: nil, restSeconds: 60, tempo: nil,
+            coachTip: "Paže mírně před tělem, lokty vedou pohyb."),
+        ResponseExercise(name: "Triceps pushdown (kabel)", slug: "tricep-pushdown",
+            sets: 3, repsMin: 12, repsMax: 15, weightKg: nil, rir: 1, rpe: nil, restSeconds: 60, tempo: nil,
+            coachTip: "Lokty pevně u těla, plný rozsah pohybu.")
+    ]
+
+    private static let pullIsolations: [ResponseExercise] = [
+        ResponseExercise(name: "Face pull (kabel)", slug: "face-pull",
+            sets: 3, repsMin: 15, repsMax: 20, weightKg: nil, rir: 1, rpe: nil, restSeconds: 60, tempo: nil,
+            coachTip: "Taháš k obličeji, palce za hlavou."),
+        ResponseExercise(name: "Bicepsový zdvih s jednoručkami", slug: "dumbbell-curl",
+            sets: 3, repsMin: 10, repsMax: 14, weightKg: nil, rir: 1, rpe: nil, restSeconds: 60, tempo: nil,
+            coachTip: "Lokty zůstávají u těla, nekývej trupem.")
+    ]
+
+    private static let legIsolations: [ResponseExercise] = [
+        ResponseExercise(name: "Předkopávání (Leg extension)", slug: "leg-extension",
+            sets: 3, repsMin: 12, repsMax: 16, weightKg: nil, rir: 1, rpe: nil, restSeconds: 60, tempo: nil,
+            coachTip: "Nahoře 1 sekundu drž kontrakci kvadricepsů."),
+        ResponseExercise(name: "Stojný výpon na lýtka", slug: "calf-raise",
+            sets: 4, repsMin: 15, repsMax: 20, weightKg: nil, rir: 1, rpe: nil, restSeconds: 45, tempo: nil,
+            coachTip: "Plný rozsah! Dole protáhni, nahoře 1 sekundu drž.")
+    ]
+
+    private static let genericIsolations: [ResponseExercise] = [
+        ResponseExercise(name: "Plank (výdrž)", slug: "plank",
+            sets: 3, repsMin: 30, repsMax: 60, weightKg: nil, rir: 0, rpe: nil, restSeconds: 45, tempo: nil,
+            coachTip: "Tělo v přímé linii, hýždě a břicho aktivní."),
+        ResponseExercise(name: "Face pull (kabel)", slug: "face-pull",
+            sets: 3, repsMin: 15, repsMax: 20, weightKg: nil, rir: 1, rpe: nil, restSeconds: 60, tempo: nil,
+            coachTip: "Klíčový preventivní cvik pro zdravá ramena.")
+    ]
 }
+

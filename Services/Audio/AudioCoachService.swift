@@ -25,6 +25,7 @@ enum CoachSpeech: Equatable {
     // Série hlášky
     case setStarting(Int, Int)          // "Série dvě ze čtyř."
     case sessionStart                   // "Posilíme! Tempo tři-jedna-dva-nula."
+    case sessionEnd                     // "Trénink dokončen! Skvělý výkon."
     case greatSet                       // pochvala (náhodná)
     case prWarning(String)              // "Dneska má jít X kg."
 
@@ -38,6 +39,7 @@ enum CoachSpeech: Equatable {
         case .restEnd:                   return "Jdeme na to!"
         case .setStarting(let s, let t): return "Série \(czechNumeral(s)) ze \(t)."
         case .sessionStart:              return "Posilíme!"
+        case .sessionEnd:                return CoachSpeech.randomSessionEndPraise()
         case .greatSet:                  return CoachSpeech.randomPraise()
         case .prWarning(let name):       return "Na \(name) je dnešní cíl nová váha. Soustřeď se."
         }
@@ -51,7 +53,7 @@ enum CoachSpeech: Equatable {
         case .restStarted, .restEnd,
              .setStarting, .greatSet,
              .prWarning, .restWarning,
-             .sessionStart:             return 0.50
+             .sessionStart, .sessionEnd: return 0.50
         }
     }
 
@@ -77,6 +79,18 @@ enum CoachSpeech: Equatable {
             "Makáš správně. Tělo ti poděkuje."
         ]
         return phrases.randomElement() ?? "Dobrá práce!"
+    }
+
+    // ✅ Speciální pochvaly při dokončení celého tréninku
+    private static func randomSessionEndPraise() -> String {
+        let phrases = [
+            "Trénink dokončen. Tohle je ta práce, která tě posouvá.",
+            "Celý trénink za tebou. Skvělý výkon!",
+            "Hotovo! Svaly si to zapamatují. Teď regeneruj.",
+            "Všechno odjeté. Dnes jsi dal maximum.",
+            "Tréninkem hotový. Odpočívej a buď na sebe hrdý."
+        ]
+        return phrases.randomElement() ?? "Trénink dokončen! Skvělý výkon."
     }
 }
 
