@@ -49,7 +49,7 @@ final class WorkoutViewModelTests: XCTestCase {
         
         // Simulujeme 3600 sekund (1 hodina)
         vm.elapsedSeconds = 3600
-        XCTAssertEqual(vm.elapsedTimeFormatted, "60:00", "3600 sekund musí být zobrazeno jako 60:00.")
+        XCTAssertEqual(vm.elapsedTimeFormatted, "1:00:00", "3600 sekund musí být zobrazeno jako 1:00:00.")
     }
 
     func testCompletionProgressWithNoExercises() {

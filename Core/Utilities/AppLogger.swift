@@ -14,7 +14,7 @@ import SwiftUI
 /// protože všechny mutace probíhají výhradně přes Task { @MainActor }.
 @MainActor
 final class AppLogger: ObservableObject {
-    static let shared = AppLogger()
+    nonisolated(unsafe) static let shared = AppLogger()
     
     nonisolated init() {}
     @Published var logs: [LogEntry] = []
