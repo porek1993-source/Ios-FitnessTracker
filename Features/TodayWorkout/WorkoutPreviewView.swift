@@ -171,16 +171,11 @@ private struct PlannedExerciseRow: View {
                     .fill(AppColors.primaryAccent.opacity(0.15))
                     .frame(width: 36, height: 36)
                 
-                if let firstTarget = exercise.exercise?.musclesTarget.first {
-                    // Try to display muscle icon
-                    if let icon = MuscleWikiDTO.muscleGroupIcons[firstTarget.rawValue] {
-                        Text(icon)
-                            .font(.system(size: 16))
-                    } else {
-                        Text("\(index)")
-                            .font(.system(size: 14, weight: .bold, design: .rounded))
-                            .foregroundStyle(AppColors.primaryAccent)
-                    }
+                if let _ = exercise.exercise?.musclesTarget.first {
+                    // Cvik má známý sval
+                    Text("\(index)")
+                        .font(.system(size: 14, weight: .bold, design: .rounded))
+                        .foregroundStyle(AppColors.primaryAccent)
                 } else {
                     Text("\(index)")
                         .font(.system(size: 14, weight: .bold, design: .rounded))
