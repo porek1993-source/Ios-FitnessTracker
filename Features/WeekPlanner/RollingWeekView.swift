@@ -534,186 +534,18 @@ struct WeekDayExerciseDetailView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            // Hlavička
-            HStack {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(day.label.uppercased())
-                        .font(.system(size: 10, weight: .black))
-                        .foregroundStyle(Color.appPrimaryAccent)
-                        .kerning(1.2)
-                    Text(exercises.isEmpty ? "Cviky vygeneruje iKorba při startu" : "\(exercises.count) cviků")
-                        .font(.system(size: 12))
-                        .foregroundStyle(.white.opacity(0.4))
-                }
-                Spacer()
-                Image(systemName: "chevron.up.circle.fill")
-                    .font(.system(size: 18))
-                    .foregroundStyle(.white.opacity(0.2))
-            }
-
+            headerView
             Divider().background(Color.white.opacity(0.07))
 
             if exercises.isEmpty && previewExercises.isEmpty {
-                // Prázdný stav — AI vygeneruje cviky při spuštění tréninku nebo na vyžádání
-                VStack(spacing: 12) {
-                    HStack(spacing: 12) {
-                        Image(systemName: "wand.and.sparkles")
-                            .font(.system(size: 20))
-                            .foregroundStyle(.blue.opacity(0.7))
-                        VStack(alignment: .leading, spacing: 3) {
-                            Text("Plán čeká na AI")
-                                .font(.system(size: 13, weight: .semibold))
-                                .foregroundStyle(.white)
-                            Text("Klikni na „Začít trénink“ nebo vygeneruj náhled.")
-                                .font(.system(size: 11))
-                                .foregroundStyle(.white.opacity(0.4))
-                                .fixedSize(horizontal: false, vertical: true)
-                        }
-                        Spacer()
-                    }
-                    
-                    if isGeneratingPreview {
-                        HStack {
-                            ProgressView().tint(.blue)
-                                .scaleEffect(0.8)
-                            Text("Generuji náhled...")
-                                .font(.system(size: 11, weight: .medium))
-                                .foregroundStyle(.blue)
-                        }
-                    } else {
-                        Button(action: generatePreview) {
-                            Text("Generovat náhled tréninku")
-                                .font(.system(size: 12, weight: .bold))
-                                .foregroundStyle(.white)
-                                .padding(.horizontal, 16)
-                                .padding(.vertical, 8)
-                                .background(RoundedRectangle(cornerRadius: 10).fill(Color.blue.opacity(0.8)))
-                        }
-                    }
-                }
-                .padding(12)
-                .background(RoundedRectangle(cornerRadius: 12).fill(Color.blue.opacity(0.07))
-                    .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.blue.opacity(0.2), lineWidth: 1)))
+                emptyStateView
             } else if !previewExercises.isEmpty {
-                // Zobrazit cviky z AI preview
-                ForEach(Array(previewExercises.enumerated()), id: \.offset) { idx, ex in
-                    HStack(spacing: 12) {
-                        ZStack {
-                            Circle().fill(Color.white.opacity(0.07)).frame(width: 28, height: 28)
-                            Text("\(idx + 1)")
-                                .font(.system(size: 11, weight: .bold, design: .rounded))
-                                .foregroundStyle(.white.opacity(0.5))
-                        }
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(ex.name)
-                                .font(.system(size: 14, weight: .semibold))
-                                .foregroundStyle(.white)
-                            Text("\(ex.sets)× \(ex.repsMin)–\(ex.repsMax) rep · \(ex.restSeconds / 60)m \(ex.restSeconds % 60)s pauza")
-                                .font(.system(size: 11))
-                                .foregroundStyle(.white.opacity(0.4))
-                        }
-                        Spacer()
-                        if let weight = ex.weightKg, weight > 0 {
-                            Text(String(format: "%.0f kg", weight))
-                                .font(.system(size: 11, weight: .semibold))
-                                .foregroundStyle(.orange.opacity(0.8))
-                        }
-                    }
-                    if idx < previewExercises.count - 1 {
-                        Divider().background(Color.white.opacity(0.05))
-                    }
-                }
+                previewExercisesListView
             } else {
-                ForEach(Array(exercises.enumerated()), id: \.element.id) { idx, ex in
-                    HStack(spacing: 12) {
-                        // Pořadí
-                        ZStack {
-                            Circle().fill(Color.white.opacity(0.07)).frame(width: 28, height: 28)
-                            Text("\(idx + 1)")
-                                .font(.system(size: 11, weight: .bold, design: .rounded))
-                                .foregroundStyle(.white.opacity(0.5))
-                        }
-                        // Info
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(ex.exercise?.name ?? ex.fallbackName ?? ex.fallbackSlug?.components(separatedBy: "-").map(\.capitalized).joined(separator: " ") ?? "Cvik \(idx + 1)")
-                                .font(.system(size: 14, weight: .semibold))
-                                .foregroundStyle(ex.exercise == nil ? .white.opacity(0.4) : .white)
-                            Text("\(ex.targetSets)× \(ex.targetRepsMin)–\(ex.targetRepsMax) rep · \(ex.restSeconds / 60)m \(ex.restSeconds % 60)s pauza")
-                                .font(.system(size: 11))
-                                .foregroundStyle(.white.opacity(0.4))
-                        }
-                        Spacer()
-                        if let lastWeight = ex.exercise?.lastUsedWeight {
-                            Text(String(format: "%.0f kg", lastWeight))
-                                .font(.system(size: 11, weight: .semibold))
-                                .foregroundStyle(.orange.opacity(0.8))
-                        }
-                    }
-                    if idx < exercises.count - 1 {
-                        Divider().background(Color.white.opacity(0.05))
-                    }
-                }
+                plannedExercisesListView
+            }
 
-                // Tlačítko pro vygenerování přes AI, pokud jsou v plánu "kostry" (prázdné cviky)
-                if exercises.contains(where: { $0.exercise == nil }) && previewExercises.isEmpty {
-                    VStack(spacing: 8) {
-                        if isGeneratingPreview {
-                            HStack {
-                                ProgressView().tint(.blue).scaleEffect(0.8)
-                                Text("Generuji náhled...")
-                                    .font(.system(size: 11, weight: .medium))
-                                    .foregroundStyle(.blue)
-                            }
-                            .padding(.top, 8)
-                        } else {
-                            Button(action: generatePreview) {
-                                HStack {
-                                    Image(systemName: "wand.and.sparkles")
-                                    Text("Získat AI rozpis přesně na míru")
-                                }
-                                .font(.system(size: 13, weight: .semibold))
-                                .foregroundStyle(.blue)
-                                .frame(maxWidth: .infinity)
-                                .padding(.vertical, 10)
-                                .background(RoundedRectangle(cornerRadius: 10).fill(Color.blue.opacity(0.1)))
-                                .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.blue.opacity(0.3), lineWidth: 1))
-                            }
-                            .padding(.top, 8)
-                        }
-                    }
-                }
-            }
-            // ── Začít trénink button — zobrazuje se pro všechny tréninkové dny ──
-            Button(action: { onStartWorkout?() }) {
-                HStack(spacing: 10) {
-                    Image(systemName: day.isToday ? "play.fill" : "play.circle.fill")
-                        .font(.system(size: 14, weight: .bold))
-                    Text(day.isToday ? "Začít trénink" : "Spustit trénink (\(day.czechDayName))")
-                        .font(.system(size: 16, weight: .bold))
-                }
-                .foregroundStyle(.white)
-                .frame(maxWidth: .infinity)
-                .frame(height: 50)
-                .background(
-                    RoundedRectangle(cornerRadius: 14)
-                        .fill(day.isToday
-                            ? LinearGradient(
-                                colors: [Color(red: 0.20, green: 0.52, blue: 1.0),
-                                         Color(red: 0.08, green: 0.35, blue: 0.85)],
-                                startPoint: .topLeading, endPoint: .bottomTrailing)
-                            : LinearGradient(
-                                colors: [Color.white.opacity(0.12), Color.white.opacity(0.06)],
-                                startPoint: .topLeading, endPoint: .bottomTrailing)
-                        )
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: 14)
-                        .stroke(day.isToday ? Color.clear : Color.white.opacity(0.15), lineWidth: 1)
-                )
-                .shadow(color: day.isToday ? .blue.opacity(0.4) : .clear, radius: 14, y: 5)
-            }
-            .buttonStyle(.plain)
-            .padding(.top, 4)
+            startWorkoutButton
         }
         .padding(14)
         .onAppear {
@@ -736,6 +568,194 @@ struct WeekDayExerciseDetailView: View {
                 }
             }
         }
+    }
+
+    // MARK: - Subviews
+
+    private var headerView: some View {
+        HStack {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(day.label.uppercased())
+                    .font(.system(size: 10, weight: .black))
+                    .foregroundStyle(Color.appPrimaryAccent)
+                    .kerning(1.2)
+                Text(exercises.isEmpty ? "Cviky vygeneruje iKorba při startu" : "\(exercises.count) cviků")
+                    .font(.system(size: 12))
+                    .foregroundStyle(.white.opacity(0.4))
+            }
+            Spacer()
+            Image(systemName: "chevron.up.circle.fill")
+                .font(.system(size: 18))
+                .foregroundStyle(.white.opacity(0.2))
+        }
+    }
+
+    private var emptyStateView: some View {
+        VStack(spacing: 12) {
+            HStack(spacing: 12) {
+                Image(systemName: "wand.and.sparkles")
+                    .font(.system(size: 20))
+                    .foregroundStyle(.blue.opacity(0.7))
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("Plán čeká na AI")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(.white)
+                    Text("Klikni na „Začít trénink“ nebo vygeneruj náhled.")
+                        .font(.system(size: 11))
+                        .foregroundStyle(.white.opacity(0.4))
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                Spacer()
+            }
+            
+            if isGeneratingPreview {
+                HStack {
+                    ProgressView().tint(.blue)
+                        .scaleEffect(0.8)
+                    Text("Generuji náhled...")
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundStyle(.blue)
+                }
+            } else {
+                Button(action: generatePreview) {
+                    Text("Generovat náhled tréninku")
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 8)
+                        .background(RoundedRectangle(cornerRadius: 10).fill(Color.blue.opacity(0.8)))
+                }
+            }
+        }
+        .padding(12)
+        .background(RoundedRectangle(cornerRadius: 12).fill(Color.blue.opacity(0.07))
+            .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.blue.opacity(0.2), lineWidth: 1)))
+    }
+
+    private var previewExercisesListView: some View {
+        ForEach(Array(previewExercises.enumerated()), id: \.offset) { idx, ex in
+            HStack(spacing: 12) {
+                ZStack {
+                    Circle().fill(Color.white.opacity(0.07)).frame(width: 28, height: 28)
+                    Text("\(idx + 1)")
+                        .font(.system(size: 11, weight: .bold, design: .rounded))
+                        .foregroundStyle(.white.opacity(0.5))
+                }
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(ex.name)
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(.white)
+                    Text("\(ex.sets)× \(ex.repsMin)–\(ex.repsMax) rep · \(ex.restSeconds / 60)m \(ex.restSeconds % 60)s pauza")
+                        .font(.system(size: 11))
+                        .foregroundStyle(.white.opacity(0.4))
+                }
+                Spacer()
+                if let weight = ex.weightKg, weight > 0 {
+                    Text(String(format: "%.0f kg", weight))
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(.orange.opacity(0.8))
+                }
+            }
+            if idx < previewExercises.count - 1 {
+                Divider().background(Color.white.opacity(0.05))
+            }
+        }
+    }
+
+    private var plannedExercisesListView: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            ForEach(Array(exercises.enumerated()), id: \.element.id) { idx, ex in
+                HStack(spacing: 12) {
+                    // Pořadí
+                    ZStack {
+                        Circle().fill(Color.white.opacity(0.07)).frame(width: 28, height: 28)
+                        Text("\(idx + 1)")
+                            .font(.system(size: 11, weight: .bold, design: .rounded))
+                            .foregroundStyle(.white.opacity(0.5))
+                    }
+                    // Info
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(ex.exercise?.name ?? ex.fallbackName ?? ex.fallbackSlug?.components(separatedBy: "-").map(\.capitalized).joined(separator: " ") ?? "Cvik \(idx + 1)")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundStyle(ex.exercise == nil ? .white.opacity(0.4) : .white)
+                        Text("\(ex.targetSets)× \(ex.targetRepsMin)–\(ex.targetRepsMax) rep · \(ex.restSeconds / 60)m \(ex.restSeconds % 60)s pauza")
+                            .font(.system(size: 11))
+                            .foregroundStyle(.white.opacity(0.4))
+                    }
+                    Spacer()
+                    if let lastWeight = ex.exercise?.lastUsedWeight {
+                        Text(String(format: "%.0f kg", lastWeight))
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundStyle(.orange.opacity(0.8))
+                    }
+                }
+                if idx < exercises.count - 1 {
+                    Divider().background(Color.white.opacity(0.05))
+                }
+            }
+
+            // Tlačítko pro vygenerování přes AI, pokud jsou v plánu "kostry" (prázdné cviky)
+            if exercises.contains(where: { $0.exercise == nil }) && previewExercises.isEmpty {
+                VStack(spacing: 8) {
+                    if isGeneratingPreview {
+                        HStack {
+                            ProgressView().tint(.blue).scaleEffect(0.8)
+                            Text("Generuji náhled...")
+                                .font(.system(size: 11, weight: .medium))
+                                .foregroundStyle(.blue)
+                        }
+                        .padding(.top, 8)
+                    } else {
+                        Button(action: generatePreview) {
+                            HStack {
+                                Image(systemName: "wand.and.sparkles")
+                                Text("Získat AI rozpis přesně na míru")
+                            }
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundStyle(.blue)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 10)
+                            .background(RoundedRectangle(cornerRadius: 10).fill(Color.blue.opacity(0.1)))
+                            .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.blue.opacity(0.3), lineWidth: 1))
+                        }
+                        .padding(.top, 8)
+                    }
+                }
+            }
+        }
+    }
+
+    private var startWorkoutButton: some View {
+        Button(action: { onStartWorkout?() }) {
+            HStack(spacing: 10) {
+                Image(systemName: day.isToday ? "play.fill" : "play.circle.fill")
+                    .font(.system(size: 14, weight: .bold))
+                Text(day.isToday ? "Začít trénink" : "Spustit trénink (\(day.czechDayName))")
+                    .font(.system(size: 16, weight: .bold))
+            }
+            .foregroundStyle(.white)
+            .frame(maxWidth: .infinity)
+            .frame(height: 50)
+            .background(
+                RoundedRectangle(cornerRadius: 14)
+                    .fill(day.isToday
+                        ? LinearGradient(
+                            colors: [Color(red: 0.20, green: 0.52, blue: 1.0),
+                                     Color(red: 0.08, green: 0.35, blue: 0.85)],
+                            startPoint: .topLeading, endPoint: .bottomTrailing)
+                        : LinearGradient(
+                            colors: [Color.white.opacity(0.12), Color.white.opacity(0.06)],
+                            startPoint: .topLeading, endPoint: .bottomTrailing)
+                    )
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 14)
+                    .stroke(day.isToday ? Color.clear : Color.white.opacity(0.15), lineWidth: 1)
+            )
+            .shadow(color: day.isToday ? .blue.opacity(0.4) : .clear, radius: 14, y: 5)
+        }
+        .buttonStyle(.plain)
+        .padding(.top, 4)
     }
 
     // MARK: - Actions
