@@ -173,46 +173,20 @@ final class WeeklyReportService {
         return text
     }
     
-    // MARK: - Daily Insight
     func generateDailyInsight(for profile: UserProfile, snapshot: HealthMetricsSnapshot?) async throws -> String {
-        let systemPrompt = """
-        Jsi iKorba, elitní a empatický silový trenér. Tvojí rolí je zhodnotit aktuální ranní připravenost cvičence a dát mu 1-2 věty doporučení pro dnešní trénink.
-        Mluv česky, buď stručný (max 2 věty). Vrať JSON objekt s klíčem "insight" obsahuje text doporučení.
-        """
-        
-        var userMessage = "Profil: \(profile.name), Cíl: \(profile.primaryGoal.displayName).\n"
-        if let snap = snapshot {
-            userMessage += "Dnešní data: Spánek \(String(format: "%.1f", snap.sleepDurationHours ?? 0)) hodin, HRV \(String(format: "%.0f", snap.heartRateVariabilityMs ?? 0)) ms, Skóre připravenosti \(String(format: "%.0f", snap.readinessScore ?? 100))/100."
-        } else {
-            userMessage += "Dnes zatím nemám synchronizovaná žádná zdravotní data z hodinek."
+        // AI API VOLÁNÍ DEAKTIVOVÁNO PRO ÚSPORU. Použití lokálního deterministického zhodnocení.
+        guard let snap = snapshot, let readiness = snap.readinessScore else {
+            return "Datům nerozumím, ale dnešek rozbijeme! 💪"
         }
         
-        let schema: [String: Any] = [
-            "type": "OBJECT",
-            "properties": [
-                "insight": ["type": "STRING"]
-            ],
-            "required": ["insight"]
-        ]
-        
-        let responseString = try await geminiClient.generate(
-            systemPrompt: systemPrompt,
-            userMessage: userMessage,
-            responseSchema: schema
-        )
-        
-        // Remove markdown blocks if present
-        let cleaned = responseString
-            .replacingOccurrences(of: "```json", with: "")
-            .replacingOccurrences(of: "```",     with: "")
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-
-        guard let data = cleaned.data(using: .utf8),
-              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-              let text = json["insight"] as? String else {
-            return "Datům nerozumím, ale dnešek rozbijeme!"
+        switch readiness {
+        case 80...100:
+            return "Vynikající regenerace! Dnes je ideální den na lámání osobních rekordů. Běž do toho naplno."
+        case 50..<80:
+            return "Tvé tělo je připravené na solidní trénink. Zaměř se na správnou spíše techniku než na absolutní váhy."
+        default:
+            return "Skóre připravenosti je dnes nižší. Zvaž zařazení lehčího tréninku nebo protažení pro lepší regeneraci."
         }
-        return text
     }
 
     /// Odesílá notifikaci o dokončení tréninku (voláno z WorkoutSummaryView)

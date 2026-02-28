@@ -12,6 +12,10 @@ struct TrainerRequestContext: Codable {
     let equipment: EquipmentContext
     let progressiveOverload: [OverloadEntry]
     let sessionTimeOverride: Int?    // v minutách
+    
+    // Nové metaparametry pro kompresi tréninků (když nestíhá dodržet vypsané dny v kalendáři)
+    let workoutsRemainingInWeek: Int?
+    let daysRemainingInWeek: Int?
 }
 
 struct UserContextProfile: Codable {

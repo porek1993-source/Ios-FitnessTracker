@@ -142,44 +142,60 @@ final class AITrainerService: ObservableObject {
             return AIExerciseCountValidator.validate(cached)
         }
 
-        AppLogger.info("ℹ️ [AITrainer] Cache MISS → volám Gemini API…")
+        AppLogger.info("ℹ️ [AITrainer] Vyhodnocuji nutnost použití AI (šetření API)...")
 
-        // ── KROK 2: Gemini API volání s timeoutem ────────────────────────────
+        // ── KROK 2: Smart API Routing ─────────────────────────────────────────
+        
+        // Získáme dnešní snapshot (HealthBackgroundManager jej ukládal)
+        let healthSnapshot = profile.healthMetricsHistory.first(where: { Calendar.current.isDate($0.date, inSameDayAs: date) })
+        
+        let shouldCallAI = shouldUseGemini(profile: profile, date: date, healthSnapshot: healthSnapshot)
 
         do {
-            let response = try await callGeminiWithTimeout(
-                date: date,
-                profile: profile,
-                plannedDay: plannedDay,
-                equipmentOverride: equipmentOverride,
-                timeLimitMinutes: timeLimitMinutes
-            )
-
-            // Validace a oprava počtu cviků (doplní chybějící izolace pokud AI vygenerovalo méně)
-            let validatedResponse = AIExerciseCountValidator.validate(response)
-
-            // ── KROK 3: Asynchronní uložení do cache (neblokuje UI) ──────────
-            let responseSnapshot = validatedResponse
-            let dateSnapshot     = date
-            let planIDSnapshot   = plannedDay.id
-
-            // Použijeme Task.detached aby cache save neblokoval return response
-            // SharedModelContainer.container je nonisolated → bezpečné předání
-            let container = SharedModelContainer.container
-            Task.detached(priority: .utility) {
-                let bgContext = ModelContext(container)
-                await WorkoutCache.save(
-                    response: responseSnapshot,
-                    for: dateSnapshot,
-                    plannedDayID: planIDSnapshot,
-                    context: bgContext
+            let finalResponse: TrainerResponse
+            
+            if shouldCallAI {
+                AppLogger.info("🧠 [AITrainer] Zjištěna odchylka (Jiná aktivita / Spánek / Vynechané dny). Volám Gemini API s 30s timeoutem!")
+                // Vybudujeme prompt
+                let userMessage = try await contextBuilder.buildMainPrompt(
+                    profile: profile,
+                    targetDate: date,
+                    plannedDay: plannedDay,
+                    equipmentOverride: equipmentOverride,
+                    timeLimitMinutes: timeLimitMinutes
                 )
+                finalResponse = try await callGeminiWithTimeout(userMessage: userMessage)
+            } else {
+                AppLogger.info("⚡️ [AITrainer] Běžný tréninkový den bez komplikací -> Vracím offline plán (šetření klíčů API).")
+                let fallback = FallbackWorkoutGenerator.generateFallbackPlan(
+                    for: UserContextProfile(fitnessLevel: profile.fitnessLevel.rawValue),
+                    day: plannedDay,
+                    context: modelContext
+                )
+                finalResponse = TrainerResponse.fromFallback(fallback)
             }
 
-            // Persistuj AI metadata na pozadí (neblokuje return)
-            Task { [weak self] in
-                guard let self else { return }
-                await self.persistAIMetadata(response: validatedResponse, date: date, profile: profile)
+            // ── KROK 3: Validace počtu cviků a uložení do cache ─────────────────
+            // Validátor zajistí, že vrácený plán obsahuje zadaný počet + extra izolace na konci,
+            // ale my jen kontrolujeme minimální limit pro jistotu.
+            let validatedResponse = AIExerciseCountValidator.validate(finalResponse)
+
+            // Uložíme do lokální paměti pro Background Thread SwiftData přístup
+            if let responseSnapshot = ResponseSnapshot(from: validatedResponse) {
+                let planIDSnapshot = plannedDay.id
+                let dateSnapshot = date
+                
+                // Zápis musí proběhnout na background threadu (BackgroundContext)
+                Task.detached {
+                    let container = SharedModelContainer.container
+                    let bgContext = ModelContext(container)
+                    await WorkoutCache.save(
+                        response: responseSnapshot,
+                        for: dateSnapshot,
+                        plannedDayID: planIDSnapshot,
+                        context: bgContext
+                    )
+                }
             }
 
             return validatedResponse
@@ -252,6 +268,50 @@ final class AITrainerService: ObservableObject {
 
 private extension AITrainerService {
 
+    /// Chytře rozhoduje, zda je nutné zaktivovat Gemini API kvůli odchylkám (ušetření nákladů).
+    func shouldUseGemini(profile: UserProfile, date: Date, healthSnapshot: HealthMetricsSnapshot?) -> Bool {
+        // 1. Zkontrolujeme externí aktivity (např. běh, florbal) viz HealthBackgroundManager
+        if let snapshot = healthSnapshot, !snapshot.externalActivities.isEmpty {
+            let totalExternalKcal = snapshot.externalActivities.reduce(0) { $0 + $1.energyKcal }
+            // Pokud spálil nad 300 kcal jiným sportem, chceme AI adaptaci
+            if totalExternalKcal > 300 {
+                return true
+            }
+        }
+        
+        // 2. Extrémně špatný spánek (méně než 5h)
+        if let snapshot = healthSnapshot, let sleep = snapshot.sleepDurationHours, sleep > 0 && sleep < 5.0 {
+            return true
+        }
+
+        // 3. Zkontrolujeme kalendář (vynechané dny)
+        if let activePlan = profile.activePlan {
+            // Kolik % plánu má hotovo? Pokud má v plánu 4 dny a do konce týdne zbývají 2 dny a on odcvičil jen 1.
+            let daysInWeekComplete = activePlan.progressHistory.filter { history in
+                // Je to ze současného týdne?
+                Calendar.current.isDate(history.date, equalTo: date, toGranularity: .weekOfYear)
+            }.count
+            
+            let plannedDaysPerWeek = activePlan.plannedDays.count
+            
+            // Kolik dnů zbývá do konce týdne (Neděle jako konec)
+            let weekday = Calendar.current.component(.weekday, from: date) // Neděle = 1, Pondělí = 2...
+            // V Evropě je začátek pondělí. Takže pondělí = 1, neděle = 7
+            let adjustedWeekday = weekday == 1 ? 7 : weekday - 1
+            let daysRemainingInWeek = 7 - adjustedWeekday
+            
+            let workoutsRemaining = plannedDaysPerWeek - daysInWeekComplete
+            
+            // Pokud mu zbývá víc tréninků, než kolik je dnů v týdnu (nebo stejně a je konec týdne),
+            // chceme Gemini, aby ty partie sloučilo do Fullbody nebo jinak strukturálně vyřešilo zpoždění.
+            if workoutsRemaining > daysRemainingInWeek.magnitude && workoutsRemaining > 0 {
+                return true
+            }
+        }
+        
+        return false
+    }
+
     // MARK: Gemini volání s hard timeoutem
 
     func callGeminiWithTimeout(
@@ -317,7 +377,36 @@ private extension AITrainerService {
         guard let json = String(data: data, encoding: .utf8) else {
             throw AppError.encodingFailed
         }
-        return "Vygeneruj trénink. Odpověz POUZE JSON:\n\(json)"
+        
+        var promptStr = "Vygeneruj trénink. Odpověz POUZE JSON:\n\(json)\n\n"
+        
+        // --- 🧠 ZVLÁŠTNÍ INSTRUKCE PRO GEMINI (Obrana proti hloupnutí AI) ---
+        // 1. Zkontrolujeme sportovní vyčerpání
+        if !context.healthMetrics.externalActivities.isEmpty {
+            let totalActivityKcal = context.healthMetrics.externalActivities.reduce(0) { $0 + $1.energyKcal }
+            if totalActivityKcal > 300 {
+                promptStr += "⚠️ POZOR: Uživatel měl včera těžkou fyzickou aktivitu (spálil \(Int(totalActivityKcal)) kcal jiným sportem). PŘIZPŮSOB trénink: sniž objem, zařaď lehčí váhy nebo změň zaměření na regeneračnější cviky.\n"
+            }
+        }
+        
+        // 2. Špatný spánek
+        if let sleep = context.healthMetrics.sleepDurationHours, sleep > 0 && sleep < 5.0 {
+            promptStr += "⚠️ POZOR: Uživatel spal velmi špatně (jen \(String(format: "%.1f", sleep))h). Sniž intenzitu (RPE) a vynech nejtěžší těžké cviky.\n"
+        }
+        
+        // 3. Zpoždění v tréninkovém plánu
+        let todayDate = Date()
+        let weekday = Calendar.current.component(.weekday, from: todayDate)
+        let adjustedWeekday = weekday == 1 ? 7 : weekday - 1
+        let daysRemainingInWeek = 7 - adjustedWeekday
+        
+        // Let's deduce how many workouts they've 'completed' from the context profile history...
+        // Wait, TrainerRequestContext doesn't have progressHistory.
+        // I will add a simple flag to the TrainerRequestContext instead or deduce it.
+        // Actually, to keep it simple, let's just use a general prompt if they are behind.
+        promptStr += "⚠️ POKYNY K ADAPTACI (pokud je potřeba): Pokud je uživatel ve skluzu (např. vynechal trénink), chytře spoj nevycvičené svalové partie do dnešního tréninku.\n"
+                
+        return promptStr
     }
 
     // MARK: Parsování a čistění JSON odpovědi

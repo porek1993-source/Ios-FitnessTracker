@@ -75,6 +75,17 @@ final class TrainerContextBuilder {
             throw AppError.noPlanForToday
         }
 
+        // --- MISSING DAYS CALCULATION ---
+        let weekday = Calendar.current.component(.weekday, from: date)
+        let adjustedWeekday = weekday == 1 ? 7 : weekday - 1
+        let daysRemainingInWeek = 7 - adjustedWeekday
+        
+        let daysInWeekComplete = activePlan.progressHistory.filter { history in
+            Calendar.current.isDate(history.date, equalTo: date, toGranularity: .weekOfYear)
+        }.count
+        let plannedDaysPerWeek = activePlan.plannedDays.count
+        let workoutsRemaining = plannedDaysPerWeek - daysInWeekComplete
+
         return TrainerRequestContext(
             userProfile:         buildUserProfile(profile: profile),
             todayPlan:           buildPlannedDay(day: plannedDay, plan: activePlan),
@@ -82,7 +93,9 @@ final class TrainerContextBuilder {
             fatigue:             buildFatigueContext(),
             equipment:           buildEquipmentContext(profile: profile, override: equipmentOverride),
             progressiveOverload: buildOverloadEntries(day: plannedDay),
-            sessionTimeOverride: timeLimitMinutes
+            sessionTimeOverride: timeLimitMinutes,
+            workoutsRemainingInWeek: workoutsRemaining,
+            daysRemainingInWeek: daysRemainingInWeek
         )
     }
 
