@@ -59,21 +59,29 @@ final class WorkoutViewModel: ObservableObject {
                     let normalizedSlug = FallbackWorkoutGenerator.normalizedSlug(ex.slug)
                     var exerciseRef: Exercise? = nil
 
-                    // 1. Nejprve zkus plan.plannedExercises (má weight history)
+                    // 1. Zkusit najít v plánu (má weight history)
                     if let plannedEx = plan.plannedExercises.first(where: {
-                        let dbSlug = $0.exercise?.slug ?? ""
-                        return dbSlug == normalizedSlug || dbSlug == ex.slug
-                            || $0.exercise?.nameEN.lowercased() == ex.name.lowercased()
+                        let dbSlug = $0.exercise?.slug.lowercased() ?? ""
+                        let fName = ex.name.lowercased()
+                        return dbSlug == normalizedSlug || dbSlug == ex.slug.lowercased()
+                            || $0.exercise?.nameEN.lowercased() == fName
+                            || $0.exercise?.name.lowercased() == fName
+                            || $0.exercise?.nameEN.lowercased().contains(fName) == true
+                            || $0.exercise?.name.lowercased().contains(fName) == true
                     }) {
                         exerciseRef = plannedEx.exercise
                     }
 
-                    // 2. Pokud nenalezeno v plánu, hledej v celé DB
+                    // 2. Pokud nenalezeno v plánu, hledej v celé DB (fuzzy match)
                     if exerciseRef == nil {
+                        let fName = ex.name.lowercased()
                         exerciseRef = allDBExercises.first(where: {
-                            $0.slug == normalizedSlug || $0.slug == ex.slug
-                                || $0.nameEN.lowercased() == ex.name.lowercased()
-                                || $0.name.lowercased() == ex.name.lowercased()
+                            $0.slug.lowercased() == normalizedSlug || $0.slug.lowercased() == ex.slug.lowercased()
+                                || $0.nameEN.lowercased() == fName
+                                || $0.name.lowercased() == fName
+                                || $0.name.lowercased().contains(fName)
+                                || $0.nameEN.lowercased().contains(fName)
+                                || fName.contains($0.name.lowercased())
                         })
                     }
 

@@ -144,24 +144,27 @@ final class AppEnvironment: ObservableObject {
                 
                 var updatedCount = 0
                 for local in localExercises {
-                    let localSlug = local.slug.lowercased()
-                    let localNameEn = local.nameEN.lowercased()
-                    let localNameCz = local.name.lowercased()
+                    // Odstranění diakritiky a speciálních znaků pro bezpečnější porovnání
+                    let localSlug = local.slug.lowercased().folding(options: .diacriticInsensitive, locale: .current).replacingOccurrences(of: "-", with: "")
+                    let localNameEn = local.nameEN.lowercased().folding(options: .diacriticInsensitive, locale: .current).replacingOccurrences(of: " ", with: "")
+                    let localNameCz = local.name.lowercased().folding(options: .diacriticInsensitive, locale: .current).replacingOccurrences(of: " ", with: "")
                     
                     // Pokročilejší párování:
                     // 1. Přesná shoda anglického jména
                     // 2. Přesná shoda slugu
                     // 3. Shoda části slugu / jména
                     if let match = wikiExercises.first(where: { wikiEx in
-                        let wikiName = wikiEx.name.lowercased()
-                        let wikiSlug = wikiName.replacingOccurrences(of: " ", with: "-")
+                        let wikiName = wikiEx.name.lowercased().folding(options: .diacriticInsensitive, locale: .current).replacingOccurrences(of: " ", with: "")
+                        let wikiSlug = wikiName.replacingOccurrences(of: "-", with: "")
                         
                         return localNameEn == wikiName ||
                                localSlug == wikiSlug ||
                                wikiName.contains(localNameEn) ||
                                localNameEn.contains(wikiName) ||
                                wikiName.contains(localNameCz) ||
-                               localNameCz.contains(wikiName)
+                               localNameCz.contains(wikiName) ||
+                               wikiSlug.contains(localSlug) ||
+                               localSlug.contains(wikiSlug)
                     }) {
                         if local.videoURL != match.videoUrl {
                             local.videoURL = match.videoUrl

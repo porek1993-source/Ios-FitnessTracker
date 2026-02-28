@@ -46,11 +46,34 @@ struct WorkoutPreviewView: View {
         ]
         let normalized = label.contains(" ") ? label : (label.components(separatedBy: " ").first ?? label)
         let lookupKey = slugMap[label] != nil ? label : normalized
-        guard let slugs = slugMap[lookupKey] else { return }
+        let fallbackSlugs = slugMap[lookupKey] ?? []
+        
         let allExercises = (try? modelContext.fetch(FetchDescriptor<Exercise>())) ?? []
-        for (i, ex) in exs.enumerated() where ex.exercise == nil && i < slugs.count {
-            if let found = allExercises.first(where: { $0.slug == slugs[i] }) {
+        
+        for (i, ex) in exs.enumerated() where ex.exercise == nil {
+            // 1. Zkusit najít podle fallbackSlug (generováno AI)
+            if let fSlug = ex.fallbackSlug, let found = allExercises.first(where: { $0.slug.lowercased() == fSlug.lowercased() }) {
                 ex.exercise = found
+                continue
+            }
+            
+            // 2. Zkusit najít podle fallbackName (fuzzy match)
+            if let fName = ex.fallbackName?.lowercased() {
+                if let found = allExercises.first(where: { 
+                    $0.name.lowercased().contains(fName) || 
+                    $0.nameEN.lowercased().contains(fName) ||
+                    fName.contains($0.name.lowercased())
+                }) {
+                    ex.exercise = found
+                    continue
+                }
+            }
+            
+            // 3. Poslední záloha: použít hardcoded slugMap jako dřív
+            if i < fallbackSlugs.count {
+                if let found = allExercises.first(where: { $0.slug == fallbackSlugs[i] }) {
+                    ex.exercise = found
+                }
             }
         }
         try? modelContext.save()

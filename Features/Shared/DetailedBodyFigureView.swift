@@ -121,34 +121,48 @@ extension Path {
 extension UIBezierPath {
     convenience init(svgPath: String) {
         self.init()
-        let commandChars = "MLHVZCQSamlhvzcqs"
+        let commandChars = CharacterSet(charactersIn: "MLHVZCQSamlhvzcqs")
         
-        var commands: [String] = []
-        var currentCmd = ""
+        // 1. Přidat mezery před příkazy a před mínusy, abychom usnadnili split
+        var formattedPath = svgPath
+            .replacingOccurrences(of: "-", with: " -")
+            .replacingOccurrences(of: ",", with: " ")
         
-        for char in svgPath {
-            if commandChars.contains(char) {
-                if !currentCmd.isEmpty { commands.append(currentCmd) }
-                currentCmd = String(char)
-            } else {
-                currentCmd.append(char)
-            }
+        // Přidat mezery před znaky příkazů
+        for char in "MLHVZCQSamlhvzcqs" {
+            formattedPath = formattedPath.replacingOccurrences(of: String(char), with: " \(char) ")
         }
-        if !currentCmd.isEmpty { commands.append(currentCmd) }
+        
+        // 2. Tokenizovat string (odstranit prázdné stringy)
+        let tokens = formattedPath.components(separatedBy: .whitespacesAndNewlines).filter { !$0.isEmpty }
+        
+        var currentCmd = ""
+        var cmdCoords: [Double] = []
+        var commands: [(String, [Double])] = []
+        
+        for token in tokens {
+            if token.count == 1, token.rangeOfCharacter(from: commandChars) != nil {
+                // Nový příkaz
+                if !currentCmd.isEmpty {
+                    commands.append((currentCmd, cmdCoords))
+                }
+                currentCmd = token
+                cmdCoords = []
+            } else if let val = Double(token) {
+                // Není to striktně nový příkaz, ale číslo k aktuálnímu
+                cmdCoords.append(val)
+            }
+            // (Pokud chybí Command char ale jdou jen čísla, ignorujeme implicitní L/C logiku pro zjednodušení. 
+            // Plný SVG parser by pokračoval v aktuálním příkazu).
+        }
+        if !currentCmd.isEmpty {
+            commands.append((currentCmd, cmdCoords))
+        }
         
         var currentPoint = CGPoint.zero
         
-        for cmdStr in commands {
-            guard let firstChar = cmdStr.first else { continue }
-            let type = String(firstChar)
-            
-            // Extract numbers keeping minus signs
-            let numStr = cmdStr.dropFirst()
-                .replacingOccurrences(of: "-", with: " -")
-                .replacingOccurrences(of: ",", with: " ")
-            let coords = numStr.split(separator: " ").compactMap { Double($0) }
-            
-            switch type {
+        for (cmdStr, coords) in commands {
+            switch cmdStr {
             case "M":
                 if coords.count >= 2 { 
                     currentPoint = CGPoint(x: coords[0], y: coords[1])
@@ -160,48 +174,76 @@ extension UIBezierPath {
                     self.move(to: currentPoint) 
                 }
             case "L":
-                if coords.count >= 2 { 
-                    currentPoint = CGPoint(x: coords[0], y: coords[1])
-                    self.addLine(to: currentPoint) 
+                var i = 0
+                while i + 1 < coords.count {
+                    currentPoint = CGPoint(x: coords[i], y: coords[i+1])
+                    self.addLine(to: currentPoint)
+                    i += 2
                 }
             case "l":
-                if coords.count >= 2 { 
-                    currentPoint = CGPoint(x: currentPoint.x + coords[0], y: currentPoint.y + coords[1])
-                    self.addLine(to: currentPoint) 
+                var i = 0
+                while i + 1 < coords.count {
+                    currentPoint = CGPoint(x: currentPoint.x + coords[i], y: currentPoint.y + coords[i+1])
+                    self.addLine(to: currentPoint)
+                    i += 2
                 }
             case "H":
-                if coords.count >= 1 {
-                    currentPoint = CGPoint(x: coords[0], y: currentPoint.y)
+                for x in coords {
+                    currentPoint = CGPoint(x: x, y: currentPoint.y)
                     self.addLine(to: currentPoint)
                 }
             case "h":
-                if coords.count >= 1 {
-                    currentPoint = CGPoint(x: currentPoint.x + coords[0], y: currentPoint.y)
+                for x in coords {
+                    currentPoint = CGPoint(x: currentPoint.x + x, y: currentPoint.y)
                     self.addLine(to: currentPoint)
                 }
             case "V":
-                if coords.count >= 1 {
-                    currentPoint = CGPoint(x: currentPoint.x, y: coords[0])
+                for y in coords {
+                    currentPoint = CGPoint(x: currentPoint.x, y: y)
                     self.addLine(to: currentPoint)
                 }
             case "v":
-                if coords.count >= 1 {
-                    currentPoint = CGPoint(x: currentPoint.x, y: currentPoint.y + coords[0])
+                for y in coords {
+                    currentPoint = CGPoint(x: currentPoint.x, y: currentPoint.y + y)
                     self.addLine(to: currentPoint)
                 }
             case "C":
-                if coords.count >= 6 {
-                    let cp1 = CGPoint(x: coords[0], y: coords[1])
-                    let cp2 = CGPoint(x: coords[2], y: coords[3])
-                    currentPoint = CGPoint(x: coords[4], y: coords[5])
+                var i = 0
+                while i + 5 < coords.count {
+                    let cp1 = CGPoint(x: coords[i], y: coords[i+1])
+                    let cp2 = CGPoint(x: coords[i+2], y: coords[i+3])
+                    currentPoint = CGPoint(x: coords[i+4], y: coords[i+5])
                     self.addCurve(to: currentPoint, controlPoint1: cp1, controlPoint2: cp2)
+                    i += 6
                 }
             case "c":
-                if coords.count >= 6 {
-                    let cp1 = CGPoint(x: currentPoint.x + coords[0], y: currentPoint.y + coords[1])
-                    let cp2 = CGPoint(x: currentPoint.x + coords[2], y: currentPoint.y + coords[3])
-                    currentPoint = CGPoint(x: currentPoint.x + coords[4], y: currentPoint.y + coords[5])
+                var i = 0
+                while i + 5 < coords.count {
+                    let cp1 = CGPoint(x: currentPoint.x + coords[i], y: currentPoint.y + coords[i+1])
+                    let cp2 = CGPoint(x: currentPoint.x + coords[i+2], y: currentPoint.y + coords[i+3])
+                    currentPoint = CGPoint(x: currentPoint.x + coords[i+4], y: currentPoint.y + coords[i+5])
                     self.addCurve(to: currentPoint, controlPoint1: cp1, controlPoint2: cp2)
+                    i += 6
+                }
+            case "S":
+                // Zjednodušený S příkaz (bez předchozí kontroly zrcadlení, pouze mapováno na C s předchozím CP = aktuální bod pro tento mock)
+                // Plné SVG vyžaduje trackování předchozího CP2
+                var i = 0
+                while i + 3 < coords.count {
+                    let cp2 = CGPoint(x: coords[i], y: coords[i+1])
+                    let end = CGPoint(x: coords[i+2], y: coords[i+3])
+                    self.addCurve(to: end, controlPoint1: currentPoint, controlPoint2: cp2)
+                    currentPoint = end
+                    i += 4
+                }
+            case "s":
+                var i = 0
+                while i + 3 < coords.count {
+                    let cp2 = CGPoint(x: currentPoint.x + coords[i], y: currentPoint.y + coords[i+1])
+                    let end = CGPoint(x: currentPoint.x + coords[i+2], y: currentPoint.y + coords[i+3])
+                    self.addCurve(to: end, controlPoint1: currentPoint, controlPoint2: cp2)
+                    currentPoint = end
+                    i += 4
                 }
             case "Z", "z":
                 self.close()
