@@ -130,7 +130,7 @@ struct RootView: View {
 
         let mockProfile = UserProfile(
             name: "Tester",
-            birthDate: birthDate,
+            dateOfBirth: birthDate,
             gender: .male,
             heightCm: 177.0,
             weightKg: 70.0,
