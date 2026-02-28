@@ -477,7 +477,7 @@ final class ActiveSessionViewModel: ObservableObject {
             if maxWeight > prev && prev > 0 {
                 prs.append(PREvent(
                     exerciseName: ex.name,
-                    muscleGroup: exercise.musclesTarget.first ?? .pecs,
+                    muscleGroup: exercise.musclesTarget.first ?? .chest,
                     oldValue: prev,
                     newValue: maxWeight,
                     type: .weight
@@ -493,7 +493,7 @@ final class ActiveSessionViewModel: ObservableObject {
             let completed = state.sets.filter { $0.isCompleted }
             guard !completed.isEmpty else { return nil }
 
-            let primary = state.exercise?.musclesTarget ?? [.pecs]
+            let primary = state.exercise?.musclesTarget ?? [.chest]
             let secondary = state.exercise?.musclesSecondary ?? []
 
             let setResults: [SessionGamificationInput.SetResult] = completed.map {

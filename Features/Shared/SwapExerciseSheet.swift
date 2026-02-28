@@ -929,26 +929,8 @@ extension ExerciseCategory {
     }
 }
 
-extension MuscleGroup {
-    var displayName: String {
-        switch self {
-        case .pecs:           return "Prsní svaly"
-        case .lats:           return "Latissimus"
-        case .traps:          return "Trapézy"
-        case .delts:          return "Deltoid"
-        case .biceps:         return "Biceps"
-        case .triceps:        return "Triceps"
-        case .quads:          return "Quadriceps"
-        case .hamstrings:     return "Hamstringy"
-        case .glutes:         return "Hýžďové"
-        case .calves:         return "Lýtka"
-        case .abs:            return "Břišní svaly"
-        case .obliques:       return "Boky"
-        case .spinalErectors: return "Vzpřimovače"
-        case .forearms:       return "Předloktí"
-        }
-    }
-}
+// MuscleGroup.displayName is now defined in Exercise.swift (localizedName / displayName)
+// Removing duplicate extension to avoid compile error.
 
 // Equipment enum je nyní v Data/Models/Exercise.swift
 
@@ -962,8 +944,8 @@ extension MuscleGroup {
         category: .chest,
         movementPattern: .push,
         equipment: [.barbell],
-        musclesTarget: [.pecs],
-        musclesSecondary: [.triceps, .delts],
+        musclesTarget: [.chest],
+        musclesSecondary: [.triceps, .frontShoulders],
         instructions: "Lehni si na lavičku, spusť čínku na hrudník a zatlač zpět."
     )
 
@@ -975,8 +957,8 @@ extension MuscleGroup {
             category: .chest,
             movementPattern: .push,
             equipment: [.dumbbell],
-            musclesTarget: [.pecs],
-            musclesSecondary: [.triceps, .delts],
+            musclesTarget: [.chest],
+            musclesSecondary: [.triceps, .frontShoulders],
             instructions: "Větší rozsah pohybu než s osou."
         ),
         Exercise(
@@ -986,7 +968,7 @@ extension MuscleGroup {
             category: .chest,
             movementPattern: .isolation,
             equipment: [.cable],
-            musclesTarget: [.pecs],
+            musclesTarget: [.chest],
             musclesSecondary: [],
             instructions: "Konstantní napětí v celém rozsahu."
         ),
@@ -997,8 +979,8 @@ extension MuscleGroup {
             category: .chest,
             movementPattern: .push,
             equipment: [.bodyweight],
-            musclesTarget: [.pecs],
-            musclesSecondary: [.triceps, .delts],
+            musclesTarget: [.chest],
+            musclesSecondary: [.triceps, .frontShoulders],
             instructions: "Základní pohyb, vždy dostupný."
         )
     ]

@@ -117,19 +117,67 @@ enum MovementPattern: String, Codable, CaseIterable {
     case isolation  = "isolation"
 }
 
+/// Kompletní enum 16 svalových skupin — rawValue přesně odpovídá Supabase klíčům.
+/// lokalizace: .localizedName vrací česky pro UI, .displayName je alias.
 enum MuscleGroup: String, Codable, CaseIterable {
-    case pecs           = "pecs"
-    case lats           = "lats"
-    case traps          = "traps"
-    case delts          = "delts"
-    case biceps         = "biceps"
-    case triceps        = "triceps"
-    case quads          = "quads"
-    case hamstrings     = "hamstrings"
-    case glutes         = "glutes"
-    case calves         = "calves"
-    case abs            = "abs"
-    case obliques       = "obliques"
-    case spinalErectors = "spinalErectors"
-    case forearms       = "forearms"
+    // ── Přední strana těla ───────────────────────────────────────────────
+    case traps          = "traps"           // Trapézy (vrchol)
+    case frontShoulders = "front-shoulders" // Přední ramena (deltoid ant.)
+    case chest          = "chest"           // Hrudník (pectoralis major)
+    case biceps         = "biceps"          // Biceps
+    case forearms       = "forearms"        // Předloktí
+    case obliques       = "obliques"        // Šikmé svaly břišní
+    case abdominals     = "abdominals"      // Přímý sval břišní (rectus)
+    case quads          = "quads"           // Přední stehna (quadriceps)
+    case calves         = "calves"          // Lýtka (gastrocnemius)
+
+    // ── Zadní strana těla ────────────────────────────────────────────────
+    case rearShoulders  = "rear-shoulders"  // Zadní ramena (deltoid post.)
+    case triceps        = "triceps"         // Triceps
+    case lats           = "lats"            // Latissimus dorsi
+    case trapsMiddle    = "traps-middle"    // Střední záda (rhomboid + mid-trap)
+    case lowerback      = "lowerback"       // Spodní záda (erector spinae)
+    case hamstrings     = "hamstrings"      // Zadní stehna
+    case glutes         = "glutes"          // Hýždě (gluteus maximus)
+
+    // MARK: - Lokalizace (CZ)
+    var localizedName: String {
+        switch self {
+        case .traps:          return "Trapézy"
+        case .frontShoulders: return "Přední ramena"
+        case .chest:          return "Hrudník"
+        case .biceps:         return "Biceps"
+        case .forearms:       return "Předloktí"
+        case .obliques:       return "Šikmé svaly břišní"
+        case .abdominals:     return "Břicho"
+        case .quads:          return "Přední stehna"
+        case .calves:         return "Lýtka"
+        case .rearShoulders:  return "Zadní ramena"
+        case .triceps:        return "Triceps"
+        case .lats:           return "Široký sval zádový"
+        case .trapsMiddle:    return "Střední záda"
+        case .lowerback:      return "Spodní záda"
+        case .hamstrings:     return "Zadní stehna"
+        case .glutes:         return "Hýždě"
+        }
+    }
+
+    /// Alias pro zpětnou kompatibilitu s kódem volajícím .displayName
+    var displayName: String { localizedName }
+
+    // MARK: - Bezpečná inicializace z libovolného Supabase stringu
+    /// Zkusí přesný rawValue match, pak fallback mapování pro starší aliasy.
+    static func from(supabaseKey: String) -> MuscleGroup? {
+        if let direct = MuscleGroup(rawValue: supabaseKey) { return direct }
+        // Starší / alternativní klíče
+        switch supabaseKey.lowercased() {
+        case "pecs":                    return .chest
+        case "delts", "shoulders":      return .frontShoulders
+        case "abs", "core":             return .abdominals
+        case "spinalerectors", "lower back", "lower_back": return .lowerback
+        case "traps-middle", "middle back", "upper back":  return .trapsMiddle
+        case "lats", "back":            return .lats
+        default: return nil
+        }
+    }
 }

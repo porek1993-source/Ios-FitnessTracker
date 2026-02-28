@@ -487,7 +487,7 @@ final class WorkoutViewModel: ObservableObject {
             if maxWeight > prev && prev > 0 {
                 prs.append(PREvent(
                     exerciseName: ex.name,
-                    muscleGroup: exercise.musclesTarget.first ?? .pecs,
+                    muscleGroup: exercise.musclesTarget.first ?? .chest,
                     oldValue: prev,
                     newValue: maxWeight,
                     type: .weight
@@ -531,18 +531,19 @@ final class WorkoutViewModel: ObservableObject {
     }
 
     /// Jednoduchá heuristika pro mapování slug → svalové skupiny
+    /// Heuristika slug → MuscleGroup (fallback pokud Exercise DB reference chybí)
     private func muscleGroupsFromSlug(_ slug: String, primary: Bool) -> [MuscleGroup] {
         let s = slug.lowercased()
         if s.contains("bench") || s.contains("chest") || s.contains("fly") || (s.contains("press") && !s.contains("shoulder") && !s.contains("over")) {
-            return primary ? [.pecs] : [.triceps, .delts]
+            return primary ? [.chest] : [.triceps, .frontShoulders]
         } else if s.contains("row") || s.contains("pulldown") || s.contains("pull") || s.contains("lat") {
             return primary ? [.lats] : [.biceps, .traps]
         } else if s.contains("squat") || s.contains("quad") || s.contains("lunge") || s.contains("leg-press") {
             return primary ? [.quads] : [.glutes, .hamstrings]
         } else if s.contains("deadlift") || s.contains("rdl") || s.contains("hip") || s.contains("hamstring") {
-            return primary ? [.hamstrings] : [.glutes, .spinalErectors]
+            return primary ? [.hamstrings] : [.glutes, .lowerback]
         } else if s.contains("shoulder") || s.contains("lateral") || s.contains("overhead") || s.contains("ohp") {
-            return primary ? [.delts] : [.triceps, .traps]
+            return primary ? [.frontShoulders] : [.triceps, .traps]
         } else if s.contains("curl") || s.contains("bicep") {
             return primary ? [.biceps] : [.forearms]
         } else if s.contains("tricep") || s.contains("dip") || s.contains("extension") || s.contains("pushdown") {
@@ -550,13 +551,15 @@ final class WorkoutViewModel: ObservableObject {
         } else if s.contains("calf") || s.contains("raise") {
             return primary ? [.calves] : []
         } else if s.contains("ab") || s.contains("core") || s.contains("plank") || s.contains("crunch") {
-            return primary ? [.abs] : [.obliques]
-        } else if s.contains("glute") || s.contains("bridge") {
+            return primary ? [.abdominals] : [.obliques]
+        } else if s.contains("glute") || s.contains("bridge") || s.contains("thrust") {
             return primary ? [.glutes] : [.hamstrings]
-        } else if s.contains("trap") || s.contains("shrug") || s.contains("face-pull") {
-            return primary ? [.traps] : [.delts]
+        } else if s.contains("trap") || s.contains("shrug") {
+            return primary ? [.traps] : [.frontShoulders]
+        } else if s.contains("face-pull") || s.contains("rear") {
+            return primary ? [.rearShoulders] : [.trapsMiddle]
         }
-        return primary ? [.pecs] : []
+        return primary ? [.chest] : []
     }
 
     private func rpe_isSuccessful(_ rpe: Int?) -> Bool {

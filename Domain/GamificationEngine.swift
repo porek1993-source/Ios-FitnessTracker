@@ -182,15 +182,15 @@ final class GamificationEngine: ObservableObject {
 extension MuscleGroup {
     var primaryCategory: ExerciseCategory {
         switch self {
-        case .pecs:                       return .chest
-        case .lats, .traps:               return .back
+        case .chest:                          return .chest
+        case .lats, .traps, .trapsMiddle,
+             .rearShoulders, .lowerback:      return .back
         case .quads, .hamstrings,
-             .glutes, .calves:            return .legs
-        case .delts:                      return .shoulders
+             .glutes, .calves:               return .legs
+        case .frontShoulders:                 return .shoulders
         case .biceps, .triceps,
-             .forearms:                   return .arms
-        case .abs, .obliques,
-             .spinalErectors:             return .core
+             .forearms:                       return .arms
+        case .abdominals, .obliques:          return .core
         }
     }
 }

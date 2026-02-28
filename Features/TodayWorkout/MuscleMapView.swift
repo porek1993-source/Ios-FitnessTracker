@@ -326,51 +326,63 @@ private enum AnatomicMuscleShape {
 
         // Jednotlivé svaly podle slug → speciální anatomické tvary
         switch slug {
-        // ── Hrudník (pecs): široká, mírně konvexní elipsa ──
-        case "pecs":
+        // ── Hrudník ──
+        case "chest":
             return pectoralPath(rect)
 
-        // ── Ramena (deltoidy): oválné kupole ──
-        case "left_delt", "right_delt":
-            return deltoidPath(rect, isLeft: slug.hasPrefix("left"))
+        // ── Přední / zadní ramena: oválné kupole ──
+        case "front-shoulders", "rear-shoulders":
+            return deltoidPath(rect, isLeft: area.id.hasPrefix("l_"))
 
-        // ── Bicepsy: vertikální elipsa s mírným zaoblením ──
-        case "left_bicep", "right_bicep":
+        // ── Bicepsy ──
+        case "biceps":
             return armMusclePath(rect)
 
-        // ── Tricepsy: podobné jako biceps ale subtilněji tvarované ──
-        case "left_tricep", "right_tricep":
+        // ── Tricepsy ──
+        case "triceps":
             return armMusclePath(rect)
 
-        // ── Břicho (abs): obrys přizpůsobený „sixpacku" ──
-        case "abs":
+        // ── Předloktí ──
+        case "forearms":
+            return armMusclePath(rect)
+
+        // ── Břicho (sixpack segmenty) ──
+        case "abdominals":
             return absPath(rect)
 
-        // ── Kvadricepsy: kapkovitý tvar ──
-        case "left_quad", "right_quad":
-            return quadPath(rect, isLeft: slug.hasPrefix("left"))
+        // ── Šikmé svaly břišní ──
+        case "obliques":
+            return Path(ellipseIn: rect)
 
-        // ── Hamstringy: vertikální elipsa ──
-        case "left_hamstring", "right_hamstring":
+        // ── Přední stehna ──
+        case "quads":
+            return quadPath(rect, isLeft: area.id.hasPrefix("left"))
+
+        // ── Zadní stehna ──
+        case "hamstrings":
             return hamstringPath(rect)
 
-        // ── Lýtka: kapkovitá elipsa (širší nahoře) ──
-        case "left_calf", "right_calf":
+        // ── Lýtka ──
+        case "calves":
             return calfPath(rect)
 
-        // ── Trapézy: šíjový lichoběžník ──
+        // ── Trapézy ──
         case "traps":
             return trapeziusPath(rect)
 
-        // ── Záda (lats): široký V-tvar ──
-        case "lats_upper":
+        // ── Latissimus dorsi ──
+        case "lats":
             return latPath(rect)
 
-        // ── Spodní záda: mírně zaoblený obdélník ──
-        case "lower_back":
+        // ── Střední záda ──
+        case "traps-middle":
             return lowerBackPath(rect)
 
-        // ── Hýždě (glutes): široká, plochá elipsa ──
+        // ── Spodní záda ──
+        case "lowerback":
+            return lowerBackPath(rect)
+
+        // ── Hýždě ──
         case "glutes":
             return glutePath(rect)
 
@@ -861,10 +873,10 @@ struct AnatomicalSilhouette: Shape {
                 let vm: HeatmapViewModel = {
                     let m = HeatmapViewModel()
                     m.muscleProgressMap = [
-                        "pecs":       0.85,
-                        "left_delt":  0.60,
-                        "right_delt": 0.60,
-                        "abs":        0.45
+                        "chest":          0.85,
+                        "front-shoulders":0.60,
+                        "abdominals":     0.45,
+                        "quads":          0.70
                     ]
                     return m
                 }()
