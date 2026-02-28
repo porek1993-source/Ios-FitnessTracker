@@ -80,10 +80,10 @@ final class TrainerContextBuilder {
         let adjustedWeekday = weekday == 1 ? 7 : weekday - 1
         let daysRemainingInWeek = 7 - adjustedWeekday
         
-        let daysInWeekComplete = activePlan.progressHistory.filter { history in
-            Calendar.current.isDate(history.date, equalTo: date, toGranularity: .weekOfYear)
+        let daysInWeekComplete = activePlan.sessions.filter { history in
+            Calendar.current.isDate(history.startedAt, equalTo: date, toGranularity: .weekOfYear)
         }.count
-        let plannedDaysPerWeek = activePlan.plannedDays.count
+        let plannedDaysPerWeek = activePlan.scheduledDays.count
         let workoutsRemaining = plannedDaysPerWeek - daysInWeekComplete
 
         return TrainerRequestContext(
