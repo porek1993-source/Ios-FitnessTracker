@@ -433,59 +433,6 @@ private struct GainsMuscleMapView: View {
     let gains: [XPGain]
     let animProgress: [MuscleGroup: Double]
 
-    /// Barva pro daný sval — odpovídá MuscleLevel barvě, animate progress 0→1
-    private func color(for muscle: MuscleGroup) -> Color {
-        guard let gain = gains.first(where: { $0.muscleGroup == muscle }) else {
-            return Color.white.opacity(0.08)
-        }
-        let progress = animProgress[muscle] ?? 0
-        let c = gain.newLevel.color
-        return Color(red: c.r * progress, green: c.g * progress, blue: c.b * progress)
-            .opacity(0.25 + 0.75 * progress)
-    }
-
-    /// Intensity pro glow efekt (0.0 – 1.0)
-    private func glowIntensity(for muscle: MuscleGroup) -> Double {
-        guard gains.first(where: { $0.muscleGroup == muscle }) != nil else { return 0 }
-        return animProgress[muscle] ?? 0
-    }
-
-    var body: some View {
-        GeometryReader { geo in
-            let W = geo.size.width
-
-            ZStack {
-                // ── Gradient atmosféra pod figurou ───────────────────────
-                RadialGradient(
-                    colors: [
-                        Color(red: 0.12, green: 0.18, blue: 0.38).opacity(0.6),
-                        Color.clear
-                    ],
-                    center: .center,
-                    startRadius: 0,
-                    endRadius: W * 0.75
-                )
-
-                // ── Silueta jako obrys ───────────────────────────────────
-                CleanBodySilhouette()
-                    .stroke(
-                        LinearGradient(
-                            colors: [Color.white.opacity(0.18), Color.white.opacity(0.06)],
-                            startPoint: .top, endPoint: .bottom
-                        ),
-                        lineWidth: 1.0
-                    )
-
-                // ── Svalový Canvas pomocí MuscleArea (přesné lícování se siluetou) ──
-                let allAreas = MuscleArea.frontAreas + MuscleArea.backAreas
-                
-                // Uděláme si lookup slovník pro rychlejší přístup a zamezení duplicit
-                // (např. pokud máme gained 'calves', nasvítíme přední i zadní lýtka)
-                ZStack {
-                    ForEach(allAreas) { area in
-                        if let targetMuscle = MuscleGroup(rawValue: area.slug),
-                           let _ = gains.first(where: { $0.muscleGroup == targetMuscle }) {
-                            
                             let fillCol = color(for: targetMuscle)
                             let glow = glowIntensity(for: targetMuscle)
                             

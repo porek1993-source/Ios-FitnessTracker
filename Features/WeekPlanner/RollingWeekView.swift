@@ -197,6 +197,7 @@ final class RollingWeekViewModel: ObservableObject {
 // MARK: ═══════════════════════════════════════════════════════════════════════
 
 struct RollingWeekView: View {
+    @EnvironmentObject private var env: AppEnvironment
     @StateObject private var vm = RollingWeekViewModel()
     @State private var showOverrideSheet = false
     @State private var selectedDayForEdit: WeekDay?
@@ -218,7 +219,37 @@ struct RollingWeekView: View {
                     .font(.system(size: 11, weight: .black))
                     .foregroundStyle(.white.opacity(0.3))
                     .kerning(1.5)
+                
                 Spacer()
+
+                // ✅ NOVÉ TLAČÍTKO: Batch AI tréninky pro celý týden
+                if let plan = activePlan, !vm.isRecalculating {
+                    Button {
+                        if let ai = env.aiTrainerService, let p = profile {
+                            Task {
+                                HapticManager.shared.playSuccess()
+                                await ai.generateFullWeek(profile: p, plan: plan)
+                            }
+                        }
+                    } label: {
+                        HStack(spacing: 5) {
+                            if env.aiTrainerService?.isLoading == true {
+                                ProgressView().tint(.blue).scaleEffect(0.6)
+                            } else {
+                                Image(systemName: "wand.and.stars")
+                                    .font(.system(size: 10))
+                            }
+                            Text("AI TÝDEN")
+                                .font(.system(size: 10, weight: .black))
+                        }
+                        .foregroundStyle(.blue)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 6)
+                        .background(Capsule().fill(Color.blue.opacity(0.12)))
+                    }
+                    .disabled(env.aiTrainerService?.isLoading == true)
+                }
+                
                 if vm.isRecalculating {
                     HStack(spacing: 6) {
                         ProgressView().tint(.white.opacity(0.5))
@@ -476,6 +507,7 @@ struct WeekDayExerciseDetailView: View {
     @State private var previewResponse: TrainerResponse?
     @State private var isGeneratingPreview: Bool = false
     @State private var hasCheckedCache: Bool = false
+    @State private var showingPreviewSheet = false
 
     // Mapování WeekDay.date → dayOfWeek (1=Po...7=Ne)
     private var ourDayIndex: Int {
@@ -545,7 +577,27 @@ struct WeekDayExerciseDetailView: View {
                 plannedExercisesListView
             }
 
-            startWorkoutButton
+            HStack(spacing: 12) {
+                // ✅ NOVÉ TLAČÍTKO: Prozkoumat trénink (Rozkliknutí náhledu)
+                Button {
+                    showingPreviewSheet = true
+                } label: {
+                    Image(systemName: "eye.fill")
+                        .font(.system(size: 16, weight: .bold))
+                        .foregroundStyle(.white)
+                        .frame(width: 44, height: 44)
+                        .background(Color.white.opacity(0.1))
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                }
+                .buttonStyle(.plain)
+                .sheet(isPresented: $showingPreviewSheet) {
+                    if let pd = plannedDay {
+                        WorkoutPreviewSheet(day: pd)
+                    }
+                }
+
+                startWorkoutButton
+            }
         }
         .padding(14)
         .onAppear {

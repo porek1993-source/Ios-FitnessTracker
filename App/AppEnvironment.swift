@@ -114,9 +114,65 @@ final class AppEnvironment: ObservableObject {
             )
         }
 
+        // 6. Synchronizace videí cviků (non-blocking)
+        syncExerciseVideos(modelContext: modelContext)
+
         // Startup dokončen — UI může přejít do aktivního stavu
         isStartupComplete = true
         AppLogger.info("🏁 [AppEnvironment] Startup sequence dokončena.")
+    }
+
+    /// Synchronizuje video URL ze Supabase do lokální SwiftData DB.
+    /// ✅ OPRAVA: Řeší problém "ukázka není k dispozici" v tréninku vylepšením fuzzy matching logiky.
+    func syncExerciseVideos(modelContext: ModelContext) {
+        Task.detached(priority: .utility) { [weak self] in
+            guard let self = self else { return }
+            do {
+                AppLogger.info("⏳ [AppEnvironment] Startuji synchronizaci videí cviků...")
+                let wikiExercises = try await self.exerciseRepository.fetchMuscleWikiAll()
+                
+                let descriptor = FetchDescriptor<Exercise>()
+                let localExercises = try modelContext.fetch(descriptor)
+                
+                var updatedCount = 0
+                for local in localExercises {
+                    let localSlug = local.slug.lowercased()
+                    let localNameEn = local.nameEN.lowercased()
+                    let localNameCz = local.name.lowercased()
+                    
+                    // Pokročilejší párování:
+                    // 1. Přesná shoda anglického jména
+                    // 2. Přesná shoda slugu
+                    // 3. Shoda části slugu / jména
+                    if let match = wikiExercises.first(where: { wikiEx in
+                        let wikiName = wikiEx.name.lowercased()
+                        let wikiSlug = wikiName.replacingOccurrences(of: " ", with: "-")
+                        
+                        return localNameEn == wikiName ||
+                               localSlug == wikiSlug ||
+                               wikiName.contains(localNameEn) ||
+                               localNameEn.contains(wikiName) ||
+                               wikiName.contains(localNameCz) ||
+                               localNameCz.contains(wikiName)
+                    }) {
+                        if local.videoURL != match.videoUrl {
+                            local.videoURL = match.videoUrl
+                            updatedCount += 1
+                            AppLogger.info("🔗 [AppEnvironment] Spárováno video pro: \(local.name) -> \(match.name)")
+                        }
+                    }
+                }
+                
+                if updatedCount > 0 {
+                    try modelContext.save()
+                    AppLogger.info("✅ [AppEnvironment] Synchronizováno \(updatedCount) videí cviků.")
+                } else {
+                    AppLogger.info("ℹ️ [AppEnvironment] Žádná nová videa k synchronizaci.")
+                }
+            } catch {
+                AppLogger.error("❌ [AppEnvironment] Chyba při synchronizaci videí: \(error)")
+            }
+        }
     }
 
     // MARK: - Globální Error Handling

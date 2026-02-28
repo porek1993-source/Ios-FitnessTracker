@@ -99,7 +99,7 @@ struct ReadinessRingView: View {
 
 // MARK: - Body Figure
 
-struct BodyFigureView: View {
+struct MuscleMapView: View {
     @ObservedObject var vm: HeatmapViewModel
     let onTap: (MuscleArea) -> Void
     @State private var showingFront = true
@@ -113,60 +113,29 @@ struct BodyFigureView: View {
             .pickerStyle(.segmented)
             .padding(.horizontal, 60)
 
-            GeometryReader { geo in
-                let areas = showingFront ? MuscleArea.frontAreas : MuscleArea.backAreas
-                ZStack {
-                    BodySilhouette(isFront: showingFront)
-                        .fill(Color.white.opacity(0.06))
-                        .overlay(BodySilhouette(isFront: showingFront)
-                            .stroke(Color.white.opacity(0.12), lineWidth: 1))
+            ZStack {
+                // ✅ NOVÁ PRÉMIOVÁ ANATOMICKÁ SILUETA (SVG)
+                DetailedBodyFigureView(
+                    muscleStates: vm.muscleGroupIntensity,
+                    isFront: showingFront
+                )
+                .frame(height: 420)
 
-                    // Barevné overlay (jen vizuál, žádná tap logika)
+                // Tap vrstva (původní tap oblasti, aby zůstala funkčnost)
+                GeometryReader { geo in
+                    let areas = showingFront ? MuscleArea.frontAreas : MuscleArea.backAreas
                     ZStack {
                         ForEach(areas) { area in
-                            let state = vm.state(for: area)
-                            Capsule()
-                                .fill(heatmapFillColor(for: state))
-                                .frame(width: area.relativeRect(in: geo.size).width,
-                                       height: area.relativeRect(in: geo.size).height)
+                            Rectangle()
+                                .fill(Color.white.opacity(0.001))
+                                .frame(width: area.relativeRect(in: geo.size).width * 1.5,
+                                       height: area.relativeRect(in: geo.size).height * 1.2)
                                 .position(x: area.relativeRect(in: geo.size).midX,
                                           y: area.relativeRect(in: geo.size).midY)
-                                .animation(.easeInOut(duration: 0.25), value: state)
-                        }
-                    }
-                    .clipShape(BodySilhouette(isFront: showingFront))
-
-                    // Gamifikace overlay
-                    ZStack {
-                        ForEach(areas) { area in
-                            if vm.muscleProgress(for: area) > 0 {
-                                MuscleGrowthOverlay(
-                                    area: area,
-                                    progress: vm.muscleProgress(for: area),
-                                    canvasSize: geo.size
-                                )
-                            }
-                        }
-                    }
-                    .clipShape(BodySilhouette(isFront: showingFront))
-
-                    // OPRAVA: Jediný tap handler přes celý canvas.
-                    // Místo contentShape(Rectangle()) na každé zone (kde vždy vyhrál
-                    // poslední ve ForEach = right_calf) ručně detekujeme oblast.
-                    Color.clear
-                        .contentShape(Rectangle())
-                        .gesture(
-                            DragGesture(minimumDistance: 0)
-                                .onEnded { value in
-                                    handleCanvasTap(at: value.startLocation,
-                                                    canvasSize: geo.size,
-                                                    areas: areas)
+                                .onTapGesture {
+                                    HapticManager.shared.playSelection()
+                                    onTap(area)
                                 }
-                        )
-                }
-            }
-            .frame(width: 250, height: 390)
-            .frame(maxWidth: .infinity)
         }
     }
 }
@@ -587,6 +556,18 @@ final class HeatmapViewModel: ObservableObject {
     @Published var lastTappedArea: MuscleArea?
     @Published var readinessScore: Double = 0
     @Published var muscleProgressMap: [String: Double] = [:]
+
+    var muscleGroupIntensity: [MuscleGroup: Double] {
+        var intensity: [MuscleGroup: Double] = [:]
+        for entry in affectedAreas {
+            if let group = MuscleGroup.from(supabaseKey: entry.area.slug) {
+                let severityVal = Double(entry.severity) / 5.0
+                let current = intensity[group] ?? 0
+                intensity[group] = max(current, severityVal)
+            }
+        }
+        return intensity
+    }
 
     /// Načte readiness z HealthKit — stejný výpočet jako Dashboard
     func loadReadiness(healthKit: HealthKitService) {

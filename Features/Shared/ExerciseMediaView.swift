@@ -1,8 +1,7 @@
 // ExerciseMediaView.swift
-// Agilní Fitness Trenér — Přehrávač GIFů s YouTube fallbackem
+// Agilní Fitness Trenér — Přehrávač medií
 //
-// ✅ WKWebView pro plynulé, paměťově nenáročné přehrávání GIF animace ve smyčce
-// ✅ Automatický fallback na YouTube pokud gifURL == nil
+// ✅ WKWebView pro plynulé, paměťově nenáročné přehrávání GIF/videa ve smyčce
 // ✅ Skeleton loading state
 // ✅ Plně česky
 
@@ -15,13 +14,13 @@ import WebKit
 
 struct ExerciseMediaView: View {
 
-    /// URL GIFu (remote nebo local). Pokud nil → YouTube fallback.
+    /// URL GIFu/Videa (remote nebo local). Pokud nil → chybový stav MissingMediaView.
     let gifURL: URL?
 
-    /// Název cviku pro generování YouTube odkazu a alt text.
+    /// Název cviku pro zobrazení a logování.
     let exerciseName: String
 
-    /// Volitelný anglický název — YouTube dává lepší výsledky.
+    /// Volitelný anglický název cviku.
     var exerciseNameEn: String? = nil
 
     // Internal state
