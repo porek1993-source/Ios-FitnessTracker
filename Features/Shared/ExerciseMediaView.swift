@@ -27,10 +27,11 @@ struct ExerciseMediaView: View {
     @State private var isLoading     = true
     @State private var loadFailed    = false
     @State private var glowPulse     = false
+    @State private var dynamicURL:   URL? = nil
 
     var body: some View {
         Group {
-            if let url = gifURL {
+            if let url = gifURL ?? dynamicURL {
                 // ── GIF přehrávač ─────────────────────────────────────────
                 GIFPlayerView(
                     gifURL:    url,
@@ -55,6 +56,42 @@ struct ExerciseMediaView: View {
         .frame(height: 260)
         .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
         .onAppear { glowPulse = true }
+        .task {
+            // Pokud chybí lokální záznam o videu (typické před první úspěšnou sync s cloudem),
+            // pokusíme se ho dotáhnout dynamicky rovnou.
+            if gifURL == nil {
+                do {
+                    isLoading = true
+                    let repo = SupabaseExerciseRepository()
+                    let all = try await repo.fetchMuscleWikiAll()
+                    
+                    var foundURL: URL? = nil
+                    
+                    if let enName = exerciseNameEn,
+                       let match = all.first(where: { $0.name.lowercased() == enName.lowercased() }) {
+                        foundURL = URL(string: match.videoUrl)
+                    } else if let match = all.first(where: { $0.name.lowercased() == exerciseName.lowercased() }) {
+                        foundURL = URL(string: match.videoUrl)
+                    }
+                    
+                    await MainActor.run {
+                        if let validURL = foundURL {
+                            self.dynamicURL = validURL
+                            // Necháme isLoading běžet, dokud WebView nenačte frame
+                        } else {
+                            self.loadFailed = true
+                            self.isLoading = false
+                        }
+                    }
+                } catch {
+                    AppLogger.error("ExerciseMediaView: Nepodařilo se dohledat video pro \(exerciseName)")
+                    await MainActor.run {
+                        self.loadFailed = true
+                        self.isLoading = false
+                    }
+                }
+            }
+        }
     }
 
     // MARK: Skeleton overlay

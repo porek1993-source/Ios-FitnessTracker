@@ -7,45 +7,74 @@ struct DetailedBodyFigureView: View {
     let muscleStates: [MuscleGroup: Double] // 0.0 až 1.0 (intenzita barvy)
     let isFront: Bool
     var highlightColor: Color = AppColors.primaryAccent
+    var onTapMuscle: ((MuscleGroup) -> Void)? = nil
     
     // Základní barvy
     private let baseFill = Color(white: 0.15)
     
     var body: some View {
-        if isFront {
-            ZStack(alignment: .top) {
-                // Iterujeme přes definované části těla z AnatomySVGPath
-                ForEach(0..<AnatomySVGPath.allFrontParts.count, id: \.self) { index in
-                    let part = AnatomySVGPath.allFrontParts[index]
-                    
-                    SVGShape(path: part.path, viewBox: part.viewBox)
-                        .fill(getColor(for: part.muscleGroups))
-                        .frame(width: part.size.width, height: part.size.height)
-                        // ZStack(alignment: .top) centruje prvky na X ose horizontálně a zarovná na Y=0.
-                        // CSS 'left: 50%; margin-left: X' znamená posunutí levého okraje o X od středu.
-                        // Ve SwiftUI offset(x:) posouvá *střed* prvku od *středu* ZStacku.
-                        // Střed prvku tedy musí být 'margin-left + width / 2'.
-                        .offset(x: part.offset.x + (part.size.width / 2), y: part.offset.y)
+        GeometryReader { geo in
+            let svgWidth: CGFloat = 400
+            let svgHeight: CGFloat = 850
+            
+            // Proporcionální škálování podle dostupné velikosti
+            let scaleX = geo.size.width / svgWidth
+            let scaleY = geo.size.height / svgHeight
+            let finalScale = min(scaleX, scaleY)
+            
+            let drawWidth = svgWidth * finalScale
+            let drawHeight = svgHeight * finalScale
+            
+            // Vystředění obsahu v dostupné šířce (nahoře zarovnané)
+            let offsetX = (geo.size.width - drawWidth) / 2
+            let offsetY = (geo.size.height - drawHeight) / 2
+            
+            if isFront {
+                ZStack(alignment: .top) {
+                    // Iterujeme přes definované části těla z AnatomySVGPath
+                    ForEach(0..<AnatomySVGPath.allFrontParts.count, id: \.self) { index in
+                        let part = AnatomySVGPath.allFrontParts[index]
+                        
+                        SVGShape(path: part.path, viewBox: part.viewBox)
+                            .fill(getColor(for: part.muscleGroups))
+                            .overlay(
+                                SVGShape(path: part.path, viewBox: part.viewBox)
+                                    .stroke(Color.black.opacity(0.8), lineWidth: 1.5)
+                            )
+                            .frame(width: part.size.width, height: part.size.height)
+                            // Offset pro absolutní posun vůči středu v neškálovaném kontextu (X) a vršku (Y)
+                            .offset(x: part.offset.x + (part.size.width / 2), y: part.offset.y)
+                            // Přidání interakce přímo na SVG křivku (contentShape(svg) zajišťuje, že tap se trefí pouze na vybarvené pixely)
+                            .contentShape(SVGShape(path: part.path, viewBox: part.viewBox))
+                            .onTapGesture {
+                                if let primaryGroup = part.muscleGroups.first {
+                                    onTapMuscle?(primaryGroup)
+                                }
+                            }
+                    }
                 }
+                .frame(width: svgWidth, height: svgHeight)
+                // Škálování podle okna z levého horního rohu před posunem
+                .scaleEffect(finalScale, anchor: .top)
+                .offset(x: offsetX, y: offsetY)
+                
+            } else {
+                // Záloha pro zadní stranu dokud nemáme SVG
+                ZStack(alignment: .top) {
+                    RoundedRectangle(cornerRadius: 30)
+                        .fill(baseFill)
+                        .frame(width: 150, height: 400)
+                        .overlay(
+                            Text("Záda\n(Připravujeme)")
+                                .multilineTextAlignment(.center)
+                                .foregroundStyle(.white.opacity(0.3))
+                                .font(.caption)
+                        )
+                }
+                .frame(width: svgWidth, height: svgHeight)
+                .scaleEffect(finalScale, anchor: .top)
+                .offset(x: offsetX, y: offsetY)
             }
-            .frame(width: 400, height: 850)
-            // Škálování podle okna nebo pevné; originál počítá se scaleEffect
-            .scaleEffect(0.4) 
-        } else {
-            // Záloha pro zadní stranu dokud nemáme SVG
-            ZStack(alignment: .top) {
-                RoundedRectangle(cornerRadius: 30)
-                    .fill(baseFill)
-                    .frame(width: 150, height: 400)
-                    .overlay(
-                        Text("Záda\n(Připravujeme)")
-                            .multilineTextAlignment(.center)
-                            .foregroundStyle(.white.opacity(0.3))
-                            .font(.caption)
-                    )
-            }
-            .frame(width: 400, height: 850)
-            .scaleEffect(0.4)
         }
     }
     

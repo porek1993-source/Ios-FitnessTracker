@@ -16,31 +16,28 @@ struct MuscleMapView: View {
             .padding(.horizontal, 60)
 
             ZStack {
-                // ✅ NOVÁ PRÉMIOVÁ ANATOMICKÁ SILUETA (SVG)
+                // ✅ NOVÁ PRÉMIOVÁ ANATOMICKÁ SILUETA (SVG) s přímým tapováním
                 DetailedBodyFigureView(
                     muscleStates: vm.muscleGroupIntensity,
-                    isFront: showingFront
-                )
-                .frame(height: 420)
-
-                // Tap vrstva (původní tap oblasti, aby zůstala funkčnost)
-                GeometryReader { geo in
-                    let areas = showingFront ? MuscleArea.frontAreas : MuscleArea.backAreas
-                    ZStack {
-                        ForEach(areas) { area in
-                            Rectangle()
-                                .fill(Color.white.opacity(0.001))
-                                .frame(width: area.relativeRect(in: geo.size).width * 1.5,
-                                       height: area.relativeRect(in: geo.size).height * 1.2)
-                                .position(x: area.relativeRect(in: geo.size).midX,
-                                          y: area.relativeRect(in: geo.size).midY)
-                                .onTapGesture {
-                                    HapticManager.shared.playSelection()
-                                    onTap(area)
-                                }
+                    isFront: showingFront,
+                    onTapMuscle: { tappedGroup in
+                        // Cílem je najít odpovídající MuscleArea pro tento MuscleGroup
+                        let areas = showingFront ? MuscleArea.frontAreas : MuscleArea.backAreas
+                        // Mapujeme supabase klíč MuscleGroup zpět na MuscleArea.slug
+                        if let matchedArea = areas.first(where: { $0.slug == tappedGroup.rawValue }) {
+                            HapticManager.shared.playSelection()
+                            onTap(matchedArea)
+                        } else {
+                            // Některé Svaly jako 'abs'/'abdominals' mohou mít trochu jiné slugy v UI a v DB
+                            // Zkusíme fuzzy match
+                            if let fallback = areas.first(where: { tappedGroup.rawValue.contains($0.slug) || $0.slug.contains(tappedGroup.rawValue) || $0.id == tappedGroup.rawValue }) {
+                                HapticManager.shared.playSelection()
+                                onTap(fallback)
+                            }
                         }
                     }
-                }
+                )
+                .frame(maxWidth: .infinity, maxHeight: 420)
             }
         }
     }

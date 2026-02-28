@@ -37,7 +37,7 @@ struct WorkoutPreviewSheet: View {
                                 emptyExercisesState
                             } else {
                                 ForEach(sortedExercises) { planned in
-                                    WorkoutPreviewRow(planned: planned)
+                                    WorkoutPreviewRow(planned: planned, allExercises: allExercises)
                                 }
                             }
                         }
@@ -45,9 +45,6 @@ struct WorkoutPreviewSheet: View {
                     }
                     .padding(.vertical, 24)
                 }
-            }
-            .onAppear {
-                repairMissingExercises()
             }
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -75,26 +72,22 @@ struct WorkoutPreviewSheet: View {
         .padding(.top, 40)
     }
 
-    private func repairMissingExercises() {
-        var didRepair = false
-        for planned in day.plannedExercises {
-            if planned.exercise == nil {
-                if let slug = planned.fallbackSlug,
-                   let matching = allExercises.first(where: { $0.slug == slug }) {
-                    planned.exercise = matching
-                    didRepair = true
-                }
-            }
-        }
-        if didRepair {
-            try? modelContext.save()
-        }
     }
 }
 
 struct WorkoutPreviewRow: View {
     let planned: PlannedExercise
+    let allExercises: [Exercise]
     @State private var showingDetail = false
+    
+    // Dynamické navázání ze @Query (funguje i po zpožděném nahrání z cloudu)
+    private var resolvedExercise: Exercise? {
+        if let ex = planned.exercise { return ex }
+        if let slug = planned.fallbackSlug {
+            return allExercises.first(where: { $0.slug == slug })
+        }
+        return nil
+    }
     
     var body: some View {
         Button { showingDetail = true } label: {
@@ -105,7 +98,7 @@ struct WorkoutPreviewRow: View {
                         .fill(AppColors.cardBg)
                         .frame(width: 56, height: 56)
                     
-                    if let videoURL = planned.exercise?.videoURL, !videoURL.isEmpty {
+                    if let videoURL = resolvedExercise?.videoURL, !videoURL.isEmpty {
                         Image(systemName: "video.fill")
                             .font(.system(size: 20))
                             .foregroundStyle(AppColors.primaryAccent)
@@ -117,7 +110,7 @@ struct WorkoutPreviewRow: View {
                 }
                 
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(planned.exercise?.name ?? planned.fallbackName ?? "Neznámý cvik")
+                    Text(resolvedExercise?.name ?? planned.fallbackName ?? "Neznámý cvik")
                         .font(.system(size: 16, weight: .bold))
                         .foregroundStyle(.white)
                         .lineLimit(1)
@@ -143,7 +136,7 @@ struct WorkoutPreviewRow: View {
         }
         .buttonStyle(.plain)
         .sheet(isPresented: $showingDetail) {
-            if let exercise = planned.exercise {
+            if let exercise = resolvedExercise {
                 ExercisePreviewDetailWrapper(exercise: exercise)
             }
         }
