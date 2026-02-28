@@ -432,119 +432,20 @@ private struct StatPill: View {
 private struct GainsMuscleMapView: View {
     let gains: [XPGain]
     let animProgress: [MuscleGroup: Double]
-
-                            let fillCol = color(for: targetMuscle)
-                            let glow = glowIntensity(for: targetMuscle)
-                            
-                            Capsule()
-                                .fill(fillCol)
-                                .frame(
-                                    width: area.relativeRect(in: geo.size).width,
-                                    height: area.relativeRect(in: geo.size).height
-                                )
-                                .position(
-                                    x: area.relativeRect(in: geo.size).midX,
-                                    y: area.relativeRect(in: geo.size).midY
-                                )
-                                .shadow(color: fillCol.opacity(0.6), radius: 6 * glow)
-                        }
-                    }
-                }
-                .clipShape(CleanBodySilhouette())
-            }
+    
+    var body: some View {
+        // Převedeme [MuscleGroup: Double] animProgress na stavy pro mapu
+        let states = animProgress.reduce(into: [MuscleGroup: Double]()) { result, pair in
+            result[pair.key] = pair.value
         }
-    }
-}
-
-// Čistá bílá silueta pro summary panáčka — sjednocená s HeatmapView
-private struct CleanBodySilhouette: Shape {
-    func path(in rect: CGRect) -> Path {
-        var p = Path()
-        let w = rect.width, h = rect.height
-        let cx = w * 0.5
-
-        // ── Hlava ──
-        p.addEllipse(in: CGRect(x: cx - w*0.11, y: h*0.005, width: w*0.22, height: h*0.10))
-
-        // ── Krk ──
-        p.addRoundedRect(
-            in: CGRect(x: cx - w*0.045, y: h*0.09, width: w*0.09, height: h*0.035),
-            cornerSize: CGSize(width: 6, height: 6), style: .continuous
+        
+        DetailedBodyFigureView(
+            muscleStates: states,
+            isFront: true,
+            highlightColor: .blue
         )
-
-        // ── Trup (ramena → pas) — Bézier ──
-        p.move(to: CGPoint(x: cx - w*0.26, y: h*0.125))
-        p.addQuadCurve(to: CGPoint(x: cx - w*0.28, y: h*0.18),
-                       control: CGPoint(x: cx - w*0.29, y: h*0.125))
-        p.addCurve(to: CGPoint(x: cx - w*0.18, y: h*0.44),
-                   control1: CGPoint(x: cx - w*0.28, y: h*0.30),
-                   control2: CGPoint(x: cx - w*0.22, y: h*0.40))
-        p.addQuadCurve(to: CGPoint(x: cx + w*0.18, y: h*0.44),
-                       control: CGPoint(x: cx, y: h*0.46))
-        p.addCurve(to: CGPoint(x: cx + w*0.28, y: h*0.18),
-                   control1: CGPoint(x: cx + w*0.22, y: h*0.40),
-                   control2: CGPoint(x: cx + w*0.28, y: h*0.30))
-        p.addQuadCurve(to: CGPoint(x: cx + w*0.26, y: h*0.125),
-                       control: CGPoint(x: cx + w*0.29, y: h*0.125))
-        p.addQuadCurve(to: CGPoint(x: cx - w*0.26, y: h*0.125),
-                       control: CGPoint(x: cx, y: h*0.115))
-        p.closeSubpath()
-
-        // Průchod obou stran pro končetiny
-        for side in [-1.0, 1.0] as [CGFloat] {
-            // Paže (horní)
-            let ox = cx + side * w * 0.32
-            let armTopY = h * 0.16, armBotY = h * 0.38
-            let armW: CGFloat = w * 0.065
-            p.addRoundedRect(
-                in: CGRect(x: ox - armW, y: armTopY, width: armW * 2, height: armBotY - armTopY),
-                cornerSize: CGSize(width: armW * 0.8, height: armW * 0.8), style: .continuous
-            )
-
-            // Předloktí
-            let fTopY = h * 0.39, fBotY = h * 0.56
-            let fW: CGFloat = w * 0.048
-            p.addRoundedRect(
-                in: CGRect(x: ox - fW, y: fTopY, width: fW * 2, height: fBotY - fTopY),
-                cornerSize: CGSize(width: fW * 0.8, height: fW * 0.8), style: .continuous
-            )
-
-            // Stehno
-            let legX = cx + side * w * 0.115
-            let topY = h * 0.445, botY = h * 0.72
-            let topW: CGFloat = w * 0.10, botW: CGFloat = w * 0.065
-            p.move(to: CGPoint(x: legX - topW, y: topY))
-            p.addLine(to: CGPoint(x: legX + topW, y: topY))
-            p.addQuadCurve(to: CGPoint(x: legX + botW, y: botY),
-                           control: CGPoint(x: legX + topW * 0.9, y: (topY + botY) * 0.55))
-            p.addQuadCurve(to: CGPoint(x: legX - botW, y: botY),
-                           control: CGPoint(x: legX, y: botY + h * 0.012))
-            p.addQuadCurve(to: CGPoint(x: legX - topW, y: topY),
-                           control: CGPoint(x: legX - topW * 0.9, y: (topY + botY) * 0.55))
-            p.closeSubpath()
-
-            // Lýtko
-            let cTopY = h * 0.73, cBotY = h * 0.93
-            let cTopW: CGFloat = w * 0.058, cMidW: CGFloat = w * 0.065, cBotW: CGFloat = w * 0.042
-            p.move(to: CGPoint(x: legX - cTopW, y: cTopY))
-            p.addLine(to: CGPoint(x: legX + cTopW, y: cTopY))
-            p.addQuadCurve(to: CGPoint(x: legX + cMidW, y: cTopY + (cBotY - cTopY) * 0.35),
-                           control: CGPoint(x: legX + cMidW * 1.05, y: cTopY + (cBotY - cTopY) * 0.15))
-            p.addQuadCurve(to: CGPoint(x: legX + cBotW, y: cBotY),
-                           control: CGPoint(x: legX + cMidW * 0.8, y: cTopY + (cBotY - cTopY) * 0.7))
-            p.addQuadCurve(to: CGPoint(x: legX - cBotW, y: cBotY),
-                           control: CGPoint(x: legX, y: cBotY + h * 0.015))
-            p.addQuadCurve(to: CGPoint(x: legX - cMidW, y: cTopY + (cBotY - cTopY) * 0.35),
-                           control: CGPoint(x: legX - cMidW * 0.8, y: cTopY + (cBotY - cTopY) * 0.7))
-            p.addQuadCurve(to: CGPoint(x: legX - cTopW, y: cTopY),
-                           control: CGPoint(x: legX - cMidW * 1.05, y: cTopY + (cBotY - cTopY) * 0.15))
-            p.closeSubpath()
-        }
-
-        return p
     }
 }
-
 // MARK: - XP Bar Row
 
 private struct XPBarRow: View {
