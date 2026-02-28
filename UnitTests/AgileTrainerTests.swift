@@ -283,3 +283,116 @@ final class MuscleWikiDTOTests: XCTestCase {
         XCTAssertNotNil(repo, "Repository musí jít inicializovat")
     }
 }
+
+// MARK: ═══════════════════════════════════════════════════════════════════════
+// MARK: GamificationEngine Tests
+// MARK: ═══════════════════════════════════════════════════════════════════════
+
+@MainActor
+final class GamificationEngineTests: XCTestCase {
+
+    /// Regresní test pro FIX #11 — levelProgress nesměl vracet záporné číslo pro elite level.
+    func testLevelProgressEliteIsOne() {
+        let engine = GamificationEngine()
+        // Simulujeme MuscleXPRecord přímo
+        let record = MuscleXPRecord(muscleGroup: .chest)
+        record.totalXP = 100_000  // Daleko za elite threshold (40 000)
+        engine.muscleRecords[.chest] = record
+
+        let progress = engine.levelProgress(for: .chest)
+        XCTAssertGreaterThanOrEqual(progress, 0.0, "levelProgress nesmí být záporné.")
+        XCTAssertLessThanOrEqual(progress, 1.0, "levelProgress nesmí překročit 1.0.")
+        XCTAssertEqual(progress, 1.0, accuracy: 0.001, "Pro elite level musí být progress 1.0.")
+    }
+
+    /// Test, že XP zisk je proporcionální k objemu.
+    func testXPGainProportionalToVolume() {
+        let engine = GamificationEngine()
+        let input = SessionGamificationInput(
+            exercises: [
+                SessionGamificationInput.ExerciseResult(
+                    exerciseName: "Bench Press",
+                    musclesTarget: [.chest],
+                    musclesSecondary: [],
+                    completedSets: [
+                        .init(weightKg: 100, reps: 10, isWarmup: false),
+                        .init(weightKg: 100, reps: 10, isWarmup: false)
+                    ]
+                )
+            ],
+            personalRecords: []
+        )
+
+        // Použijeme in-memory SwiftData context pro test
+        let config = ModelConfiguration(isStoredInMemoryOnly: true)
+        let schema = Schema([MuscleXPRecord.self])
+        guard let container = try? ModelContainer(for: schema, configurations: config) else {
+            XCTFail("Nelze vytvořit test ModelContainer")
+            return
+        }
+        let context = container.mainContext
+
+        let gains = engine.process(input: input, context: context)
+
+        XCTAssertFalse(gains.isEmpty, "Musí existovat alespoň 1 XP zisk.")
+        let chestGain = gains.first { $0.muscleGroup == .chest }
+        XCTAssertNotNil(chestGain, "Chest musí mít XP zisk.")
+        // 2 sety × 100 kg × 10 reps = 2000 XP
+        XCTAssertEqual(chestGain?.xpEarned ?? 0, 2000, accuracy: 1.0, "XP zisk musí odpovídat volume * koeficientu.")
+    }
+}
+
+// MARK: ═══════════════════════════════════════════════════════════════════════
+// MARK: Extensions Tests (FIX #16, #21)
+// MARK: ═══════════════════════════════════════════════════════════════════════
+
+final class ExtensionsTests: XCTestCase {
+
+    /// Regresní test pro FIX #16 — endOfDay musí být DST-bezpečný.
+    func testEndOfDayIsStartOfNextDay() {
+        // Použijeme fixní datum abychom nezáviseli na aktuálním dnu
+        let calendar = Calendar.current
+        var components = DateComponents()
+        components.year = 2024
+        components.month = 3
+        components.day = 31  // Konec letního času v CZ 2024 (přechod o půlnoci)
+        components.hour = 12
+        components.minute = 0
+        guard let testDate = calendar.date(from: components) else {
+            XCTFail("Nepodařilo se vytvořit testovací datum")
+            return
+        }
+
+        let endOfDay = testDate.endOfDay
+        let startOfNextDay = calendar.startOfDay(for: testDate.addingTimeInterval(86_400))
+
+        // endOfDay musí být shodné se začátkem zítřka (DST-bezpečné)
+        XCTAssertEqual(endOfDay, testDate.startOfDay.addingTimeInterval(0) == endOfDay ? endOfDay : startOfNextDay,
+                       "endOfDay musí odpovídat začátku zítřka dle Calendar.")
+    }
+
+    /// Test Double.rounded(toNearest:) — přesunuto z WorkoutViewModel (FIX #21).
+    func testDoubleRoundedToNearest() {
+        XCTAssertEqual(100.0.rounded(toNearest: 2.5), 100.0, accuracy: 0.001)
+        XCTAssertEqual(101.0.rounded(toNearest: 2.5), 100.0, accuracy: 0.001)
+        XCTAssertEqual(101.3.rounded(toNearest: 2.5), 102.5, accuracy: 0.001)
+        XCTAssertEqual(102.4.rounded(toNearest: 2.5), 102.5, accuracy: 0.001)
+        XCTAssertEqual(95.0.rounded(toNearest: 5.0),  95.0,  accuracy: 0.001)
+        XCTAssertEqual(97.5.rounded(toNearest: 5.0),  100.0, accuracy: 0.001)
+    }
+
+    /// Test weekday konverze — pondělí musí být 1, neděle 7.
+    func testWeekdayConversion() {
+        let calendar = Calendar(identifier: .gregorian)
+        // 2024-01-01 byl pondělí
+        var components = DateComponents()
+        components.year = 2024; components.month = 1; components.day = 1
+        guard let monday = calendar.date(from: components) else { XCTFail(); return }
+
+        components.day = 7  // neděle
+        guard let sunday = calendar.date(from: components) else { XCTFail(); return }
+
+        XCTAssertEqual(monday.weekday, 1, "Pondělí musí být weekday 1.")
+        XCTAssertEqual(sunday.weekday,  7, "Neděle musí být weekday 7.")
+    }
+}

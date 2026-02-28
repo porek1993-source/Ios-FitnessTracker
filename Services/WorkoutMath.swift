@@ -2,7 +2,7 @@
 // Agilní Fitness Trenér — Lokální výpočty progresivního přetížení a rozcviček
 
 import Foundation
-import SwiftData
+// SwiftData import odstraněn — ProgressionEngine nyní pracuje se SetSnapshot (ValueType), ne s @Model CompletedSet
 
 // MARK: - Weight Rounder
 
@@ -13,6 +13,36 @@ enum WeightRounder {
         let step = 2.5
         let rounded = round(weight / step) * step
         return rounded
+    }
+}
+
+// MARK: - SetSnapshot
+//
+// ✅ FIX: ProgressionEngine původně přijímal [CompletedSet] kde CompletedSet je @Model class.
+// Vytváření @Model instancí bez ModelContext je undefined behavior ve SwiftData.
+// Řešení: Lehký ValueType struct pro přenos dat do ProgressionEngine.
+// WorkoutViewModel/ActiveSessionViewModel nyní předávají SetSnapshot místo CompletedSet.
+
+struct SetSnapshot {
+    let weightKg: Double
+    let reps: Int
+    let rpe: Double?
+    let isWarmup: Bool
+
+    /// Convenience init z WeightEntry (@Model)
+    init(from entry: WeightEntry, isWarmup: Bool = false) {
+        self.weightKg = entry.weightKg
+        self.reps = entry.reps
+        self.rpe = entry.rpe
+        self.isWarmup = isWarmup
+    }
+
+    /// Přímý init pro testy a fallback
+    init(weightKg: Double, reps: Int, rpe: Double? = nil, isWarmup: Bool = false) {
+        self.weightKg = weightKg
+        self.reps = reps
+        self.rpe = rpe
+        self.isWarmup = isWarmup
     }
 }
 
@@ -67,7 +97,7 @@ enum ProgressionEngine {
     /// - Pokud RPE bylo příliš vysoké (≥9.5) → udrž váhu i přes splněná reps
     /// - Pokud RPE bylo nízké (≤6) → +5 kg (příliš lehké)
     /// - Jinak → udrž váhu, přidej reps
-    static func calculateNextTarget(previousSets: [CompletedSet], programRepsMin: Int, programRepsMax: Int) -> Target? {
+    static func calculateNextTarget(previousSets: [SetSnapshot], programRepsMin: Int, programRepsMax: Int) -> Target? {
         guard !previousSets.isEmpty else { return nil }
         
         let workingSets = previousSets.filter { !$0.isWarmup }

@@ -4,10 +4,16 @@
 import WatchConnectivity
 import Foundation
 
+// ✅ FIX #12: @MainActor zajišťuje, že všechny @Published aktualizace a NotificationCenter.post
+// probíhají na hlavním vlákně. WCSessionDelegate metody jsou volány z libovolného vlákna —
+// bez @MainActor by aktualizace ObservableObject state způsobovaly runtime warningy / data race.
+@MainActor
 final class WatchConnectivityManager: NSObject, WCSessionDelegate, ObservableObject {
 
     static let shared = WatchConnectivityManager()
 
+    // ✅ @MainActor init: WCSession.default.delegate přiřazení je thread-safe
+    // nonisolated(unsafe) umožňuje přístup k singletonu bez await z nonisolated kontextu.
     override init() {
         super.init()
         if WCSession.isSupported() {
@@ -61,13 +67,13 @@ final class WatchConnectivityManager: NSObject, WCSessionDelegate, ObservableObj
     #endif
 
     func session(_ session: WCSession, didReceiveMessage message: [String: Any]) {
-        Task { @MainActor in
-            NotificationCenter.default.post(
-                name: .watchMessageReceived,
-                object: nil,
-                userInfo: message
-            )
-        }
+        // ✅ FIX #12: Třída je @MainActor-isolated — delegátní metody jsou hopnuty
+        // na main actor automaticky. Vnořený Task { @MainActor } je zbytečný.
+        NotificationCenter.default.post(
+            name: .watchMessageReceived,
+            object: nil,
+            userInfo: message
+        )
     }
 }
 

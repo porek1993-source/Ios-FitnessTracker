@@ -45,12 +45,22 @@ final class HealthBackgroundManager {
         }
     }
     
-    /// Zaregistruje background task. Musí být zavoláno hned po spuštění aplikace.
+    /// Zaregistruje background task. Musí být voláno hned po spuštění aplikace.
     func registerBackgroundTasks() {
         BGTaskScheduler.shared.register(forTaskWithIdentifier: Self.healthSyncTaskIdentifier, using: nil) { task in
-            guard let task = task as? BGAppRefreshTask else { return }
-            Task { @MainActor in
-                HealthBackgroundManager.shared.handleHealthSync(task: task)
+            guard let bgTask = task as? BGAppRefreshTask else { return }
+            // ✅ FIX #20: BGTaskScheduler handler běží na libovolném vlákně.
+            // Přesuneme zpracování na MainActor, ale MUSÍME nastavit expirationHandler
+            // PŘED async hopem, protože systém ho může zavolat kdykoliv (i okamžitě).
+            // Nastavíme ho synchronně ještě před Task { @MainActor }.
+            nonisolated(unsafe) var taskRef: Task<Void, Never>? = nil
+            bgTask.expirationHandler = {
+                AppLogger.warning("[HealthSync] Task vypršel (čas vyhrazený systémem došel).")
+                taskRef?.cancel()
+                bgTask.setTaskCompleted(success: false)
+            }
+            taskRef = Task { @MainActor in
+                HealthBackgroundManager.shared.handleHealthSync(task: bgTask)
             }
         }
     }
@@ -81,7 +91,10 @@ final class HealthBackgroundManager {
         // Hned naplánujeme další (systém vyžaduje, abychom naplánovali vždy dopředu)
         scheduleNextSync()
         
-        let operation = Task {
+        // ✅ FIX #20: expirationHandler je nastaven v registerBackgroundTasks() PŘED
+        // async hopem na MainActor, protože systém ho může zavolat kdykoliv.
+        // Duplicitní nastavení zde bylo odstraněno — přepisovalo by handler z registrace.
+        Task {
             do {
                 AppLogger.info("[HealthSync] Začínám background sync Health dat...")
                 
@@ -105,11 +118,6 @@ final class HealthBackgroundManager {
                 AppLogger.error("[HealthSync] Sync selhal: \(error.localizedDescription)")
                 task.setTaskCompleted(success: false)
             }
-        }
-        
-        task.expirationHandler = {
-            AppLogger.warning("[HealthSync] Task vypršel (čas vyhrazený systémem došel).")
-            operation.cancel()
         }
     }
     

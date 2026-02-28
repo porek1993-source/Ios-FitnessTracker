@@ -9,8 +9,10 @@ struct RescheduledDay: Codable {
     let focus: String
 
     /// Datum dne (kalkulováno lokálně, ne z AI).
+    /// ✅ FIX #13: Původní kód force-unwrapoval Calendar.date(byAdding:) výsledek.
+    /// Ačkoli je selhání hypotetické, force-unwrap je špatná praxe — nahrazeno ?? .now.
     var date: Date {
-        Calendar.current.date(byAdding: .day, value: dayIndex, to: Calendar.current.startOfDay(for: .now))!
+        Calendar.current.date(byAdding: .day, value: dayIndex, to: Calendar.current.startOfDay(for: .now)) ?? .now
     }
 }
 

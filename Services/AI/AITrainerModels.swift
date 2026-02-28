@@ -84,7 +84,7 @@ enum SportMuscleMapping {
         if s.contains("soccer") || s.contains("football") || s.contains("floorball") || s.contains("futsal") {
             return SportMuscleImpact(
                 primaryMuscles: ["quads", "hamstrings", "calves", "glutes"],
-                secondaryMuscles: ["abs", "hip_flexors"],
+                secondaryMuscles: ["abdominals", "obliques"],  // ✅ FIX: "abs"→"abdominals", "hip_flexors" není v DB → nahrazeno "obliques"
                 recoveryHoursNeeded: 36,
                 avoidHeavyCompounds: true
             )
@@ -92,7 +92,7 @@ enum SportMuscleMapping {
         // Tenis, squash, badminton — rotační + nohy + ramena
         if s.contains("tennis") || s.contains("squash") || s.contains("badminton") {
             return SportMuscleImpact(
-                primaryMuscles: ["forearms", "delts", "obliques"],
+                primaryMuscles: ["forearms", "front-shoulders", "obliques"],  // ✅ FIX: "delts"→"front-shoulders"
                 secondaryMuscles: ["quads", "calves", "lats"],
                 recoveryHoursNeeded: 24,
                 avoidHeavyCompounds: false
@@ -101,8 +101,8 @@ enum SportMuscleMapping {
         // Krav maga, bojové sporty — celé tělo
         if s.contains("krav") || s.contains("martial") || s.contains("boxing") || s.contains("mma") || s.contains("judo") {
             return SportMuscleImpact(
-                primaryMuscles: ["pecs", "delts", "quads", "hamstrings"],
-                secondaryMuscles: ["abs", "obliques", "biceps", "triceps"],
+                primaryMuscles: ["chest", "front-shoulders", "quads", "hamstrings"],  // ✅ FIX: "pecs"→"chest", "delts"→"front-shoulders"
+                secondaryMuscles: ["abdominals", "obliques", "biceps", "triceps"],
                 recoveryHoursNeeded: 48,
                 avoidHeavyCompounds: true
             )
@@ -110,7 +110,7 @@ enum SportMuscleMapping {
         // Jóga, pilates — flexibilita, core
         if s.contains("yoga") || s.contains("joga") || s.contains("pilates") || s.contains("stretch") {
             return SportMuscleImpact(
-                primaryMuscles: ["abs", "spinalErectors"],
+                primaryMuscles: ["abdominals", "lowerback"],    // ✅ FIX: "spinalErectors"→"lowerback"
                 secondaryMuscles: ["hamstrings", "glutes"],
                 recoveryHoursNeeded: 12,
                 avoidHeavyCompounds: false
@@ -129,7 +129,7 @@ enum SportMuscleMapping {
         if s.contains("run") || s.contains("running") || s.contains("jogging") {
             return SportMuscleImpact(
                 primaryMuscles: ["quads", "calves", "hamstrings"],
-                secondaryMuscles: ["glutes", "abs"],
+                secondaryMuscles: ["glutes", "abdominals"],    // ✅ FIX: "abs"→"abdominals"
                 recoveryHoursNeeded: 24,
                 avoidHeavyCompounds: false
             )
@@ -137,8 +137,8 @@ enum SportMuscleMapping {
         // Plavání — horní tělo + core
         if s.contains("swim") || s.contains("swimming") {
             return SportMuscleImpact(
-                primaryMuscles: ["lats", "delts", "pecs"],
-                secondaryMuscles: ["abs", "triceps"],
+                primaryMuscles: ["lats", "front-shoulders", "chest"],  // ✅ FIX: "delts"→"front-shoulders", "pecs"→"chest"
+                secondaryMuscles: ["abdominals", "triceps"],
                 recoveryHoursNeeded: 24,
                 avoidHeavyCompounds: false
             )
@@ -146,8 +146,8 @@ enum SportMuscleMapping {
         // Basketbal, volejbal, házená — nohy + horní
         if s.contains("basket") || s.contains("volleyball") || s.contains("handball") {
             return SportMuscleImpact(
-                primaryMuscles: ["quads", "calves", "delts"],
-                secondaryMuscles: ["abs", "glutes"],
+                primaryMuscles: ["quads", "calves", "front-shoulders"],  // ✅ FIX: "delts"→"front-shoulders"
+                secondaryMuscles: ["abdominals", "glutes"],              // ✅ FIX: "abs"→"abdominals"
                 recoveryHoursNeeded: 36,
                 avoidHeavyCompounds: false
             )

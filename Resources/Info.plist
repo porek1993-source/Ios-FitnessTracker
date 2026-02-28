@@ -36,6 +36,7 @@
 	<key>UIRequiredDeviceCapabilities</key>
 	<array>
 		<string>armv7</string>
+		<string>healthkit</string>
 	</array>
 	<key>NSHealthShareUsageDescription</key>
 	<string>Agile Trainer potřebuje přístup k HealthKitu pro sledování spánku, tepu a dalších zdravotních metrik pro optimalizaci tvého tréninku.</string>

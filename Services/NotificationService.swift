@@ -34,7 +34,9 @@ final class NotificationService {
         content.title = "Čas na trénink! 💪"
         content.body = "Trenér iKorba na tebe čeká. Podívej se na dnešní plán."
         content.sound = .default
-        content.badge = 1
+        // ✅ FIX #17: Odstraněno content.badge = 1 — badge se nikde nevynuloval,
+        // takže zůstal trvale na ikoně. Opakující se připomínky nemají badge nastavovat.
+        // Místo toho je clearBadge() voláno při otevření aplikace (viz AgileFitnessTrainerApp.swift).
 
         var components = DateComponents()
         components.hour = hour
@@ -54,6 +56,11 @@ final class NotificationService {
                 AppLogger.info("NotificationService: Denní připomínka naplánována na \(hour):\(String(format: "%02d", minute))")
             }
         }
+    }
+
+    /// ✅ FIX #17: Vymaže badge aplikace. Volej při každém spuštění do popředí.
+    func clearBadge() {
+        UNUserNotificationCenter.current().setBadgeCount(0)
     }
 
     /// Naplánuje notifikaci po vynechání tréninku (24h po původně plánovaném čase)

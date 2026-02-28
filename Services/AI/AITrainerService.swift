@@ -220,11 +220,11 @@ final class AITrainerService: ObservableObject {
         let daysToProcess = plan.scheduledDays.filter { !$0.isRestDay && $0.plannedExercises.isEmpty }
         
         for day in daysToProcess {
-            // Kalkulujeme datum pro tento 'den v týdnu' (1=Po...7=Ne)
+            // ✅ FIX: Používáme Date.weekday extension (1=Po...7=Ne) místo inline konverze
+            // která duplicovala logiku a mohla vnést nekonzistenci.
             let calendar = Calendar.current
             let today = Date.now
-            let currentWeekday = calendar.component(.weekday, from: today)
-            let ourTodayIdx = (currentWeekday == 1 ? 7 : currentWeekday - 1)
+            let ourTodayIdx = today.weekday   // 1=Po ... 7=Ne (konverze v Extensions.swift)
             
             let diff = day.dayOfWeek - ourTodayIdx
             let targetDate = calendar.date(byAdding: .day, value: (diff < 0 ? diff + 7 : diff), to: today) ?? today
