@@ -787,7 +787,7 @@ private struct BodyMapPreviewCard: View {
                             // Affected area tags
                             FlowLayout(spacing: 5) {
                                 ForEach(heatmapVM.affectedAreas.prefix(3)) { entry in
-                                    Text(entry.area.displayName)
+                                    Text(entry.area?.displayName ?? "Neznámý sval")
                                         .font(.system(size: 10, weight: .semibold))
                                         .foregroundStyle(entry.isJointPain ? .red : .orange)
                                         .padding(.horizontal, 7)
@@ -841,8 +841,7 @@ private struct MiniBodyCanvas: View {
                 // Barevné zóny únavy
                 Canvas { ctx, size in
                     for entry in vm.affectedAreas {
-                        let area = entry.area
-                        guard area.isFrontSide else { continue }
+                        guard let area = entry.area, area.isFrontSide else { continue }
                         let r = area.relativeRect(in: size)
                         let color = entry.isJointPain
                             ? Color.red.opacity(0.60)
