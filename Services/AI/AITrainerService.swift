@@ -745,37 +745,37 @@ enum AIExerciseCountValidator {
     private static let pushIsolations: [ResponseExercise] = [
         ResponseExercise(name: "Rozpažování s jednoručkami (Lateral raise)", nameEN: "Dumbbell Lateral Raise", slug: "lateral-raise",
             sets: 3, repsMin: 12, repsMax: 15, weightKg: nil, rir: 1, rpe: nil, restSeconds: 60, tempo: nil,
-            coachTip: "Paže mírně před tělem, lokty vedou pohyb."),
+            coachTip: "Paže mírně před tělem, lokty vedou pohyb.", supersetId: nil),
         ResponseExercise(name: "Triceps pushdown (kabel)", nameEN: "Cable Tricep Pushdown", slug: "tricep-pushdown",
             sets: 3, repsMin: 12, repsMax: 15, weightKg: nil, rir: 1, rpe: nil, restSeconds: 60, tempo: nil,
-            coachTip: "Lokty pevně u těla, plný rozsah pohybu.")
+            coachTip: "Lokty pevně u těla, plný rozsah pohybu.", supersetId: nil)
     ]
 
     private static let pullIsolations: [ResponseExercise] = [
         ResponseExercise(name: "Face pull (kabel)", nameEN: "Cable Face Pull", slug: "face-pull",
             sets: 3, repsMin: 15, repsMax: 20, weightKg: nil, rir: 1, rpe: nil, restSeconds: 60, tempo: nil,
-            coachTip: "Taháš k obličeji, palce za hlavou."),
+            coachTip: "Taháš k obličeji, palce za hlavou.", supersetId: nil),
         ResponseExercise(name: "Bicepsový zdvih s jednoručkami", nameEN: "Dumbbell Bicep Curl", slug: "dumbbell-curl",
             sets: 3, repsMin: 10, repsMax: 14, weightKg: nil, rir: 1, rpe: nil, restSeconds: 60, tempo: nil,
-            coachTip: "Lokty zůstávají u těla, nekývej trupem.")
+            coachTip: "Lokty zůstávají u těla, nekývej trupem.", supersetId: nil)
     ]
 
     private static let legIsolations: [ResponseExercise] = [
         ResponseExercise(name: "Předkopávání (Leg extension)", nameEN: "Leg Extension", slug: "leg-extension",
             sets: 3, repsMin: 12, repsMax: 16, weightKg: nil, rir: 1, rpe: nil, restSeconds: 60, tempo: nil,
-            coachTip: "Nahoře 1 sekundu drž kontrakci kvadricepsů."),
+            coachTip: "Nahoře 1 sekundu drž kontrakci kvadricepsů.", supersetId: nil),
         ResponseExercise(name: "Stojný výpon na lýtka", nameEN: "Standing Calf Raise", slug: "calf-raise",
             sets: 4, repsMin: 15, repsMax: 20, weightKg: nil, rir: 1, rpe: nil, restSeconds: 45, tempo: nil,
-            coachTip: "Plný rozsah! Dole protáhni, nahoře 1 sekundu drž.")
+            coachTip: "Plný rozsah! Dole protáhni, nahoře 1 sekundu drž.", supersetId: nil)
     ]
 
     private static let genericIsolations: [ResponseExercise] = [
         ResponseExercise(name: "Plank (výdrž)", nameEN: "Plank", slug: "plank",
             sets: 3, repsMin: 30, repsMax: 60, weightKg: nil, rir: 0, rpe: nil, restSeconds: 45, tempo: nil,
-            coachTip: "Tělo v přímé linii, hýždě a břicho aktivní."),
+            coachTip: "Tělo v přímé linii, hýždě a břicho aktivní.", supersetId: nil),
         ResponseExercise(name: "Face pull (kabel)", nameEN: "Cable Face Pull", slug: "face-pull",
             sets: 3, repsMin: 15, repsMax: 20, weightKg: nil, rir: 1, rpe: nil, restSeconds: 60, tempo: nil,
-            coachTip: "Klíčový preventivní cvik pro zdravá ramena.")
+            coachTip: "Klíčový preventivní cvik pro zdravá ramena.", supersetId: nil)
     ]
 }
 

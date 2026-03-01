@@ -62,7 +62,15 @@ public final class HealthWorkoutWriter {
                 start: startDate,
                 end: endDate
             )
-            try await healthStore.add([energySample], to: workout)
+            try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+                healthStore.add([energySample], to: workout) { success, error in
+                    if let error = error {
+                        continuation.resume(throwing: error)
+                    } else {
+                        continuation.resume()
+                    }
+                }
+            }
         }
 
         print("✅ [HealthWorkoutWriter] Úspěšně uložen HKWorkout (.traditionalStrengthTraining), Cas: \(Int(workout.duration / 60)) min, Kcal: \(activeEnergyBurnedKcal ?? 0)")

@@ -85,23 +85,23 @@ final class FallbackWorkoutGenerator {
             .init(name: "Benchpress s jednoručkami", nameEN: "Dumbbell Bench Press", slug: "dumbbell-bench-press",
                   sets: sets, repsMin: 6, repsMax: 10, weightKg: upper,
                   rir: nil, rpe: 7, restSeconds: 120, tempo: "3010",
-                  coachTip: "Lopatky zamáčknuté k sobě. Spouštěj pomalu, tlač explozivně."),
+                  coachTip: "Lopatky zamáčknuté k sobě. Spouštěj pomalu, tlač explozivně.", supersetId: nil),
             .init(name: "Tlaky na ramenou s jednoručkami", nameEN: "Dumbbell Shoulder Press", slug: "dumbbell-shoulder-press",
                   sets: sets, repsMin: 8, repsMax: 12, weightKg: upper * 0.5,
                   rir: nil, rpe: 7, restSeconds: 90, tempo: "2010",
-                  coachTip: "Lokty mírně před tělem, nestrkej bradu dopředu."),
+                  coachTip: "Lokty mírně před tělem, nestrkej bradu dopředu.", supersetId: nil),
             .init(name: "Šikmý benchpress s jednoručkami", nameEN: "Incline Dumbbell Press", slug: "incline-dumbbell-press",
                   sets: sets, repsMin: 10, repsMax: 14, weightKg: upper * 0.7,
                   rir: nil, rpe: 7, restSeconds: 90, tempo: "2010",
-                  coachTip: "Sklon lavice 30–45°, tlačíš na horní prsa."),
+                  coachTip: "Sklon lavice 30–45°, tlačíš na horní prsa.", supersetId: nil),
             .init(name: "Rozpažování vsedě (lateral raise)", nameEN: "Seated Lateral Raise", slug: "lateral-raise",
                   sets: 3, repsMin: 12, repsMax: 16, weightKg: upper * 0.2,
                   rir: nil, rpe: 8, restSeconds: 60, tempo: nil,
-                  coachTip: "Dlaně dolů, palce mírně dolů. Pohyb vychází z loktů, ne ze zápěstí."),
+                  coachTip: "Dlaně dolů, palce mírně dolů. Pohyb vychází z loktů, ne ze zápěstí.", supersetId: nil),
             .init(name: "Triceps pushdown (kabel/guma)", nameEN: "Tricep Pushdown", slug: "tricep-pushdown",
                   sets: 3, repsMin: 12, repsMax: 15, weightKg: upper * 0.3,
                   rir: nil, rpe: 8, restSeconds: 60, tempo: nil,
-                  coachTip: "Lokty přitisknuty k tělu po celý pohyb. Plný rozsah.")
+                  coachTip: "Lokty přitisknuty k tělu po celý pohyb. Plný rozsah.", supersetId: nil)
         ]
     }
 
@@ -110,23 +110,23 @@ final class FallbackWorkoutGenerator {
             .init(name: "Přítahy v předklonu s jednoručkami", nameEN: "Dumbbell Row", slug: "dumbbell-row",
                   sets: sets, repsMin: 8, repsMax: 12, weightKg: upper,
                   rir: nil, rpe: 7, restSeconds: 120, tempo: "2011",
-                  coachTip: "Táhneš loktem k bokům, ne k uchu. Záda rovná, ne kulata."),
+                  coachTip: "Táhneš loktem k bokům, ne k uchu. Záda rovná, ne kulata.", supersetId: nil),
             .init(name: "Přítahy na hrazdě", nameEN: "Pull Up", slug: "pull-up",
                   sets: sets, repsMin: 5, repsMax: 10, weightKg: nil,
                   rir: nil, rpe: 7, restSeconds: 120, tempo: "2010",
-                  coachTip: "Visíš plnými rameny, taháš lopatky dolů, pak teprve ohýbáš lokty."),
+                  coachTip: "Visíš plnými rameny, taháš lopatky dolů, pak teprve ohýbáš lokty.", supersetId: nil),
             .init(name: "Face pull (guma / kabel)", nameEN: "Face Pull", slug: "face-pull",
                   sets: 3, repsMin: 15, repsMax: 20, weightKg: upper * 0.2,
                   rir: nil, rpe: 7, restSeconds: 60, tempo: nil,
-                  coachTip: "Taháš k obličeji, palce za hlavou. Klíč pro zdravá ramena!"),
+                  coachTip: "Taháš k obličeji, palce za hlavou. Klíč pro zdravá ramena!", supersetId: nil),
             .init(name: "Bicepsový zdvih s jednoručkami", nameEN: "Dumbbell Curl", slug: "dumbbell-curl",
                   sets: 3, repsMin: 10, repsMax: 14, weightKg: upper * 0.35,
                   rir: nil, rpe: 8, restSeconds: 60, tempo: "2012",
-                  coachTip: "Lokty zůstávají u těla. Nekývej trupem."),
+                  coachTip: "Lokty zůstávají u těla. Nekývej trupem.", supersetId: nil),
             .init(name: "Kladivový zdvih (hammer curl)", nameEN: "Hammer Curl", slug: "hammer-curl",
                   sets: 3, repsMin: 10, repsMax: 14, weightKg: upper * 0.35,
                   rir: nil, rpe: 8, restSeconds: 60, tempo: nil,
-                  coachTip: "Neutrální grip rozvíjí brachialis — sval pod bicepsem.")
+                  coachTip: "Neutrální grip rozvíjí brachialis — sval pod bicepsem.", supersetId: nil)
         ]
     }
 
@@ -135,27 +135,27 @@ final class FallbackWorkoutGenerator {
             .init(name: "Goblet dřep (kettlebell / jednoručka)", nameEN: "Goblet Squat", slug: "goblet-squat",
                   sets: sets, repsMin: 8, repsMax: 12, weightKg: lower * 0.4,
                   rir: nil, rpe: 7, restSeconds: 120, tempo: "3010",
-                  coachTip: "Váhu drž blízko hrudníku. Kolena sledují palce, nezapadají dovnitř."),
+                  coachTip: "Váhu drž blízko hrudníku. Kolena sledují palce, nezapadají dovnitř.", supersetId: nil),
             .init(name: "Rumunský mrtvý tah s jednoručkami", nameEN: "Dumbbell Romanian Deadlift", slug: "romanian-deadlift-dumbbell",
                   sets: sets, repsMin: 10, repsMax: 14, weightKg: lower * 0.6,
                   rir: nil, rpe: 7, restSeconds: 120, tempo: "3011",
-                  coachTip: "Kyčle tlačíš dozadu, ne kolena dolů. Záda rovná, hrudník ven."),
+                  coachTip: "Kyčle tlačíš dozadu, ne kolena dolů. Záda rovná, hrudník ven.", supersetId: nil),
             .init(name: "Výpady s jednoručkami (alternující)", nameEN: "Dumbbell Lunges", slug: "dumbbell-lunges",
                   sets: 3, repsMin: 10, repsMax: 14, weightKg: lower * 0.3,
                   rir: nil, rpe: 8, restSeconds: 75, tempo: nil,
-                  coachTip: "Přední koleno nad špičkou, zadní koleno lehce nechává sát k zemi."),
+                  coachTip: "Přední koleno nad špičkou, zadní koleno lehce nechává sát k zemi.", supersetId: nil),
             .init(name: "Hip thrust s jednoručkou", nameEN: "Dumbbell Hip Thrust", slug: "hip-thrust",
                   sets: 3, repsMin: 12, repsMax: 16, weightKg: lower * 0.4,
                   rir: nil, rpe: 8, restSeconds: 75, tempo: nil,
-                  coachTip: "Lopatky na lavici, chodidla přímo pod koleny. Stiskni hýždě nahoře."),
+                  coachTip: "Lopatky na lavici, chodidla přímo pod koleny. Stiskni hýždě nahoře.", supersetId: nil),
             .init(name: "Leg extension (stroj)", nameEN: "Leg Extension", slug: "leg-extension",
                   sets: 3, repsMin: 12, repsMax: 16, weightKg: lower * 0.3,
                   rir: nil, rpe: 8, restSeconds: 60, tempo: nil,
-                  coachTip: "Plný rozsah pohybu. Nahoře 1 sekundu drž kontrakci kvadricepsů."),
+                  coachTip: "Plný rozsah pohybu. Nahoře 1 sekundu drž kontrakci kvadricepsů.", supersetId: nil),
             .init(name: "Stojný výpon na lýtka", nameEN: "Standing Calf Raise", slug: "calf-raise",
                   sets: 4, repsMin: 15, repsMax: 20, weightKg: lower * 0.2,
                   rir: nil, rpe: 8, restSeconds: 45, tempo: nil,
-                  coachTip: "Plný rozsah! Dole protáhni, nahoře 1 sekundu drž kontrakci.")
+                  coachTip: "Plný rozsah! Dole protáhni, nahoře 1 sekundu drž kontrakci.", supersetId: nil)
         ]
     }
 
@@ -164,23 +164,23 @@ final class FallbackWorkoutGenerator {
             .init(name: "Benchpress s jednoručkami", nameEN: "Dumbbell Bench Press", slug: "dumbbell-bench-press",
                   sets: sets, repsMin: 8, repsMax: 12, weightKg: upper,
                   rir: nil, rpe: 7, restSeconds: 90, tempo: "2010",
-                  coachTip: "Offline záloha — Upper den. Lopatky zamáčknuté."),
+                  coachTip: "Offline záloha — Upper den. Lopatky zamáčknuté.", supersetId: nil),
             .init(name: "Přítahy v předklonu s jednoručkami", nameEN: "Dumbbell Row", slug: "dumbbell-row",
                   sets: sets, repsMin: 8, repsMax: 12, weightKg: upper,
                   rir: nil, rpe: 7, restSeconds: 90, tempo: "2011",
-                  coachTip: "Superserie s benchpressem pro úsporu času je možná."),
+                  coachTip: "Superserie s benchpressem pro úsporu času je možná.", supersetId: nil),
             .init(name: "Tlaky na ramenou s jednoručkami", nameEN: "Dumbbell Shoulder Press", slug: "dumbbell-shoulder-press",
                   sets: sets, repsMin: 10, repsMax: 14, weightKg: upper * 0.5,
                   rir: nil, rpe: 7, restSeconds: 75, tempo: nil,
-                  coachTip: nil),
+                  coachTip: nil, supersetId: nil),
             .init(name: "Bicepsový zdvih s jednoručkami", nameEN: "Dumbbell Curl", slug: "dumbbell-curl",
                   sets: 3, repsMin: 10, repsMax: 14, weightKg: upper * 0.35,
                   rir: nil, rpe: 8, restSeconds: 60, tempo: nil,
-                  coachTip: nil),
+                  coachTip: nil, supersetId: nil),
             .init(name: "Triceps pushdown", nameEN: "Tricep Pushdown", slug: "tricep-pushdown",
                   sets: 3, repsMin: 12, repsMax: 15, weightKg: upper * 0.3,
                   rir: nil, rpe: 8, restSeconds: 60, tempo: nil,
-                  coachTip: nil)
+                  coachTip: nil, supersetId: nil)
         ]
     }
 
@@ -189,23 +189,23 @@ final class FallbackWorkoutGenerator {
             .init(name: "Goblet dřep", nameEN: "Goblet Squat", slug: "goblet-squat",
                   sets: sets, repsMin: 8, repsMax: 12, weightKg: lower * 0.35,
                   rir: nil, rpe: 7, restSeconds: 120, tempo: "3010",
-                  coachTip: "Offline záloha — Lower den."),
+                  coachTip: "Offline záloha — Lower den.", supersetId: nil),
             .init(name: "Rumunský mrtvý tah s jednoručkami", nameEN: "Dumbbell Romanian Deadlift", slug: "romanian-deadlift-dumbbell",
                   sets: sets, repsMin: 10, repsMax: 14, weightKg: lower * 0.5,
                   rir: nil, rpe: 7, restSeconds: 90, tempo: "3011",
-                  coachTip: "Kyčle dozadu, záda rovná, cítíš tah v hamstrinzích."),
+                  coachTip: "Kyčle dozadu, záda rovná, cítíš tah v hamstrinzích.", supersetId: nil),
             .init(name: "Hip thrust s jednoručkou", nameEN: "Dumbbell Hip Thrust", slug: "hip-thrust",
                   sets: sets, repsMin: 12, repsMax: 16, weightKg: lower * 0.4,
                   rir: nil, rpe: 8, restSeconds: 75, tempo: nil,
-                  coachTip: "Lopatky na lavici, chodidla přímo pod koleny. Stiskni hýždě nahoře."),
+                  coachTip: "Lopatky na lavici, chodidla přímo pod koleny. Stiskni hýždě nahoře.", supersetId: nil),
             .init(name: "Výpady s jednoručkami", nameEN: "Dumbbell Lunges", slug: "dumbbell-lunges",
                   sets: 3, repsMin: 12, repsMax: 16, weightKg: lower * 0.25,
                   rir: nil, rpe: 8, restSeconds: 60, tempo: nil,
-                  coachTip: nil),
+                  coachTip: nil, supersetId: nil),
             .init(name: "Stojný výpon na lýtka", nameEN: "Standing Calf Raise", slug: "calf-raise",
                   sets: 3, repsMin: 15, repsMax: 20, weightKg: lower * 0.15,
                   rir: nil, rpe: 8, restSeconds: 45, tempo: nil,
-                  coachTip: nil)
+                  coachTip: nil, supersetId: nil)
         ]
     }
 
@@ -214,27 +214,27 @@ final class FallbackWorkoutGenerator {
             .init(name: "Goblet dřep", nameEN: "Goblet Squat", slug: "goblet-squat",
                   sets: sets, repsMin: 10, repsMax: 15, weightKg: lower * 0.35,
                   rir: nil, rpe: 7, restSeconds: 90, tempo: "3010",
-                  coachTip: "Offline záloha — Fullbody den."),
+                  coachTip: "Offline záloha — Fullbody den.", supersetId: nil),
             .init(name: "Benchpress s jednoručkami", nameEN: "Dumbbell Bench Press", slug: "dumbbell-bench-press",
                   sets: sets, repsMin: 8, repsMax: 12, weightKg: upper,
                   rir: nil, rpe: 7, restSeconds: 90, tempo: "2010",
-                  coachTip: "Lopatky zamáčknuté k sobě. Spouštěj pomalu, tlač explozivně."),
+                  coachTip: "Lopatky zamáčknuté k sobě. Spouštěj pomalu, tlač explozivně.", supersetId: nil),
             .init(name: "Přítahy v předklonu s jednoručkami", nameEN: "Dumbbell Row", slug: "dumbbell-row",
                   sets: sets, repsMin: 8, repsMax: 12, weightKg: upper,
                   rir: nil, rpe: 7, restSeconds: 90, tempo: nil,
-                  coachTip: "Táhneš loktem k bokům, ne k uchu. Záda rovná."),
+                  coachTip: "Táhneš loktem k bokům, ne k uchu. Záda rovná.", supersetId: nil),
             .init(name: "Rumunský mrtvý tah s jednoručkami", nameEN: "Dumbbell Romanian Deadlift", slug: "romanian-deadlift-dumbbell",
                   sets: sets, repsMin: 10, repsMax: 14, weightKg: lower * 0.45,
                   rir: nil, rpe: 7, restSeconds: 75, tempo: nil,
-                  coachTip: "Kyčle dozadu, záda rovná, hrudník ven."),
+                  coachTip: "Kyčle dozadu, záda rovná, hrudník ven.", supersetId: nil),
             .init(name: "Tlaky na ramenou vsedě", nameEN: "Seated Dumbbell Shoulder Press", slug: "dumbbell-shoulder-press",
                   sets: 3, repsMin: 10, repsMax: 14, weightKg: upper * 0.45,
                   rir: nil, rpe: 8, restSeconds: 60, tempo: nil,
-                  coachTip: "Lokty mírně před tělem. Plný rozsah — ruce nahoře se skoro dotknou."),
+                  coachTip: "Lokty mírně před tělem. Plný rozsah — ruce nahoře se skoro dotknou.", supersetId: nil),
             .init(name: "Plank", nameEN: "Plank", slug: "plank",
                   sets: 3, repsMin: 30, repsMax: 60, weightKg: nil,
                   rir: nil, rpe: 7, restSeconds: 45, tempo: nil,
-                  coachTip: "Tělo v přímé linii. Hýždě a břicho aktivní po celou dobu.")
+                  coachTip: "Tělo v přímé linii. Hýždě a břicho aktivní po celou dobu.", supersetId: nil)
         ]
     }
 }
