@@ -8,7 +8,12 @@
 	<array>
 		<string>HKQuantityTypeIdentifierHeartRate</string>
 		<string>HKQuantityTypeIdentifierRestingHeartRate</string>
+		<string>HKQuantityTypeIdentifierHeartRateVariabilitySDNN</string>
 		<string>HKCategoryTypeIdentifierSleepAnalysis</string>
+		<string>HKQuantityTypeIdentifierRespiratoryRate</string>
+		<string>HKQuantityTypeIdentifierActiveEnergyBurned</string>
+		<string>HKQuantityTypeIdentifierBasalEnergyBurned</string>
+		<string>HKWorkoutTypeIdentifier</string>
 	</array>
 	<key>com.apple.security.application-groups</key>
 	<array>

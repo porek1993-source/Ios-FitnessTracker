@@ -39,9 +39,13 @@
 		<string>healthkit</string>
 	</array>
 	<key>NSHealthShareUsageDescription</key>
-	<string>Agile Trainer potřebuje přístup k HealthKitu pro sledování spánku, tepu a dalších zdravotních metrik pro optimalizaci tvého tréninku.</string>
+	<string>Agilní trenér čte tvůj spánek, HRV a tepovou frekvenci z Apple Health. Tato data Jakubovi (AI trenérovi) umožňují personalizovat dnešní trénink a předejít přetrénování.</string>
 	<key>NSHealthUpdateUsageDescription</key>
-	<string>Agile Trainer zapisuje tréninkové aktivity do Health.</string>
+	<string>Aplikace zapisuje tvé odcvičené tréninky a spálené kalorie do Apple Health, abys měl kompletní přehled o své fyzické aktivitě.</string>
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>instagram-stories</string>
+	</array>
 	<key>GEMINI_API_KEY</key>
 	<string>$(GEMINI_API_KEY)</string>
 	<key>SUPABASE_URL</key>

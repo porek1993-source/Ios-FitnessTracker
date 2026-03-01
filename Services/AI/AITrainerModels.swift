@@ -211,6 +211,7 @@ struct ResponsePlan: Codable {
                         "type": "object",
                         "properties": [
                             "name": ["type": "string"],
+                            "nameEN": ["type": "string"],
                             "slug": ["type": "string"],
                             "coachTip": ["type": "string"],
                             "sets": ["type": "integer"],
@@ -254,6 +255,7 @@ struct MainBlock: Codable {
 
 struct ResponseExercise: Codable {
     let name: String
+    let nameEN: String
     let slug: String
     let sets: Int
     let repsMin: Int

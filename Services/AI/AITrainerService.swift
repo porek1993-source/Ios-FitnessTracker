@@ -82,11 +82,11 @@ final class AITrainerService: ObservableObject {
         • ORANGE (HRV 50–65%, 5–7h) → Blok B: 1 cvik méně, váha −10%
         • RED (HRV<50%) → jen aktivní regenerace, žádné heavy compound
 
-        OMEZENÍ:
+        • OMEZENÍ:
         • Vynech svaly označené fatigued nebo jointPain
         • Nikdy nepoužij vybavení chybějící v equipment.availableEquipment
         • Váhy z progressiveOverload jsou základ pro weightKg
-        • name: česky, slug: anglicky (barbell-bench-press) pro vyhledání v databázi
+        • name: česky, nameEN: přesný anglický název, slug: anglicky (barbell-bench-press) pro vyhledání v databázi
         • readinessLevel: green|orange|red
         • Odpověz JEDNÍM JSON objektem. Bez markdown, bez textu navíc.
         """
@@ -492,6 +492,7 @@ private extension AITrainerService {
                                     "type": "OBJECT",
                                     "properties": [
                                         "name":        ["type": "STRING"],
+                                        "nameEN":      ["type": "STRING"],
                                         "slug":        ["type": "STRING"],
                                         "sets":        ["type": "INTEGER"],
                                         "repsMin":     ["type": "INTEGER"],
@@ -502,7 +503,7 @@ private extension AITrainerService {
                                         "tempo":       ["type": "STRING", "nullable": true],
                                         "coachTip":    ["type": "STRING", "nullable": true]
                                     ],
-                                    "required": ["name", "slug", "sets", "repsMin", "repsMax", "rir", "restSeconds"]
+                                    "required": ["name", "nameEN", "slug", "sets", "repsMin", "repsMax", "rir", "restSeconds"]
                                 ]
                             ]
                         ],
@@ -742,37 +743,37 @@ enum AIExerciseCountValidator {
     // MARK: - Fallback Isolation Exercises
 
     private static let pushIsolations: [ResponseExercise] = [
-        ResponseExercise(name: "Rozpažování s jednoručkami (Lateral raise)", slug: "lateral-raise",
+        ResponseExercise(name: "Rozpažování s jednoručkami (Lateral raise)", nameEN: "Dumbbell Lateral Raise", slug: "lateral-raise",
             sets: 3, repsMin: 12, repsMax: 15, weightKg: nil, rir: 1, rpe: nil, restSeconds: 60, tempo: nil,
             coachTip: "Paže mírně před tělem, lokty vedou pohyb."),
-        ResponseExercise(name: "Triceps pushdown (kabel)", slug: "tricep-pushdown",
+        ResponseExercise(name: "Triceps pushdown (kabel)", nameEN: "Cable Tricep Pushdown", slug: "tricep-pushdown",
             sets: 3, repsMin: 12, repsMax: 15, weightKg: nil, rir: 1, rpe: nil, restSeconds: 60, tempo: nil,
             coachTip: "Lokty pevně u těla, plný rozsah pohybu.")
     ]
 
     private static let pullIsolations: [ResponseExercise] = [
-        ResponseExercise(name: "Face pull (kabel)", slug: "face-pull",
+        ResponseExercise(name: "Face pull (kabel)", nameEN: "Cable Face Pull", slug: "face-pull",
             sets: 3, repsMin: 15, repsMax: 20, weightKg: nil, rir: 1, rpe: nil, restSeconds: 60, tempo: nil,
             coachTip: "Taháš k obličeji, palce za hlavou."),
-        ResponseExercise(name: "Bicepsový zdvih s jednoručkami", slug: "dumbbell-curl",
+        ResponseExercise(name: "Bicepsový zdvih s jednoručkami", nameEN: "Dumbbell Bicep Curl", slug: "dumbbell-curl",
             sets: 3, repsMin: 10, repsMax: 14, weightKg: nil, rir: 1, rpe: nil, restSeconds: 60, tempo: nil,
             coachTip: "Lokty zůstávají u těla, nekývej trupem.")
     ]
 
     private static let legIsolations: [ResponseExercise] = [
-        ResponseExercise(name: "Předkopávání (Leg extension)", slug: "leg-extension",
+        ResponseExercise(name: "Předkopávání (Leg extension)", nameEN: "Leg Extension", slug: "leg-extension",
             sets: 3, repsMin: 12, repsMax: 16, weightKg: nil, rir: 1, rpe: nil, restSeconds: 60, tempo: nil,
             coachTip: "Nahoře 1 sekundu drž kontrakci kvadricepsů."),
-        ResponseExercise(name: "Stojný výpon na lýtka", slug: "calf-raise",
+        ResponseExercise(name: "Stojný výpon na lýtka", nameEN: "Standing Calf Raise", slug: "calf-raise",
             sets: 4, repsMin: 15, repsMax: 20, weightKg: nil, rir: 1, rpe: nil, restSeconds: 45, tempo: nil,
             coachTip: "Plný rozsah! Dole protáhni, nahoře 1 sekundu drž.")
     ]
 
     private static let genericIsolations: [ResponseExercise] = [
-        ResponseExercise(name: "Plank (výdrž)", slug: "plank",
+        ResponseExercise(name: "Plank (výdrž)", nameEN: "Plank", slug: "plank",
             sets: 3, repsMin: 30, repsMax: 60, weightKg: nil, rir: 0, rpe: nil, restSeconds: 45, tempo: nil,
             coachTip: "Tělo v přímé linii, hýždě a břicho aktivní."),
-        ResponseExercise(name: "Face pull (kabel)", slug: "face-pull",
+        ResponseExercise(name: "Face pull (kabel)", nameEN: "Cable Face Pull", slug: "face-pull",
             sets: 3, repsMin: 15, repsMax: 20, weightKg: nil, rir: 1, rpe: nil, restSeconds: 60, tempo: nil,
             coachTip: "Klíčový preventivní cvik pro zdravá ramena.")
     ]
