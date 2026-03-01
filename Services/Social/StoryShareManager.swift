@@ -6,6 +6,7 @@
 import SwiftUI
 import UIKit
 
+@MainActor
 public final class StoryShareManager {
     public static let shared = StoryShareManager()
 

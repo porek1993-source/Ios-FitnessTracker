@@ -4,6 +4,7 @@
 import Foundation
 import HealthKit
 
+@MainActor
 public final class HealthWorkoutWriter {
     public static let shared = HealthWorkoutWriter()
     private let healthStore = HKHealthStore()
@@ -34,46 +35,35 @@ public final class HealthWorkoutWriter {
         // Oprávnění by se mělo žádat v HealthBackgroundManager při onboardingu
         // try await healthStore.requestAuthorization(toShare: [workoutType, energyType], read: [])
 
-        // ✅ Vytvoření Workout objektu
-        var totalEnergy: HKQuantity? = nil
+        // ✅ Vytvoření WorkoutBuilderu (moderní iOS 17+ API)
+        let configuration = HKWorkoutConfiguration()
+        configuration.activityType = .traditionalStrengthTraining
+        configuration.locationType = .indoor
+        
+        let builder = HKWorkoutBuilder(healthStore: healthStore, configuration: configuration, device: .local())
+        
+        try await builder.beginCollection(at: startDate)
+        
+        // ✅ Přidání energie (pokud je)
         if let kcal = activeEnergyBurnedKcal {
-            totalEnergy = HKQuantity(unit: .kilocalorie(), doubleValue: kcal)
+            let energy = HKQuantity(unit: .kilocalorie(), doubleValue: kcal)
+            let sample = HKQuantitySample(type: energyType, quantity: energy, start: startDate, end: endDate)
+            try await builder.add([sample])
         }
-
-        let workout = HKWorkout(
-            activityType: .traditionalStrengthTraining,
-            start: startDate,
-            end: endDate,
-            duration: endDate.timeIntervalSince(startDate),
-            totalEnergyBurned: totalEnergy,
-            totalDistance: nil,
-            device: HKDevice.local(),
-            metadata: metadata
-        )
-
-        // ✅ Uložení Workoutu do databáze
-        try await healthStore.save(workout)
-
-        // ✅ Pokud máme energii, přidáme k workoutu Quantity Samples (pro přesné uzavření kroužků)
-        if let energy = totalEnergy {
-            let energySample = HKQuantitySample(
-                type: energyType,
-                quantity: energy,
-                start: startDate,
-                end: endDate
-            )
-            try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
-                healthStore.add([energySample], to: workout) { success, error in
-                    if let error = error {
-                        continuation.resume(throwing: error)
-                    } else {
-                        continuation.resume()
-                    }
-                }
-            }
+        
+        // ✅ Metadata
+        if let metadata = metadata {
+            try await builder.addMetadata(metadata)
         }
-
-        print("✅ [HealthWorkoutWriter] Úspěšně uložen HKWorkout (.traditionalStrengthTraining), Cas: \(Int(workout.duration / 60)) min, Kcal: \(activeEnergyBurnedKcal ?? 0)")
+        
+        try await builder.endCollection(at: endDate)
+        
+        // ✅ Dokončení a uložení
+        guard let workout = try await builder.finishWorkout() else {
+            throw HealthError.unavailable
+        }
+        
+        print("✅ [HealthWorkoutWriter] Úspěšně uložen HKWorkoutBuilder (.traditionalStrengthTraining), Cas: \(Int(workout.duration / 60)) min, Kcal: \(activeEnergyBurnedKcal ?? 0)")
     }
 
     /// Pomocná metoda pro jednoduchý odhad spálených kalorií na základě času a průměrné intenzity
