@@ -159,6 +159,8 @@ struct GIFPlayerView: UIViewRepresentable {
             document.body.style.overflow='hidden';
         """, completionHandler: nil)
 
+        // Set the initial URL to prevent duplicate load in updateUIView
+        context.coordinator.lastLoadedURL = gifURL
         loadGIF(in: webView)
         return webView
     }
@@ -169,6 +171,20 @@ struct GIFPlayerView: UIViewRepresentable {
             context.coordinator.lastLoadedURL = gifURL
             loadGIF(in: webView)
         }
+    }
+
+    // Explicitní úklid při odebrání pohledu, předchází "termination resistance" chybám WebKitu.
+    static func dismantleUIView(_ uiView: WKWebView, coordinator: Coordinator) {
+        uiView.navigationDelegate = nil
+        uiView.stopLoading()
+        uiView.evaluateJavaScript("""
+            var media = document.querySelector('video') || document.querySelector('img');
+            if (media) {
+                if (media.tagName.toLowerCase() === 'video') { media.pause(); }
+                media.removeAttribute('src'); 
+            }
+        """, completionHandler: nil)
+        uiView.loadHTMLString("", baseURL: nil)
     }
 
     // MARK: HTML šablona pro GIF
