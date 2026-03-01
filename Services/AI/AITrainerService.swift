@@ -387,7 +387,7 @@ private extension AITrainerService {
         // --- 🧠 ZVLÁŠTNÍ INSTRUKCE PRO GEMINI (Obrana proti hloupnutí AI) ---
         
         // 0. DELOAD (Kritické vyvolání z Health trendů)
-        if let plan = try? self.modelContext.fetch(FetchDescriptor<UserProfile>()).first, plan.isDeloadRecommended {
+        if context.isDeloadRecommended {
              promptStr += "⚠️ KRITICKÝ POKYN (DELOAD): Uživatel vykazuje známky vysoké akumulované únavy (HRV/RHR trend). Vygeneruj DELOAD trénink: max 4 cviky, intenzita 60 %, max 2 série na cvik. Zaměř se na techniku a regeneraci.\n"
         }
 

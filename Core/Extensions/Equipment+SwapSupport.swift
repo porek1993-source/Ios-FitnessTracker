@@ -26,6 +26,8 @@ extension Equipment {
         case .kettlebell:    return "Kettlebell"
         case .pullupBar:     return "Hrazda"
         case .trx:           return "TRX"
+        case .bench:         return "Lavice"
+        case .smith:         return "Multipress"
         }
     }
 
@@ -41,6 +43,8 @@ extension Equipment {
         case .kettlebell:     return "circle.fill"
         case .pullupBar:      return "figure.gymnastics"
         case .trx:            return "rectangle.and.arrow.up.right.and.arrow.down.left"
+        case .bench:          return "chair.fill"
+        case .smith:          return "building.columns.fill"
         }
     }
 
@@ -64,6 +68,8 @@ extension Equipment {
         case "Odporová guma": return .resistanceBand
         case "TRX":           return .trx
         case "Hrazda":        return .pullupBar
+        case "Multipress":    return .smith
+        case "Lavice":        return .bench
         case "Kotouč":        return .barbell
         case "Bosu":          return .bodyweight
         case "Medicimbal":    return .kettlebell

@@ -228,7 +228,6 @@ private struct SessionHeaderBar: View {
             HStack(spacing: 7) {
                 ForEach(Array(vm.exercises.enumerated()), id: \.element.id) { i, ex in
                     let isSupersetWithNext = i < vm.exercises.count - 1 && ex.supersetId != nil && ex.supersetId == vm.exercises[i + 1].supersetId
-                    let isSupersetWithPrev = i > 0 && ex.supersetId != nil && ex.supersetId == vm.exercises[i - 1].supersetId
                     let isActive = i == vm.currentExerciseIndex
 
                     ZStack(alignment: .center) {

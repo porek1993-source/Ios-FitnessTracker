@@ -16,6 +16,8 @@ struct TrainerRequestContext: Codable {
     // Nové metaparametry pro kompresi tréninků (když nestíhá dodržet vypsané dny v kalendáři)
     let workoutsRemainingInWeek: Int?
     let daysRemainingInWeek: Int?
+
+    let isDeloadRecommended: Bool
 }
 
 struct UserContextProfile: Codable {

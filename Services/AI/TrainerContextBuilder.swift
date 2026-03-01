@@ -96,7 +96,8 @@ final class TrainerContextBuilder {
             progressiveOverload: buildOverloadEntries(day: plannedDay),
             sessionTimeOverride: timeLimitMinutes,
             workoutsRemainingInWeek: workoutsRemaining,
-            daysRemainingInWeek: daysRemainingInWeek
+            daysRemainingInWeek: daysRemainingInWeek,
+            isDeloadRecommended: profile.isDeloadRecommended
         )
     }
 
