@@ -149,9 +149,9 @@ final class RollingWeekViewModel: ObservableObject {
 
         // Načteme historii posledních 5 tréninků pro kontext
         let context = SharedModelContainer.container.mainContext
-        let statusCompleted = SessionStatus.completed
+        let statusCompletedRaw = SessionStatus.completed.rawValue
         let descriptor = FetchDescriptor<WorkoutSession>(
-            predicate: #Predicate<WorkoutSession> { $0.status == statusCompleted }
+            predicate: #Predicate<WorkoutSession> { $0.statusRaw == statusCompletedRaw }
         )
         let allSessions: [WorkoutSession] = (try? context.fetch(descriptor)) ?? []
         let recentSessions = allSessions.sorted(by: { $0.startedAt > $1.startedAt })
