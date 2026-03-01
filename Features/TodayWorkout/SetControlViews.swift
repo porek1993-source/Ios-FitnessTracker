@@ -53,7 +53,7 @@ struct SetRowView: View {
             CompactNumberField(
                 value: Binding(
                     get: { setData.weightKg },
-                    set: { setData.weightKg = $0 }
+                    set: { setData.weightKg = $0 ?? 0 }
                 ),
                 placeholder: setData.previousWeightKg.map { String(format: "%.1f", $0) } ?? "—",
                 isFocused: _weightFocused,
@@ -63,7 +63,7 @@ struct SetRowView: View {
             .frame(maxWidth: .infinity)
             .onChange(of: weightFocused) { _, focused in
                 // Auto-fill předchozí váhu při prvním klepnutí (pokud je pole prázdné)
-                if focused && setData.weightKg == nil, let prev = setData.previousWeightKg {
+                if focused && (setData.weightKg == 0), let prev = setData.previousWeightKg {
                     setData.weightKg = prev
                 }
             }

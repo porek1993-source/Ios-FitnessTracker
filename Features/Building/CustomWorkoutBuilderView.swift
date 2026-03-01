@@ -238,43 +238,36 @@ struct CustomWorkoutBuilderView: View {
         guard !workoutExercises.isEmpty else { return }
         
         let plan = PlannedWorkoutDay(
-            id: UUID(),
-            dayName: "Vlastní Trénink",
-            muscleFocusDescription: "Custom Builder",
-            warmupCardioMinutes: 5,
-            exercises: []
+            dayOfWeek: 0, // Marker pro vlastní trénink
+            label: "Vlastní Trénink"
         )
+        modelContext.insert(plan)
         
-        let session = WorkoutSession(plannedDay: plan)
+        // 1. Vytvoříme session
+        let session = WorkoutSession(plan: nil, plannedDay: plan)
+        modelContext.insert(session)
         
-        // Zapsání cviků do session
-        for builderEx in workoutExercises {
-            let sessionEx = SessionExerciseState(
-                name: builderEx.exercise.name,
-                slug: builderEx.exercise.slug,
-                coachTip: builderEx.exercise.instructions,
-                tempo: "2010",
-                restSeconds: 90,
-                sets: (1...builderEx.setsCount).map { i in
-                    SetState(
-                        id: UUID(),
-                        isWarmup: i == 1,
-                        targetReps: 10,
-                        weightKg: builderEx.exercise.lastUsedWeight ?? 20.0,
-                        previousWeightKg: builderEx.exercise.lastUsedWeight
-                    )
-                },
-                exercise: builderEx.exercise
+        // 2. Přidáme cviky do plánu i do session pro okamžitý start
+        for (index, builderEx) in workoutExercises.enumerated() {
+            // Přidání do plánu (pro historii)
+            let plannedEx = PlannedExercise(
+                order: index,
+                exercise: builderEx.exercise,
+                targetSets: builderEx.setsCount,
+                targetRepsMin: 8,
+                targetRepsMax: 12
             )
-            session.exercises.append(sessionEx)
+            plannedEx.plannedDay = plan
+            
+            // Přidání do session (pro aktivní trénink)
+            let sessionEx = SessionExercise(
+                order: index,
+                exercise: builderEx.exercise,
+                session: session
+            )
         }
         
-        modelContext.insert(plan)
-        modelContext.insert(session)
         try? modelContext.save()
-        
-        // Navigace na ActiveSession probíhá odjinud (např skrze status check v Dashboardu),
-        // my se zde jen zavřeme a backend to detekuje jako "dnešní aktivní trénink".
         dismiss()
     }
 }

@@ -6,7 +6,7 @@ import Foundation
 public struct StreakManager {
     /// Vypočítá aktuální streak (za kolik po sobě jdoucích týdnů uživatel dokončil alespoň jeden trénink).
     /// Ignoruje aktuální týden, pokud v něm ještě nezačal, takže streak nepřeruší před koncem týdne.
-    public static func calculateWeeklyStreak(completedSessions: [WorkoutSession]) -> Int {
+    static func calculateWeeklyStreak(completedSessions: [WorkoutSession]) -> Int {
         let calendar = Calendar.current
         let allCompleted = completedSessions.filter { $0.status == .completed && $0.finishedAt != nil }
         

@@ -10,7 +10,7 @@ final class DataExportManager {
     /// Vygeneruje dočasný CSV soubor se všemi tréninky a vrátí jeho URL
     func generateCSV(context: ModelContext) -> URL? {
         let descriptor = FetchDescriptor<WorkoutSession>(
-            predicate: #Predicate { $0.statusRaw == SessionStatus.finished.rawValue },
+            predicate: #Predicate { $0.status.rawValue == SessionStatus.completed.rawValue },
             sortBy: [SortDescriptor(\.startedAt, order: .reverse)]
         )
         

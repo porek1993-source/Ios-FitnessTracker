@@ -28,7 +28,7 @@ import SwiftData
 //   • Completed = jemný zelený nádech (jasná zpětná vazba)
 //   • Inactive = průhledné (méně rušivé)
 
-extension ActiveSetRow {
+extension WorkoutSetRowView {
 
     /// Vylepšené pozadí série — nahrazuje původní `rowBG`
     var enhancedRowBackground: some View {
@@ -380,7 +380,7 @@ extension RollingWeekViewModel {
         // Načti dokončené tréninky v rozsahu aktuálního týdne
         let descriptor = FetchDescriptor<WorkoutSession>(
             predicate: #Predicate<WorkoutSession> {
-                $0.status == statusCompleted &&
+                $0.status.rawValue == statusCompleted.rawValue &&
                 $0.startedAt >= weekStart &&
                 $0.startedAt <= weekEnd
             }

@@ -49,7 +49,9 @@ struct WorkoutSetRowView: View {
                 .frame(maxWidth: .infinity)
                 .padding(.horizontal, 4)
                 .onChange(of: weightText) { _, v in
-                    currentSet.weightKg = Double(v.replacingOccurrences(of: ",", with: "."))
+                    if let d = Double(v.replacingOccurrences(of: ",", with: ".")) {
+                        currentSet.weightKg = d
+                    }
                 }
 
                 // ③ Reps
@@ -133,8 +135,8 @@ struct WorkoutSetRowView: View {
             ? String(format: "%.0f", prev) : String(format: "%.1f", prev)
     }
 
-    private var isBodyweight: Bool { currentSet.previousWeightKg == nil && currentSet.weightKg == nil }
-    private var canComplete: Bool { currentSet.reps != nil && (isBodyweight || currentSet.weightKg != nil) }
+    private var isBodyweight: Bool { currentSet.weightKg == 0 }
+    private var canComplete: Bool { currentSet.reps != nil }
 
     private func handleComplete() {
         withAnimation(.spring(response: 0.12, dampingFraction: 0.45)) { bounce = 0.80 }

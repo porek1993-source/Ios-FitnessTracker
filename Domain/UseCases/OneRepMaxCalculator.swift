@@ -42,7 +42,7 @@ public struct OneRepMaxCalculator {
     
     /// Pro historickou analýzu (např. do grafů): projde všechny záznamy a pro každý unikátní den najde nejvyšší 1RM.
     /// Vrací chronologicky seřazené pole (Date, Double).
-    public static func historical1RM(from entries: [WeightEntry], formula: OneRepMaxFormula = .brzycki) -> [(date: Date, OneRM: Double)] {
+    static func historical1RM(from entries: [WeightEntry], formula: OneRepMaxFormula = .brzycki) -> [(date: Date, OneRM: Double)] {
         var dailyMaxes: [Date: Double] = [:]
         let calendar = Calendar.current
         

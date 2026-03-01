@@ -513,7 +513,7 @@ final class ActiveSessionViewModel: ObservableObject {
             guard !ex.isWarmupOnly, let exerciseDB = ex.exercise else { continue }
             let workingSets = ex.sets.filter { $0.isCompleted && !$0.isWarmup }
             for (setIdx, set) in workingSets.enumerated() {
-                let weight = set.weightKg ?? 0
+                let weight = set.weightKg
                 guard let reps = set.reps, reps > 0 else { continue }
                 let isSuccess = (set.rpe ?? 5) <= 9 // RPE 10 znamená selhání
                 let entry = WeightEntry(
@@ -568,7 +568,7 @@ final class ActiveSessionViewModel: ObservableObject {
             let secondary = state.exercise?.musclesSecondary ?? []
 
             let setResults: [SessionGamificationInput.SetResult] = completed.map {
-                .init(weightKg: $0.weightKg ?? 0, reps: $0.reps ?? 0, isWarmup: $0.isWarmup)
+                .init(weightKg: $0.weightKg, reps: $0.reps ?? 0, isWarmup: $0.isWarmup)
             }
             return SessionGamificationInput.ExerciseResult(
                 exerciseName: state.name,

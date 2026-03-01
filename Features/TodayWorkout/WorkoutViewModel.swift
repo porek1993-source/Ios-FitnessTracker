@@ -320,9 +320,15 @@ final class WorkoutViewModel: ObservableObject {
         }
 
         Task {
+            // Vypočítáme aktuální index a počet dokončených cviků pro Live Activity
+            let currentIdx = exerciseIndex
+            let completedCount = exercises.filter { $0.sets.allSatisfy { $0.isCompleted } }.count
+            
             await LiveActivityManager.shared.startRestActivity(
                 session:           session,
                 currentExercise:   exercise,
+                currentExerciseIndex: currentIdx,
+                completedExercisesCount: completedCount,
                 completedSetIndex: setIndex,
                 restSeconds:       restSeconds,
                 planLabel:         planLabel
@@ -754,7 +760,7 @@ struct SessionExerciseState: Identifiable {
         self.sets = (0..<max(1, planned.targetSets)).map { _ in
             SetState(
                 type: .normal,
-                targetReps: planned.targetRepsMax, // Using max as the primary target
+                targetRepsMin: planned.targetRepsMax, // Using max as the primary target
                 weightKg: planned.exercise?.lastUsedWeight ?? 0, // Default to 0 if nil
                 previousWeightKg: planned.exercise?.lastUsedWeight
             )
@@ -776,7 +782,7 @@ struct SessionExerciseState: Identifiable {
         self.sets = (0..<response.sets).map { _ in
             SetState(
                 type: .normal,
-                targetReps: response.repsMax, // Using max as the primary target
+                targetRepsMin: response.repsMax, // Using max as the primary target
                 weightKg: response.weightKg ?? 0, // Default to 0 if nil
                 previousWeightKg: response.weightKg
             )
@@ -789,7 +795,7 @@ struct SessionExerciseState: Identifiable {
     static func warmupExercise(_ wu: WarmUpExercise) -> SessionExerciseState {
         let reps = Int(wu.reps.components(separatedBy: CharacterSet.decimalDigits.inverted).first ?? "10") ?? 10
         let sets = (0..<wu.sets).map { _ in
-            SetState(type: .warmup, targetReps: reps, weightKg: 0) // Warmup sets typically start with 0 weight
+            SetState(type: .warmup, targetRepsMin: reps, weightKg: 0) // Warmup sets typically start with 0 weight
         }
         return SessionExerciseState(
             name: wu.name,
@@ -848,4 +854,5 @@ struct SetState: Identifiable {
     // Legacy init
     init(type: SetType, targetReps: Int, weightKg: Double) {
         self.init(type: type, targetRepsMin: targetReps, targetRepsMax: targetReps, weightKg: weightKg)
+    }
 }

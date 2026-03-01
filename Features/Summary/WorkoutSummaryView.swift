@@ -64,8 +64,8 @@ struct WorkoutSummaryView: View {
     
     // Fallback kalorií
     private var displayedCalories: String? {
-        if let hk = hkResult, hk.success, hk.caloriesWritten > 0 {
-            return "\(Int(hk.caloriesWritten))"
+        if let hk = hkResult, hk.success, let cals = hk.caloriesWritten, cals > 0 {
+            return "\(Int(cals))"
         }
         // Fallback odhad: 5 kcal/min + 10 kcal/tunu
         let fallback = (Double(session.durationMinutes) * 5.0) + ((totalVolume / 1000.0) * 10.0)

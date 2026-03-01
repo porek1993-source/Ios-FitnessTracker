@@ -23,7 +23,7 @@ struct GlobalErrorModifier: ViewModifier {
     @State private var dismissTask: Task<Void, Never>?
 
     // Network monitor
-    @StateObject private var netMonitor = NetworkMonitor()
+    @ObservedObject private var netMonitor = NetworkMonitor.shared
 
     func body(content: Content) -> some View {
         content
