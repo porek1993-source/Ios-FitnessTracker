@@ -247,6 +247,7 @@ struct TrainerDashboardView: View {
     @State private var showWorkout  = false
     @State private var showPreview  = false
     @State private var showBuilder  = false
+    @State private var showQuickPicker = false
     
     // Pro spuštění custom tréninku
     @State private var customSessionToStart: WorkoutSession? = nil // Proměnná pro zobrazení Custom Workout Builderu
@@ -386,7 +387,30 @@ struct TrainerDashboardView: View {
                     )
                 } else {
                     VStack(spacing: 10) {
-                        // Sekundární CTA — Sestavit ručně
+                        // Rychlý trénink — podle partie nebo zdravotního problému
+                        Button(action: {
+                            UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                            showQuickPicker = true
+                        }) {
+                            HStack(spacing: 10) {
+                                Image(systemName: "bolt.fill")
+                                    .font(.system(size: 14))
+                                    .foregroundStyle(.orange)
+                                Text("Rychlý trénink")
+                                    .font(.system(size: 15, weight: .bold))
+                                    .foregroundStyle(.white)
+                            }
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 14)
+                            .background(
+                                LinearGradient(colors: [.orange.opacity(0.2), .red.opacity(0.15)], startPoint: .leading, endPoint: .trailing)
+                            )
+                            .clipShape(RoundedRectangle(cornerRadius: 16))
+                            .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.orange.opacity(0.35), lineWidth: 1))
+                        }
+                        .padding(.horizontal, 22)
+
+                        // Sestavit ručně — výběr cviků z databáze
                         Button(action: {
                             UIImpactFeedbackGenerator(style: .light).impactOccurred()
                             showBuilder = true
@@ -432,6 +456,11 @@ struct TrainerDashboardView: View {
             }
             .sheet(isPresented: $showBuilder) {
                 CustomWorkoutBuilderView()
+            }
+            .sheet(isPresented: $showQuickPicker) {
+                QuickWorkoutPickerView()
+                    .presentationDetents([.large])
+                    .presentationDragIndicator(.visible)
             }
         }
         .task {

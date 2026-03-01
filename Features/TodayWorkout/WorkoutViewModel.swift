@@ -8,7 +8,7 @@ import SwiftData
 final class WorkoutViewModel: ObservableObject {
     @Published var exercises: [SessionExerciseState]
     @Published var currentExerciseIndex = 0
-    @Published var warmupExercises: [String] = []
+    @Published var warmupExercises: [String]? = nil
     
     // UI State
     @Published var showSummary = false
@@ -16,7 +16,7 @@ final class WorkoutViewModel: ObservableObject {
     @Published var restSecondsRemaining = 0
     @Published var totalRestSeconds = 90
     @Published var elapsedSeconds = 0
-    @Published var audioEnabled = false
+    @Published var audioEnabled = true
     @Published var hkWriteResult: HealthKitWriteResult?
 
     // Timery jsou bezpečně spravovány jako Task (cancelovatelné, bez nonisolated(unsafe))
@@ -49,10 +49,13 @@ final class WorkoutViewModel: ObservableObject {
             // ✅ Načteme VŠECHNY cviky z DB pro spolehlivé napárování (slug/name)
             let allDBExercises: [Exercise] = (try? SharedModelContainer.container.mainContext.fetch(FetchDescriptor<Exercise>())) ?? []
 
-            // Warmup
+            // Warmup — naplníme warmupExercises pro WarmupPhaseView
+            var warmupNames: [String] = []
             for wu in response.warmUp {
                 states.append(SessionExerciseState.warmupExercise(wu))
+                warmupNames.append(wu.name)
             }
+            warmupExercises = warmupNames.isEmpty ? nil : warmupNames
 
             // Main exercises - flatten mainBlocks
             for block in response.mainBlocks {
@@ -187,8 +190,11 @@ final class WorkoutViewModel: ObservableObject {
         
         startElapsedTimer()
 
-        // Init audio coach
+        // Init audio coach — obě instance (metronom + obecné hlášky)
         audioCoach = AudioCoachService()
+        audioCoach?.enable()
+        AudioCoachManager.shared.enable()
+        audioCoach?.announceSessionStart()
 
         // ✅ FIX Bug #1: Dohledat chybějící videoURL a coachTip přímo z Supabase MuscleWiki
         // Spustíme async, nezablokujeme UI — výsledky se propisují do @Published exercises
@@ -443,6 +449,11 @@ final class WorkoutViewModel: ObservableObject {
 
     func skipExercise() { withAnimation { advanceToNextExercise() } }
 
+    /// Přičte čas strávený rozcvičkou k celkovému elapsed time
+    func addWarmupTime(seconds: Int) {
+        elapsedSeconds += max(0, seconds)
+    }
+
     @Published var allExercisesDone = false   // true = uživatel dokončil všechny cviky
 
     private func advanceToNextExercise() {
@@ -500,11 +511,12 @@ final class WorkoutViewModel: ObservableObject {
     func toggleAudio() {
         audioEnabled.toggle()
         if audioEnabled {
+            audioCoach?.enable()
             AudioCoachManager.shared.enable()
-            AudioCoachManager.shared.announce(message: "Jdeme na to, zvuk zapnut!")
+            AudioCoachManager.shared.announce(message: "Zvuk zapnut!")
         } else {
+            audioCoach?.disable()
             AudioCoachManager.shared.disable()
-            audioCoach?.disable() // Původní metronom atd.
         }
     }
 
@@ -516,6 +528,9 @@ final class WorkoutViewModel: ObservableObject {
         elapsedTimerTask?.cancel()
         advanceTask?.cancel()
         advanceTask = nil
+        audioCoach?.stopAll()
+        audioCoach?.disable()
+        AudioCoachManager.shared.disable()
         session.durationMinutes = elapsedSeconds / 60
         session.status = .completed
         session.finishedAt = .now
@@ -613,6 +628,9 @@ final class WorkoutViewModel: ObservableObject {
     func cancelWorkout(modelContext: ModelContext) {
         restTimerTask?.cancel()
         elapsedTimerTask?.cancel()
+        audioCoach?.stopAll()
+        audioCoach?.disable()
+        AudioCoachManager.shared.disable()
         session.status = .skipped
         modelContext.delete(session)
         do {

@@ -30,13 +30,17 @@ struct CustomWorkoutBuilderView: View {
     var filteredExercises: [Exercise] {
         var base = allExercises
         if let g = selectedMuscleGroup {
-            // Hledáme jak podle enum hodnoty tak i hrubým stringem
             base = base.filter { $0.primaryMuscleGroup == g || $0.muscle_group == g.rawValue }
         }
         if !searchText.isEmpty {
             base = base.filter { $0.name.localizedCaseInsensitiveContains(searchText) }
         }
-        return base
+        // Vlastní cviky vždy nahoře
+        return base.sorted { ($0.isCustom ? 0 : 1) < ($1.isCustom ? 0 : 1) }
+    }
+
+    var customExercises: [Exercise] {
+        allExercises.filter { $0.isCustom }
     }
 
     var body: some View {
@@ -115,32 +119,35 @@ struct CustomWorkoutBuilderView: View {
             
             // Seznam cviků k přidání
             List {
-                ForEach(filteredExercises) { ex in
-                    HStack {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text(ex.name)
-                                .font(.system(size: 16, weight: .bold))
-                                .foregroundStyle(.white)
-                            Text(ex.muscle_group)
-                                .font(.caption)
-                                .foregroundStyle(.white.opacity(0.5))
+                // Sekce vlastní cviky (pokud existují a není aktivní vyhledávání)
+                if !customExercises.isEmpty && searchText.isEmpty && selectedMuscleGroup == nil {
+                    Section {
+                        ForEach(customExercises) { ex in
+                            exerciseRow(ex: ex)
                         }
-                        Spacer()
-                        Button {
-                            withAnimation {
-                                workoutExercises.append(BuilderExercise(exercise: ex))
-                            }
-                        } label: {
-                            Image(systemName: "plus.circle.fill")
-                                .font(.system(size: 24))
-                                .foregroundStyle(.blue)
-                        }
+                    } header: {
+                        Text("Moje cviky")
+                            .font(.system(size: 11, weight: .bold))
+                            .foregroundStyle(.orange)
+                            .textCase(nil)
                     }
-                    .padding(.vertical, 4)
-                    .listRowBackground(Color.clear)
+                    Section {
+                        ForEach(filteredExercises.filter { !$0.isCustom }) { ex in
+                            exerciseRow(ex: ex)
+                        }
+                    } header: {
+                        Text("Databáze cviků")
+                            .font(.system(size: 11, weight: .bold))
+                            .foregroundStyle(.white.opacity(0.4))
+                            .textCase(nil)
+                    }
+                } else {
+                    ForEach(filteredExercises) { ex in
+                        exerciseRow(ex: ex)
+                    }
                 }
-                
-                // Přidání vlastního cviku
+
+                // Tlačítko pro přidání vlastního cviku (vždy na konci)
                 Button {
                     showAddCustom = true
                 } label: {
@@ -148,11 +155,10 @@ struct CustomWorkoutBuilderView: View {
                         Image(systemName: "plus.app.fill")
                         Text("Nenašel jsi cvik? Přidej vlastní")
                     }
-                    .font(.system(size: 16, weight: .medium))
+                    .font(.system(size: 15, weight: .medium))
                     .foregroundStyle(.blue)
                 }
                 .listRowBackground(Color.clear)
-                .padding(.top, 16)
             }
             .listStyle(.plain)
         }
@@ -219,7 +225,41 @@ struct CustomWorkoutBuilderView: View {
     }
     
     // MARK: - Helper Views
-    
+
+    @ViewBuilder
+    private func exerciseRow(ex: Exercise) -> some View {
+        HStack {
+            VStack(alignment: .leading, spacing: 4) {
+                HStack(spacing: 6) {
+                    if ex.isCustom {
+                        Image(systemName: "person.fill")
+                            .font(.system(size: 10))
+                            .foregroundStyle(.orange)
+                    }
+                    Text(ex.name)
+                        .font(.system(size: 16, weight: .bold))
+                        .foregroundStyle(.white)
+                }
+                Text(ex.muscle_group)
+                    .font(.caption)
+                    .foregroundStyle(.white.opacity(0.5))
+            }
+            Spacer()
+            Button {
+                withAnimation {
+                    workoutExercises.append(BuilderExercise(exercise: ex))
+                }
+            } label: {
+                Image(systemName: "plus.circle.fill")
+                    .font(.system(size: 24))
+                    .foregroundStyle(.blue)
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(.vertical, 4)
+        .listRowBackground(Color.clear)
+    }
+
     private func filterChip(title: String, isSelected: Bool, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Text(title)

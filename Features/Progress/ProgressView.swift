@@ -358,10 +358,21 @@ struct AppProgressView: View {
         }
 
         return HStack(spacing: 12) {
-            RoundedRectangle(cornerRadius: 4).fill(Color.blue.opacity(0.8)).frame(width: 4)
+            // Barevný indikátor — modrá pro plánované, oranžová pro rychlé/standalone
+            let isStandalone = session.plannedDay?.dayOfWeek == 99
+            RoundedRectangle(cornerRadius: 4)
+                .fill(isStandalone ? Color.orange.opacity(0.8) : Color.blue.opacity(0.8))
+                .frame(width: 4)
             VStack(alignment: .leading, spacing: 4) {
-                Text(session.plannedDay?.label ?? "Trénink")
-                    .font(.system(size: 15, weight: .semibold, design: .rounded)).foregroundStyle(.white)
+                HStack(spacing: 6) {
+                    if isStandalone {
+                        Image(systemName: "bolt.fill")
+                            .font(.system(size: 10))
+                            .foregroundStyle(.orange)
+                    }
+                    Text(session.plannedDay?.label ?? "Trénink")
+                        .font(.system(size: 15, weight: .semibold, design: .rounded)).foregroundStyle(.white)
+                }
                 HStack(spacing: 12) {
                     Label("\(session.durationMinutes) min", systemImage: "clock")
                         .font(.system(size: 12)).foregroundStyle(.white.opacity(0.6))

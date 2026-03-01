@@ -3,12 +3,13 @@ import SwiftUI
 struct WarmupPhaseView: View {
     let exercises: [SessionExerciseState]
     let aiExercises: [String]?
-    let onFinishWarmup: () -> Void
+    let onFinishWarmup: (Int) -> Void   // předáme počet sekund rozcvičky
     let onCancel: () -> Void
     
     @State private var generatedWarmups: [String] = []
+    @State private var warmupStartDate: Date = .now
 
-    init(exercises: [SessionExerciseState], aiExercises: [String]? = nil, onFinishWarmup: @escaping () -> Void, onCancel: @escaping () -> Void) {
+    init(exercises: [SessionExerciseState], aiExercises: [String]? = nil, onFinishWarmup: @escaping (Int) -> Void, onCancel: @escaping () -> Void) {
         self.exercises = exercises
         self.aiExercises = aiExercises
         self.onFinishWarmup = onFinishWarmup
@@ -83,7 +84,8 @@ struct WarmupPhaseView: View {
                     
                     Button(action: {
                         UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-                        onFinishWarmup()
+                        let warmupSeconds = Int(Date.now.timeIntervalSince(warmupStartDate))
+                        onFinishWarmup(warmupSeconds)
                     }) {
                         Text("Odškrtnout rozcvičku a začít tvrdě")
                             .font(.system(size: 16, weight: .bold))
@@ -102,6 +104,7 @@ struct WarmupPhaseView: View {
             }
         }
         .onAppear {
+            warmupStartDate = .now
             generateWarmups()
         }
     }
@@ -139,9 +142,9 @@ struct WarmupPhaseView: View {
             ]
         } else {
             list = [
-                "2 minutový lehký poklus nebo veslování",
-                "20x Dynamický strečink celého těla",
-                "15x Kroužení všemi nosnými klouby"
+                "2 minutový lehký poklus nebo skipping na místě",
+                "20x Výpady + rotace trupu (střídej nohy, otáčej trup ke kolenu vpředu)",
+                "15x Kroužení rameny, kyčlemi a kotníky (každý kloub 5× vpřed, 5× vzad)"
             ]
         }
         generatedWarmups = list

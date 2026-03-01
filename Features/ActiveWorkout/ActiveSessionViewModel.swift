@@ -446,6 +446,11 @@ final class ActiveSessionViewModel: ObservableObject {
 
     @Published var allExercisesDone = false
 
+    /// Přičte čas rozcvičky k celkovému elapsed time (rozcvička je součást tréninku)
+    func addWarmupTime(seconds: Int) {
+        elapsedSeconds += seconds
+    }
+
     func skipExercise() {
         guard currentExerciseIndex < exercises.count - 1 else {
             withAnimation { allExercisesDone = true }

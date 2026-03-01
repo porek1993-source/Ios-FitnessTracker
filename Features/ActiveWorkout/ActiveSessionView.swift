@@ -23,6 +23,7 @@ struct ActiveSessionView: View {
     @State private var showCancelDlg  = false
     @State private var showPlateCalculator = false
     @State private var isWarmupDone   = false
+    @State private var canReturnToWarmup = true  // Lze se vrátit do rozcvičky
     
     // Properties for finish and summary:
     let onFinish: (([XPGain], [PREvent]) -> Void)?
@@ -65,7 +66,12 @@ struct ActiveSessionView: View {
 
             // ── Pinned header
             VStack {
-                SessionHeaderBar(vm: vm, onFinish: { showFinishDlg = true }, onCancel: { showCancelDlg = true })
+                SessionHeaderBar(
+                    vm: vm,
+                    onFinish: { showFinishDlg = true },
+                    onCancel: { showCancelDlg = true },
+                    onReturnToWarmup: canReturnToWarmup ? { withAnimation { isWarmupDone = false } } : nil
+                )
                 Spacer()
             }
 
@@ -84,9 +90,14 @@ struct ActiveSessionView: View {
                 WarmupPhaseView(
                     exercises: vm.exercises,
                     aiExercises: vm.warmupExercises,
-                    onFinishWarmup: {
+                    onFinishWarmup: { warmupSeconds in
+                        vm.addWarmupTime(seconds: warmupSeconds)
                         withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) {
                             isWarmupDone = true
+                        }
+                        // Po 30s od startu pracovního cvičení zakážeme návrat
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 30) {
+                            canReturnToWarmup = false
                         }
                     },
                     onCancel: { showCancelDlg = true }
@@ -208,6 +219,7 @@ private struct SessionHeaderBar: View {
     @ObservedObject var vm: WorkoutViewModel
     let onFinish: () -> Void
     let onCancel: () -> Void
+    var onReturnToWarmup: (() -> Void)? = nil
 
     var body: some View {
         HStack(spacing: 0) {
@@ -255,6 +267,22 @@ private struct SessionHeaderBar: View {
             Spacer()
 
             HStack(spacing: 8) {
+                // Zpět k rozcvičce (jen pokud je ještě dostupné)
+                if let returnToWarmup = onReturnToWarmup {
+                    Button(action: returnToWarmup) {
+                        Image(systemName: "arrow.uturn.left")
+                            .font(.system(size: 12, weight: .bold))
+                            .foregroundStyle(.orange.opacity(0.85))
+                            .frame(width: 32, height: 32)
+                            .background(
+                                Circle()
+                                    .fill(.orange.opacity(0.12))
+                                    .overlay(Circle().stroke(.orange.opacity(0.20), lineWidth: 1))
+                            )
+                    }
+                    .buttonStyle(.plain)
+                }
+                
                 // Zrušit trénink
                 Button(action: onCancel) {
                     Image(systemName: "xmark")
