@@ -23,7 +23,7 @@ final class OfflineSyncManager {
         }
         
         // Vybereme jen ty, které jsou už .finished
-        let finishedToSync = unsynced.filter { $0.status == .finished }
+        let finishedToSync = unsynced.filter { $0.status == .completed }
         
         if finishedToSync.isEmpty {
             return

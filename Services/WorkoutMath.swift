@@ -61,21 +61,24 @@ struct WarmupCalculator {
         return [
             // 1. Série (osa 20 kg nebo méně)
             SetState(
+                type: .warmup,
                 targetRepsMin: 10, targetRepsMax: 12,
                 weightKg: WeightRounder.roundToNearestPlates(weight: firstWeight),
-                reps: 10, isCompleted: false, isWarmup: true
+                reps: 10, isCompleted: false
             ),
             // 2. Série (50 % pracovní váhy, min 5 kg)
             SetState(
+                type: .warmup,
                 targetRepsMin: 5, targetRepsMax: 5,
                 weightKg: max(5.0, WeightRounder.roundToNearestPlates(weight: targetWeight * 0.5)),
-                reps: 5, isCompleted: false, isWarmup: true
+                reps: 5, isCompleted: false
             ),
             // 3. Série (75 % pracovní váhy, min 5 kg)
             SetState(
+                type: .warmup,
                 targetRepsMin: 3, targetRepsMax: 3,
                 weightKg: max(5.0, WeightRounder.roundToNearestPlates(weight: targetWeight * 0.75)),
-                reps: 3, isCompleted: false, isWarmup: true
+                reps: 3, isCompleted: false
             )
         ]
     }

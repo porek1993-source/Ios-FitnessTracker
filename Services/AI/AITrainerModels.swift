@@ -266,6 +266,7 @@ struct ResponseExercise: Codable {
     let restSeconds: Int
     let tempo: String?
     let coachTip: String?
+    let supersetId: String?
 }
 
 struct CoolDownExercise: Codable {

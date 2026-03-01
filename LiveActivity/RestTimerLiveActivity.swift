@@ -34,7 +34,7 @@ struct RestTimerLiveActivity: Widget {
                     .font(.subheadline)
                     .foregroundStyle(.white.opacity(0.8))
                 
-                ProgressView(value: context.state.sessionProgress.completedSets, total: context.state.sessionProgress.totalSets)
+                ProgressView(value: Double(context.state.sessionProgress.completedSets), total: Double(context.state.sessionProgress.totalSets))
                     .tint(.orange)
             }
             .padding()
