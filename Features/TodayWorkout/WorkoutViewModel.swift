@@ -774,7 +774,7 @@ struct SessionExerciseState: Identifiable {
     init(from response: ResponseExercise) {
         self.id          = UUID()
         self.name        = response.name
-        self.nameEN      = response.nameEN
+        self.nameEN      = response.nameEN ?? ""
         self.slug        = FallbackWorkoutGenerator.normalizedSlug(response.slug)
         self.coachTip    = response.coachTip
         self.tempo       = response.tempo
