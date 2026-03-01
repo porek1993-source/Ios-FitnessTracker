@@ -41,7 +41,7 @@ final class ActiveSessionViewModel: ObservableObject {
     @Published var restSecondsRemaining:  Int = 0
     @Published var totalRestSeconds:      Int = 90
     @Published var elapsedSeconds:        Int = 0
-    @Published var audioEnabled:          Bool = false
+    @Published var audioEnabled:          Bool = true // Default on for better UX
 
     // AI Coach state
     @Published var isLoadingCoachTip:     Bool = false
@@ -91,6 +91,12 @@ final class ActiveSessionViewModel: ObservableObject {
         buildExerciseStates(from: plan, aiResponse: aiResponse)
         startElapsedTimer()
         audioCoach = AudioCoachService()
+        
+        // Inicializace audio kocu pokud je zapnutý
+        if audioEnabled {
+            audioCoach?.enable()
+            audioCoach?.announceSessionStart()
+        }
 
         // ✅ FIX Bug #1: Dohledat chybějící videoURL přímo ze Supabase
         Task { [weak self] in await self?.enrichWithVideoURLs() }
@@ -319,7 +325,14 @@ final class ActiveSessionViewModel: ObservableObject {
                     self.restTask = nil
                     self.isResting = false
                     HapticManager.shared.playSuccess()
-                    if self.audioEnabled { self.audioCoach?.speak(.restEnd) }
+                    if self.audioEnabled { 
+                        self.audioCoach?.speak(.restEnd)
+                        // Oznámit další sérii
+                        let currentEx = self.exercises[self.currentExerciseIndex]
+                        let nextSetIdx = currentEx.sets.firstIndex(where: { !$0.isCompleted }) ?? 0
+                        let totalSets = currentEx.sets.count
+                        self.audioCoach?.speak(.setStarting(nextSetIdx + 1, totalSets))
+                    }
                     break
                 }
             }
@@ -372,14 +385,16 @@ final class ActiveSessionViewModel: ObservableObject {
 
         if audioEnabled {
             let exercise = exercises[exerciseIndex]
-            let setNum = setIndex + 1
-            let totalSets = exercise.sets.filter { !$0.isWarmup }.count
-            audioCoach?.speak(.setStarting(setNum, totalSets))
+            let isLastSet = setIndex == exercise.sets.count - 1
+            audioCoach?.announceSetComplete(praise: isLastSet)
         }
 
         let restSeconds = exercises[exerciseIndex].restSeconds
         if restSeconds > 0 {
             startRestTimer(seconds: restSeconds)
+            if audioEnabled {
+                audioCoach?.announceRestStart(seconds: restSeconds)
+            }
             
             // Live Activity start
             let completedExCount = exercises.prefix(exerciseIndex + 1).filter { ex in
@@ -471,7 +486,10 @@ final class ActiveSessionViewModel: ObservableObject {
     func toggleAudio() {
         audioEnabled.toggle()
         if audioEnabled {
+            audioCoach?.enable()
             audioCoach?.speak(.sessionStart)
+        } else {
+            audioCoach?.disable()
         }
     }
 
@@ -535,10 +553,16 @@ final class ActiveSessionViewModel: ObservableObject {
                     reps: reps,
                     rpe: set.rpe,
                     wasSuccessful: isSuccess,
-                    setNumber: setIdx + 1
+                    setNumber: setIdx + 1,
+                    type: set.setType // ✅ Fix: Store correct set type (Normal, Failure, etc.)
                 )
                 context.insert(entry)
             }
+        }
+
+        // ✅ Reset deload flag after session completion
+        if let profile = try? context.fetch(FetchDescriptor<UserProfile>()).first {
+            profile.isDeloadRecommended = false
         }
 
         do {
@@ -608,9 +632,13 @@ final class ActiveSessionViewModel: ObservableObject {
             let allPlanned = plan.plannedExercises
             var isFirstWorkingExercise = true
 
-            for block in response.mainBlocks {
+            for (blockIdx, block) in response.mainBlocks.enumerated() {
+                let blockSupersetId = block.exercises.count > 1 ? "block-\(blockIdx)" : nil
                 for ex in block.exercises {
                     var state = SessionExerciseState(from: ex)
+                    if state.supersetId == nil {
+                        state.supersetId = blockSupersetId
+                    }
 
                     // ✅ Hledej v planned i v celé DB
                     let normalizedSlug = FallbackWorkoutGenerator.normalizedSlug(ex.slug)

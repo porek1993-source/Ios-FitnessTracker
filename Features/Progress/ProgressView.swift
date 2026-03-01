@@ -13,6 +13,7 @@ struct AppProgressView: View {
     @State private var selectedExercise: Exercise?
     @State private var showExercisePicker = false
     @State private var show1RM = false
+    @State private var showPhotos = false
 
     private var completedSessions: [WorkoutSession] {
         sessions.filter { $0.status == .completed }
@@ -21,7 +22,7 @@ struct AppProgressView: View {
     @Query(sort: \WeightEntry.loggedAt, order: .reverse) private var weightEntries: [WeightEntry]
 
     private var volumeByWeek: [(label: String, volume: Double)] {
-        let calendar = Calendar.current
+        let calendar = Calendar.mondayStart
         // FIX: Použij (yearForWeekOfYear * 100 + weekOfYear) jako klíč
         // Zabraňuje kolizi T01/T52 přes hranici roku (bug: T52 2024 vs T52 2025 = stejný klíč)
         var grouped: [Int: Double] = [:]
@@ -77,18 +78,19 @@ struct AppProgressView: View {
     }
 
     private var totalVolume: Double {
-        // WeightEntry je přesný zdroj (jen pracovní a failure)
+        // Zkusíme sečíst objem přímo ze všech záznamů
         let fromEntries = weightEntries
-            .filter({ $0.setType == .normal || $0.setType == .failure })
-            .reduce(0.0) { $0 + $1.weightKg * Double($1.reps) }
-            
+            .filter { $0.setType == .normal || $0.setType == .failure }
+            .reduce(0.0) { $0 + ($1.weightKg * Double($1.reps)) }
+
         if fromEntries > 0 { return fromEntries }
-        
-        // Fallback
+
+        // Fallback: Pokud weightEntries selžou (např. lag v SwiftData), sečteme z completedSessions
         var fallbackVol = 0.0
         for session in completedSessions {
             for ex in session.exercises {
                 for set in ex.completedSets {
+                    // ✅ FIX: Pouze .normal a .failure se počítají do objemu a 1RM
                     if set.setType == .normal || set.setType == .failure {
                         fallbackVol += set.weightKg * Double(set.reps)
                     }
@@ -96,6 +98,10 @@ struct AppProgressView: View {
             }
         }
         return fallbackVol
+    }
+
+    private var sessionDates: [Date] {
+        completedSessions.map { $0.startedAt }
     }
 
     private var personalRecordsCount: Int {
@@ -112,16 +118,25 @@ struct AppProgressView: View {
                             .padding(.horizontal, 16)
                             .padding(.top, 16)
 
-                        if !volumeByWeek.isEmpty {
-                            weeklyVolumeChart.padding(.horizontal, 16)
-                        }
-                        
-                        WorkoutCalendarView(workoutDates: completedSessions.map { $0.startedAt })
-                            .padding(.horizontal, 16)
-
-                        exerciseProgressSection.padding(.horizontal, 16)
-                        historySection.padding(.horizontal, 16).padding(.bottom, 40)
+                        MuscleVolumeChart(weightEntries: weightEntries)
+                            .frame(height: 220)
+                            .padding(.top, 8)
                     }
+                    .padding(.horizontal, 20)
+                    .padding(.top, 24)
+                    
+                    // GitHub-style Heatmap
+                    WorkoutCalendarView(workoutDates: sessionDates, accentColor: .blue)
+                        .padding(.horizontal, 20)
+                        .padding(.top, 24)
+                    
+                    // 1RM Graf
+                    VStack(alignment: .leading, spacing: 12) {
+                        exerciseProgressSection
+                        historySection.padding(.bottom, 40)
+                    }
+                    .padding(.horizontal, 20)
+                    .padding(.top, 24)
                 }
             }
             .navigationTitle("Progres")
@@ -130,12 +145,32 @@ struct AppProgressView: View {
             .toolbarBackground(Color.appBackground, for: .navigationBar)
             .toolbarBackground(.visible, for: .navigationBar)
             .sheet(isPresented: $showExercisePicker) { exercisePickerSheet }
+            .navigationDestination(isPresented: $showPhotos) {
+                ProgressGalleryView()
+            }
             .onAppear {
                 if selectedExercise == nil {
                     selectedExercise = exercises.first(where: { $0.slug == "barbell-bench-press" })
                         ?? exercises.first(where: { !$0.weightHistory.isEmpty })
                 }
             }
+        }
+    }
+
+    private var galleryHeaderButton: some View {
+        Button {
+            showPhotos = true
+        } label: {
+            HStack(spacing: 6) {
+                Image(systemName: "camera.viewfinder")
+                    .font(.system(size: 14))
+                Text("Fotky")
+                    .font(.system(size: 13, weight: .bold))
+            }
+            .foregroundStyle(.orange)
+            .padding(.horizontal, 14).padding(.vertical, 8)
+            .background(Color.orange.opacity(0.15))
+            .clipShape(Capsule())
         }
     }
 
@@ -146,10 +181,20 @@ struct AppProgressView: View {
 
 
     private var statsHeader: some View {
-        HStack(spacing: 12) {
-            statCard(title: "Tréninky", value: "\(completedSessions.count)", icon: "checkmark.circle.fill", color: .blue)
-            statCard(title: "Celkový objem", value: totalVolume.formatVolume(), icon: "scalemass.fill", color: .orange)
-            statCard(title: "PR záznamy", value: "\(personalRecordsCount)", icon: "trophy.fill", color: .yellow)
+        VStack(spacing: 16) {
+            HStack {
+                Text("Můj výkon")
+                    .font(.system(size: 20, weight: .bold, design: .rounded))
+                    .foregroundStyle(.white)
+                Spacer()
+                galleryHeaderButton
+            }
+            
+            HStack(spacing: 12) {
+                statCard(title: "Tréninky", value: "\(completedSessions.count)", icon: "checkmark.circle.fill", color: .blue)
+                statCard(title: "Celkový objem", value: totalVolume.formatVolume(), icon: "scalemass.fill", color: .orange)
+                statCard(title: "PR záznamy", value: "\(personalRecordsCount)", icon: "trophy.fill", color: .yellow)
+            }
         }
     }
 

@@ -26,13 +26,13 @@ extension Date {
     /// Vrátí den týdne v naší konvenci: 1=Pondělí … 7=Neděle
     /// (Swift .weekday vrací 1=Neděle, proto konvertujeme)
     var weekday: Int {
-        let swiftWeekday = Calendar.current.component(.weekday, from: self)
+        let swiftWeekday = Calendar.mondayStart.component(.weekday, from: self)
         // Swift: 1=Sun, 2=Mon … 7=Sat → naše: 1=Mon … 7=Sun
         return swiftWeekday == 1 ? 7 : swiftWeekday - 1
     }
 
     var startOfDay: Date {
-        Calendar.current.startOfDay(for: self)
+        Calendar.mondayStart.startOfDay(for: self)
     }
 
     /// Konec dne — DST-bezpečná implementace pomocí Calendar.
@@ -40,12 +40,12 @@ extension Date {
     /// kde má den 23 nebo 25 hodin. Calendar.date(byAdding:) respektuje DST správně.
     var endOfDay: Date {
         // Přidáme 1 den a vezmeme startOfDay — výsledek je přesně začátek zítřka = konec dneška
-        let tomorrow = Calendar.current.date(byAdding: .day, value: 1, to: startOfDay) ?? startOfDay.addingTimeInterval(86_400)
+        let tomorrow = Calendar.mondayStart.date(byAdding: .day, value: 1, to: startOfDay) ?? startOfDay.addingTimeInterval(86_400)
         return tomorrow
     }
 
     func isSameDay(as other: Date) -> Bool {
-        Calendar.current.isDate(self, inSameDayAs: other)
+        Calendar.mondayStart.isDate(self, inSameDayAs: other)
     }
 }
 

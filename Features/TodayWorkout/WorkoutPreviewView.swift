@@ -126,8 +126,46 @@ struct WorkoutPreviewView: View {
                             .padding(.bottom, 20)
                         } else if let response = previewResponse {
                             VStack(spacing: 12) {
-                                ForEach(Array(response.mainBlocks.flatMap { $0.exercises }.enumerated()), id: \.offset) { idx, ex in
-                                     AIPreviewExerciseRow(index: idx + 1, exercise: ex)
+                                // Warmup block
+                                if !response.warmUp.isEmpty {
+                                    HStack {
+                                        Text("ROZCVIČKA")
+                                            .font(.system(size: 11, weight: .black))
+                                            .foregroundStyle(.blue.opacity(0.6))
+                                            .kerning(1.0)
+                                        Spacer()
+                                    }
+                                    .padding(.horizontal, 4)
+                                    .padding(.top, 8)
+
+                                    ForEach(Array(response.warmUp.enumerated()), id: \.offset) { idx, wu in
+                                        WarmupPreviewRow(index: idx + 1, warmup: wu)
+                                    }
+                                }
+
+                                // Main blocks
+                                ForEach(Array(response.mainBlocks.enumerated()), id: \.offset) { blockIdx, block in
+                                    HStack {
+                                        Text(block.blockLabel.uppercased())
+                                            .font(.system(size: 11, weight: .black))
+                                            .foregroundStyle(.blue.opacity(0.6))
+                                            .kerning(1.0)
+                                        Spacer()
+                                    }
+                                    .padding(.horizontal, 4)
+                                    .padding(.top, 8)
+
+                                    ForEach(Array(block.exercises.enumerated()), id: \.offset) { exIdx, ex in
+                                        let isSupersetWithNext = exIdx < block.exercises.count - 1 && ex.supersetId != nil && ex.supersetId == block.exercises[exIdx + 1].supersetId
+                                        let isSupersetWithPrev = exIdx > 0 && ex.supersetId != nil && ex.supersetId == block.exercises[exIdx - 1].supersetId
+                                        
+                                        AIPreviewExerciseRow(
+                                            index: exIdx + 1, 
+                                            exercise: ex,
+                                            isSupersetWithNext: isSupersetWithNext,
+                                            isSupersetWithPrev: isSupersetWithPrev
+                                        )
+                                    }
                                 }
                             }
                             .padding(.horizontal, 18)
@@ -157,9 +195,18 @@ struct WorkoutPreviewView: View {
                                 }
                                 .padding(.horizontal, 18)
 
-                                VStack(spacing: 12) {
+                                VStack(spacing: 0) {
                                     ForEach(Array(repairedExercises.enumerated()), id: \.offset) { idx, ex in
-                                        PlannedExerciseRow(index: idx + 1, exercise: ex)
+                                        let isSupersetWithNext = idx < repairedExercises.count - 1 && ex.supersetId != nil && ex.supersetId == repairedExercises[idx + 1].supersetId
+                                        let isSupersetWithPrev = idx > 0 && ex.supersetId != nil && ex.supersetId == repairedExercises[idx - 1].supersetId
+
+                                        PlannedExerciseRow(
+                                            index: idx + 1, 
+                                            exercise: ex,
+                                            isSupersetWithNext: isSupersetWithNext,
+                                            isSupersetWithPrev: isSupersetWithPrev
+                                        )
+                                        .padding(.bottom, isSupersetWithNext ? 0 : 12)
                                     }
                                 }
                                 .padding(.horizontal, 18)
@@ -262,11 +309,40 @@ private struct StatPill: View {
 private struct PlannedExerciseRow: View {
     let index: Int
     let exercise: PlannedExercise
+    let isSupersetWithNext: Bool
+    let isSupersetWithPrev: Bool
 
     var body: some View {
-        HStack(spacing: 14) {
-            // Index badge with muscle icon
-            ZStack {
+        ZStack(alignment: .leading) {
+            // Superset vertical connector
+            if isSupersetWithNext || isSupersetWithPrev {
+                Rectangle()
+                    .fill(Color.blue.opacity(0.4))
+                    .frame(width: 4)
+                    .padding(.leading, 16)
+                    .padding(.vertical, isSupersetWithNext && isSupersetWithPrev ? 0 : 18)
+            }
+
+            VStack(alignment: .leading, spacing: 0) {
+                if isSupersetWithNext && !isSupersetWithPrev {
+                    HStack(spacing: 4) {
+                        Image(systemName: "link")
+                            .font(.system(size: 8, weight: .black))
+                        Text("SUPERSÉRIE")
+                            .font(.system(size: 9, weight: .black))
+                            .kerning(0.8)
+                    }
+                    .foregroundStyle(.blue)
+                    .padding(.horizontal, 6).padding(.vertical, 3)
+                    .background(Color.blue.opacity(0.12))
+                    .clipShape(Capsule())
+                    .padding(.leading, 36)
+                    .padding(.bottom, 6)
+                }
+
+                HStack(spacing: 14) {
+                    // Index badge with muscle icon
+                    ZStack {
                 Circle()
                     .fill(AppColors.primaryAccent.opacity(0.15))
                     .frame(width: 36, height: 36)
@@ -329,15 +405,10 @@ private struct PlannedExerciseRow: View {
 
             Spacer(minLength: 0)
         }
-        .padding(14)
-        .background(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .fill(AppColors.secondaryBg)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 16, style: .continuous)
-                        .stroke(AppColors.border, lineWidth: 1)
-                )
-        )
+        .padding(.vertical, 12)
+        .padding(.horizontal, 16)
+        .background(RoundedRectangle(cornerRadius: 16).fill(Color.white.opacity(0.04)))
+        .padding(.leading, isSupersetWithNext || isSupersetWithPrev ? 28 : 0)
     }
 }
 
@@ -346,24 +417,99 @@ private struct PlannedExerciseRow: View {
 private struct AIPreviewExerciseRow: View {
     let index: Int
     let exercise: ResponseExercise
+    let isSupersetWithNext: Bool
+    let isSupersetWithPrev: Bool
+
+    var body: some View {
+        ZStack(alignment: .leading) {
+            // Superset vertical connector
+            if isSupersetWithNext || isSupersetWithPrev {
+                Rectangle()
+                    .fill(Color.cyan.opacity(0.3))
+                    .frame(width: 4)
+                    .padding(.leading, 16)
+                    .padding(.vertical, isSupersetWithNext && isSupersetWithPrev ? 0 : 18)
+            }
+
+            VStack(alignment: .leading, spacing: 0) {
+                if isSupersetWithNext && !isSupersetWithPrev {
+                    HStack(spacing: 4) {
+                        Image(systemName: "link")
+                            .font(.system(size: 8, weight: .black))
+                        Text("SUPERSÉRIE")
+                            .font(.system(size: 9, weight: .black))
+                            .kerning(0.8)
+                    }
+                    .foregroundStyle(.cyan)
+                    .padding(.horizontal, 6).padding(.vertical, 3)
+                    .background(Color.cyan.opacity(0.12))
+                    .clipShape(Capsule())
+                    .padding(.leading, 36)
+                    .padding(.bottom, 6)
+                }
+
+                HStack(spacing: 14) {
+                    ZStack {
+                        Circle()
+                            .fill(Color.blue.opacity(0.15))
+                            .frame(width: 36, height: 36)
+                        Text("\(index)")
+                            .font(.system(size: 14, weight: .bold, design: .rounded))
+                            .foregroundStyle(.blue)
+                    }
+
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(exercise.name)
+                            .font(.system(size: 15, weight: .semibold))
+                            .foregroundStyle(.white)
+                            .lineLimit(2)
+
+                        HStack(spacing: 10) {
+                            Label("\(exercise.sets)×\(exercise.repsMin)–\(exercise.repsMax)", systemImage: "repeat")
+                                .font(.system(size: 11))
+                                .foregroundStyle(.white.opacity(0.45))
+
+                            if exercise.restSeconds > 0 {
+                                Label("\(exercise.restSeconds)s", systemImage: "timer")
+                                    .font(.system(size: 11))
+                                    .foregroundStyle(.white.opacity(0.35))
+                            }
+                        }
+                    }
+                    Spacer()
+                }
+                .padding(.vertical, 12)
+                .padding(.horizontal, 16)
+                .background(RoundedRectangle(cornerRadius: 16).fill(Color.white.opacity(0.04)))
+                .padding(.leading, isSupersetWithNext || isSupersetWithPrev ? 28 : 0)
+            }
+        }
+    }
+}
+
+// MARK: - Warmup Preview Row
+
+private struct WarmupPreviewRow: View {
+    let index: Int
+    let warmup: WarmUpExercise
 
     var body: some View {
         HStack(spacing: 14) {
             ZStack {
-                Circle().fill(Color.blue.opacity(0.15)).frame(width: 36, height: 36)
-                Text("\(index)").font(.system(size: 14, weight: .bold, design: .rounded)).foregroundStyle(.blue)
+                Circle().fill(Color.orange.opacity(0.15)).frame(width: 36, height: 36)
+                Text("\(index)").font(.system(size: 14, weight: .bold, design: .rounded)).foregroundStyle(.orange)
             }
             VStack(alignment: .leading, spacing: 4) {
-                Text(exercise.name).font(.system(size: 15, weight: .semibold)).foregroundStyle(.white).lineLimit(2)
+                Text(warmup.name).font(.system(size: 15, weight: .semibold)).foregroundStyle(.white).lineLimit(2)
                 HStack(spacing: 10) {
-                    Label("\(exercise.sets)×\(exercise.repsMin)-\(exercise.repsMax)", systemImage: "repeat")
-                    if exercise.restSeconds > 0 { Label("\(exercise.restSeconds)s", systemImage: "timer") }
+                    Label("\(warmup.sets)×\(warmup.reps)", systemImage: "repeat")
+                    if let notes = warmup.notes {
+                        Text(notes)
+                            .font(.system(size: 11))
+                            .foregroundStyle(.white.opacity(0.4))
+                    }
                 }
                 .font(.system(size: 12)).foregroundStyle(.white.opacity(0.45))
-                
-                if let weight = exercise.weightKg, weight > 0 {
-                    Text("Doporučená váha: \(Int(weight)) kg").font(.system(size: 11, weight: .bold)).foregroundStyle(.orange)
-                }
             }
             Spacer(minLength: 0)
         }
@@ -373,7 +519,7 @@ private struct AIPreviewExerciseRow: View {
                 .fill(AppColors.secondaryBg)
                 .overlay(
                     RoundedRectangle(cornerRadius: 16)
-                        .stroke(Color.blue.opacity(0.3), lineWidth: 1)
+                        .stroke(Color.orange.opacity(0.2), lineWidth: 1)
                 )
         )
     }

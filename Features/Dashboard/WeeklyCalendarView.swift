@@ -20,7 +20,7 @@ struct WeeklyCalendarView: View {
     private let days = ["Po", "Út", "St", "Čt", "Pá", "So", "Ne"]
     
     private var todayIndex: Int {
-        let wd = Calendar.current.component(.weekday, from: .now)
+        let wd = Calendar.mondayStart.component(.weekday, from: .now)
         return wd == 1 ? 6 : wd - 2
     }
 

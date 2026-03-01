@@ -34,7 +34,7 @@ struct WorkoutViewWithAI: View {
             Color(red: 0.05, green: 0.05, blue: 0.08).ignoresSafeArea()
 
             if showWorkout, let response = trainerResponse {
-                WorkoutView(
+                ActiveSessionView(
                     session: session,
                     plan: plannedDay,
                     planLabel: plannedDay.label,
@@ -114,9 +114,12 @@ struct WorkoutViewWithAI: View {
             AppLogger.error("WorkoutViewWithAI: Chyba při ukládání po tréninku: \(error)")
         }
 
-        // Notifikace o dokončení tréninku (streak z Dashboard VM)
+        // Notifikace o dokončení tréninku (výpočet aktuálního streaku)
+        let allCompleted = profile.workoutPlans.flatMap { $0.sessions }.filter { $0.status == .completed }
+        let streak = StreakManager.calculateWeeklyStreak(completedSessions: allCompleted)
+        
         WeeklyReportService.sendWorkoutCompletionNotification(
-            streakDays: 1,  // Skutečný streak načte DashboardViewModel při příštím otevření
+            streakDays: streak, // Zobrazí týdenní streak (počet týdnů)
             sessionLabel: response.sessionLabel
         )
     }

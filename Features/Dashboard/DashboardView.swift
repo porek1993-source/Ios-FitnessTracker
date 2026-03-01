@@ -24,6 +24,9 @@ final class DashboardViewModel: ObservableObject {
     @Published var exerciseCount: Int             = 0
     @Published var hasPlanToday: Bool             = false
     @Published var todayPlannedExercises: [PlannedExercise] = []
+    
+    // History
+    @Published var sessionDates: [Date] = []
 
     // State
     @Published var isLoadingReadiness: Bool   = true
@@ -48,14 +51,14 @@ final class DashboardViewModel: ObservableObject {
 
     func load(profile: UserProfile) async {
         greeting  = makeGreeting()
-        await loadReadiness()
+        await loadReadiness(profile: profile)
         loadPlan(profile: profile)
         loadWeekStats(profile: profile)
     }
 
     // MARK: - Readiness
 
-    private func loadReadiness() async {
+    private func loadReadiness(profile: UserProfile) async {
         isLoadingReadiness = true
         defer { isLoadingReadiness = false }
 
@@ -72,11 +75,9 @@ final class DashboardViewModel: ObservableObject {
         hrv        = summary.hrv
         restingHR  = summary.restingHeartRate
 
-        // ✅ FIX: Dashboard původně počítal readiness vlastním algoritmem (jednoduchý součet),
-        // zatímco HealthBackgroundManager ukládal skóre přes ReadinessCalculator (váhové složky).
-        // Tato nekonzistence způsobovala, že Dashboard zobrazoval jiné skóre než to uložené v DB.
-        // Nyní oba používají ReadinessCalculator.compute() — jednoznačný výsledek.
-        let tempSnapshot = buildTempSnapshot(from: summary)
+        // ✅ FIX: Dashboard dříve počítal readiness s nulovými baseliny.
+        // Nyní předáváme profil, aby ReadinessCalculator mohl použít historické průměry (HRV/RHR).
+        let tempSnapshot = buildTempSnapshot(from: summary, profile: profile)
         let score: Double
         if let result = ReadinessCalculator.compute(snapshot: tempSnapshot) {
             score = result.score
@@ -103,15 +104,20 @@ final class DashboardViewModel: ObservableObject {
 
     /// Vytvoří dočasný snapshot z HKDailySummary pro použití s ReadinessCalculator.
     /// Snapshot není uložen do DB — slouží pouze pro výpočet skóre v reálném čase.
-    private func buildTempSnapshot(from summary: HKDailySummary) -> HealthMetricsSnapshot {
+    private func buildTempSnapshot(from summary: HKDailySummary, profile: UserProfile) -> HealthMetricsSnapshot {
         let snap = HealthMetricsSnapshot(date: .now)
         snap.sleepDurationHours   = summary.sleepDurationHours
         snap.sleepEfficiencyPct   = summary.sleepEfficiencyPct
         snap.heartRateVariabilityMs = summary.hrv
         snap.restingHeartRate     = summary.restingHeartRate
-        // Baseline není k dispozici při real-time výpočtu → ReadinessCalculator použije absolutní fallback
-        snap.hrvBaselineAvg       = nil
-        snap.restingHRBaseline    = nil
+        
+        // Načteme baseliny z profilu (stejně jako v HealthBackgroundManager)
+        let history = profile.healthMetricsHistory.sorted(by: { $0.date > $1.date })
+        if let lastValid = history.first(where: { $0.hrvBaselineAvg != nil }) {
+            snap.hrvBaselineAvg = lastValid.hrvBaselineAvg
+            snap.restingHRBaseline = lastValid.restingHRBaseline
+        }
+        
         return snap
     }
 
@@ -170,12 +176,14 @@ final class DashboardViewModel: ObservableObject {
         guard let plan = profile.workoutPlans.first(where: { $0.isActive }) else { return }
 
         // ✅ FIX: Calendar.mondayStart zajišťuje pondělní začátek týdne nezávisle na locale.
-        // Calendar.current na US zařízeních (locale en_US) má firstWeekday=1 (neděle),
+        // Calendar.mondayStart na všech zařízeních má firstWeekday=2 (pondělí).
         // což způsobovalo špatné zařazení session do týdnů a posunuté indexy stavů dnů.
         let startOfWeek = Calendar.mondayStart.dateInterval(of: .weekOfYear, for: .now)?.start ?? .now
         // date.weekday = 1=Po..7=Ne → 0-based index do states[]: 0=Po..6=Ne
         let normalizedToday = Date.now.weekday - 1
         
+        self.sessionDates = plan.sessions.filter { $0.status == .completed }.map { $0.startedAt }
+
         var states: [DailyWorkoutState] = Array(repeating: .empty, count: 7)
 
         // 1. Plánované dny
@@ -238,7 +246,10 @@ struct TrainerDashboardView: View {
     @State private var showHeatmap  = false
     @State private var showWorkout  = false
     @State private var showPreview  = false
-    @State private var showBuilder  = false // Proměnná pro zobrazení Custom Workout Builderu
+    @State private var showBuilder  = false
+    
+    // Pro spuštění custom tréninku
+    @State private var customSessionToStart: WorkoutSession? = nil // Proměnná pro zobrazení Custom Workout Builderu
     @State private var appearedOnce = false
 
     var profile: UserProfile? { profiles.first }
@@ -273,6 +284,11 @@ struct TrainerDashboardView: View {
                         )
                         .padding(.horizontal, 18)
                         .padding(.top, 16)
+
+                        // ── Monthly Heatmap Calendar ─────────────────────
+                        WorkoutCalendarView(workoutDates: vm.sessionDates)
+                            .padding(.horizontal, 18)
+                            .padding(.top, 16)
 
                         // ── Body Map Preview ──────────────────────────
                         BodyMapPreviewCard(
@@ -407,8 +423,15 @@ struct TrainerDashboardView: View {
             .fullScreenCover(isPresented: $showWorkout) {
                 TodayWorkoutLaunchWrapper(
                     profile: profile,
-                    onDismiss: { showWorkout = false }
+                    customSession: customSessionToStart,
+                    onDismiss: { 
+                        showWorkout = false 
+                        customSessionToStart = nil
+                    }
                 )
+            }
+            .sheet(isPresented: $showBuilder) {
+                CustomWorkoutBuilderView()
             }
         }
         .task {
@@ -433,6 +456,12 @@ struct TrainerDashboardView: View {
         .onChange(of: profiles.count) {
             Task {
                 if let p = profiles.first { await vm.load(profile: p) }
+            }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("StartCustomWorkout"))) { note in
+            if let session = note.object as? WorkoutSession {
+                customSessionToStart = session
+                showWorkout = true
             }
         }
     }
@@ -1142,6 +1171,7 @@ struct FlowLayout: Layout {
 // MARK: - TodayWorkoutLaunchWrapper
 struct TodayWorkoutLaunchWrapper: View {
     let profile: UserProfile?
+    let customSession: WorkoutSession?
     let onDismiss: () -> Void
 
     @Environment(\.modelContext) private var modelContext
@@ -1195,6 +1225,13 @@ struct TodayWorkoutLaunchWrapper: View {
     }
 
     private func prepareWorkout() {
+        if let customSession {
+            self.session = customSession
+            self.plannedDay = customSession.plannedDay
+            self.isReady = true
+            return
+        }
+        
         guard let profile else { errorMessage = "Profil nenalezen."; return }
         guard let plan = profile.workoutPlans.first(where: { $0.isActive }) else {
             errorMessage = "Nemáš aktivní tréninkový plán."
@@ -1208,6 +1245,17 @@ struct TodayWorkoutLaunchWrapper: View {
         }
         let newSession = WorkoutSession(plan: plan, plannedDay: found)
         modelContext.insert(newSession)
+        
+        // ✅ FIX: Populate SessionExercise from PlannedExercise
+        for pev in found.plannedExercises.sorted(by: { $0.order < $1.order }) {
+            let sessionEx = SessionExercise(
+                order: pev.order,
+                exercise: pev.exercise,
+                session: newSession
+            )
+            modelContext.insert(sessionEx)
+        }
+        
         try? modelContext.save()
         self.plannedDay = found
         self.session = newSession

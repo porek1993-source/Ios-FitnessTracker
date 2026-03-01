@@ -8,6 +8,10 @@ import SwiftData
 final class WorkoutViewModel: ObservableObject {
     @Published var exercises: [SessionExerciseState]
     @Published var currentExerciseIndex = 0
+    @Published var warmupExercises: [String] = []
+    
+    // UI State
+    @Published var showSummary = false
     @Published var isResting = false
     @Published var restSecondsRemaining = 0
     @Published var totalRestSeconds = 90
@@ -188,7 +192,8 @@ final class WorkoutViewModel: ObservableObject {
 
         // ✅ FIX Bug #1: Dohledat chybějící videoURL a coachTip přímo z Supabase MuscleWiki
         // Spustíme async, nezablokujeme UI — výsledky se propisují do @Published exercises
-        Task { await enrichWithVideoURLs() }
+        // ✅ FIX: [weak self] pro zamezení retain cycle v initu
+        Task { [weak self] in await self?.enrichWithVideoURLs() }
     }
 
     // MARK: - Video URL Enrichment (Bug #1 Fix)
@@ -319,7 +324,9 @@ final class WorkoutViewModel: ObservableObject {
             AudioCoachManager.shared.announcePraise()
         }
 
-        Task {
+        // ✅ FIX: [weak self] pro zamezení retain cycle
+        Task { [weak self] in
+            guard let self else { return }
             // Vypočítáme aktuální index a počet dokončených cviků pro Live Activity
             let currentIdx = exerciseIndex
             let completedCount = exercises.filter { $0.sets.allSatisfy { $0.isCompleted } }.count
@@ -377,10 +384,10 @@ final class WorkoutViewModel: ObservableObject {
             AudioCoachManager.shared.announce(message: "Pauza, \(seconds) vteřin.")
         }
 
-        restTimerTask = Task {
+        restTimerTask = Task { [weak self] in
             while !Task.isCancelled {
                 try? await Task.sleep(nanoseconds: 1_000_000_000)
-                guard !Task.isCancelled else { break }
+                guard let self, !Task.isCancelled else { break }
                 if restSecondsRemaining > 1 {
                     restSecondsRemaining -= 1
                     if restSecondsRemaining == 10 && audioEnabled {
@@ -513,17 +520,28 @@ final class WorkoutViewModel: ObservableObject {
         session.status = .completed
         session.finishedAt = .now
 
-        // Ulož WeightEntry pro každý dokončený working set (ne warmup)
-        for ex in exercises {
-            guard !ex.isWarmupOnly else { continue }
-            // Použij exercise přímo ze state (nastaveno v initu) - nepotřebujeme session.exercises lookup
+        // Vymažeme staré cviky ze session (pokud tam nějaké byly z přípravy) a nahradíme je reálně odcvičenými
+        session.exercises.removeAll()
+        
+        // Ulož do session a zároveň vytvoř WeightEntry pro každý dokončený working set
+        for (exIdx, ex) in exercises.enumerated() {
             guard let exercise = ex.exercise else { continue }
-
-            let workingSets = ex.sets.filter { $0.isCompleted && $0.type == .normal }
-            for (setIdx, set) in workingSets.enumerated() {
-                // Bodyweight cviky mohou mít weightKg = nil nebo 0
+            
+            let sEx = SessionExercise(
+                order: exIdx,
+                exercise: exercise,
+                fallbackSlug: ex.slug,
+                fallbackName: ex.name,
+                session: session
+            )
+            modelContext.insert(sEx)
+            
+            let workingSets = ex.sets.enumerated().filter { $0.element.isCompleted && ($0.element.type == .normal || $0.element.type == .failure) }
+            for (setIdx, set) in workingSets {
                 let weight = set.weightKg
                 guard let reps = set.reps, reps > 0 else { continue }
+                
+                // 1. Záznam pro analytiku a progressive overload
                 let entry = WeightEntry.create(
                     exercise: exercise,
                     sessionId: session.id,
@@ -531,9 +549,21 @@ final class WorkoutViewModel: ObservableObject {
                     reps: reps,
                     rpe: set.rpe,
                     wasSuccessful: rpe_isSuccessful(set.rpe),
-                    setNumber: setIdx + 1
+                    setNumber: setIdx + 1,
+                    type: set.type
                 )
                 modelContext.insert(entry)
+                
+                // 2. Záznam pro historii session (lehčí objekt)
+                let cSet = CompletedSet(
+                    setNumber: setIdx + 1,
+                    weightKg: weight,
+                    reps: reps,
+                    rpe: set.rpe != nil ? Double(set.rpe!) : nil,
+                    type: set.type
+                )
+                modelContext.insert(cSet)
+                sEx.completedSets.append(cSet)
             }
         }
 
@@ -545,7 +575,8 @@ final class WorkoutViewModel: ObservableObject {
         Task { await LiveActivityManager.shared.endCurrentActivity() }
 
         // ── Zápis do Apple Health ──
-        Task {
+        Task { [weak self] in
+            guard let self else { return }
             // Vypočítáme odhad kalorií přes sdílenou utilitu
             let estimatedKcal = HealthWorkoutWriter.estimateBurnedCalories(durationSeconds: TimeInterval(elapsedSeconds))
             

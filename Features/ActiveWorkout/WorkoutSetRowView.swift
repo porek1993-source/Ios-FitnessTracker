@@ -8,6 +8,7 @@ struct WorkoutSetRowView: View {
     let setNumber:  Int
     @Binding var currentSet: SetState
     let isActive:   Bool
+    let isSuperset: Bool
     let onComplete: () -> Void
 
     @FocusState private var wFocus: Bool
@@ -23,10 +24,18 @@ struct WorkoutSetRowView: View {
     var body: some View {
         VStack(spacing: 0) {
             HStack(spacing: 0) {
+                // Superset connector (outside the main HStack to allow edge-to-edge verticality)
+                if isSuperset {
+                    Rectangle()
+                        .fill(AppColors.primaryAccent.opacity(0.4))
+                        .frame(width: 3)
+                        .padding(.vertical, -9) // Extend beyond row padding
+                }
 
                 // ① Badge (Klikací pro změnu typu série)
                 SetBadge(number: setNumber, isCompleted: currentSet.isCompleted, isActive: isActive, type: currentSet.type)
                     .frame(width: 38)
+                    .padding(.leading, isSuperset ? 8 : 0)
                     .onTapGesture {
                         if isActive && !currentSet.isCompleted {
                             UIImpactFeedbackGenerator(style: .light).impactOccurred()

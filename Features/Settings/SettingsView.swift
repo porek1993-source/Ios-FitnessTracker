@@ -197,7 +197,7 @@ struct ProfileSettingsForm: View {
 
                 // MARK: — Vybavení
                 settingsSection(title: "Dostupné vybavení", icon: "scalemass.fill") {
-                    LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 2), spacing: 8) {
+                    LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 12), count: 2), spacing: 12) {
                         ForEach(Equipment.allCases, id: \.rawValue) { equip in
                             equipmentToggle(equip)
                         }
@@ -322,6 +322,7 @@ struct ProfileSettingsForm: View {
     private func equipmentToggle(_ equip: Equipment) -> some View {
         let isSelected = draftEquipment.contains(equip)
         return Button {
+            UIImpactFeedbackGenerator(style: .light).impactOccurred()
             withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
                 if isSelected {
                     draftEquipment.remove(equip)
@@ -331,24 +332,39 @@ struct ProfileSettingsForm: View {
             }
         } label: {
             VStack(spacing: 8) {
-                Text(equip.emoji).font(.system(size: 24))
+                Text(equip.emoji)
+                    .font(.system(size: 32))
+                    .shadow(color: isSelected ? .blue.opacity(0.3) : .clear, radius: 8)
+                
                 Text(equip.localizedName)
-                    .font(.system(size: 13, weight: .medium, design: .rounded))
+                    .font(.system(size: 13, weight: .bold, design: .rounded))
                     .foregroundStyle(isSelected ? .white : .white.opacity(0.6))
                     .multilineTextAlignment(.center)
                     .lineLimit(2)
                     .minimumScaleFactor(0.8)
             }
-            .frame(maxWidth: .infinity, minHeight: 80)
-            .padding(10)
+            .frame(maxWidth: .infinity, minHeight: 100)
+            .padding(12)
             .background(
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .fill(isSelected ? Color.blue.opacity(0.2) : Color.white.opacity(0.05))
+                ZStack {
+                    if isSelected {
+                        LinearGradient(
+                            colors: [Color.blue.opacity(0.2), Color.blue.opacity(0.05)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    } else {
+                        Color.white.opacity(0.05)
+                    }
+                }
             )
+            .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
             .overlay(
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .stroke(isSelected ? Color.blue : Color.white.opacity(0.08), lineWidth: 1.5)
+                RoundedRectangle(cornerRadius: 20, style: .continuous)
+                    .stroke(isSelected ? Color.blue : Color.white.opacity(0.05), lineWidth: isSelected ? 1.5 : 1)
             )
+            .scaleEffect(isSelected ? 1.02 : 1.0)
+            .animation(.interactiveSpring(), value: isSelected)
         }
     }
 

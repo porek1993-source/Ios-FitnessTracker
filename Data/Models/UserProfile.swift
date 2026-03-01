@@ -15,6 +15,10 @@ final class UserProfile {
 
     var primaryGoal: FitnessGoal
     var fitnessLevel: FitnessLevel
+    
+    // AI Adaptation flags
+    var isDeloadRecommended: Bool = false
+    
     var availableDaysPerWeek: Int
     var preferredSplitType: SplitType
     var sessionDurationMinutes: Int

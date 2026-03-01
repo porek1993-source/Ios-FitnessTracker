@@ -82,7 +82,7 @@ final class RollingWeekViewModel: ObservableObject {
 
     /// Sestaví 7 dnů od dneška na základě aktivního plánu.
     func buildWeek() {
-        let calendar = Calendar.current
+        let calendar = Calendar.mondayStart
         let today = Date.now
         
         // Načteme aktivní plán z databáze
@@ -600,7 +600,7 @@ struct WeekDayExerciseDetailView: View {
 
     // Mapování WeekDay.date → dayOfWeek (1=Po...7=Ne)
     private var ourDayIndex: Int {
-        let cal = Calendar.current
+        let cal = Calendar.mondayStart
         let wd = cal.component(.weekday, from: day.date)
         return wd == 1 ? 7 : wd - 1
     }
@@ -732,45 +732,17 @@ struct WeekDayExerciseDetailView: View {
     }
 
     private var emptyStateView: some View {
-        VStack(spacing: 12) {
-            HStack(spacing: 12) {
-                Image(systemName: "wand.and.sparkles")
-                    .font(.system(size: 20))
-                    .foregroundStyle(.blue.opacity(0.7))
-                VStack(alignment: .leading, spacing: 3) {
-                    Text("Plán čeká na AI")
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundStyle(.white)
-                    Text("Klikni na „Začít trénink“ nebo vygeneruj náhled.")
-                        .font(.system(size: 11))
-                        .foregroundStyle(.white.opacity(0.4))
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-                Spacer()
-            }
-            
-            if isGeneratingPreview {
-                HStack {
-                    ProgressView().tint(.blue)
-                        .scaleEffect(0.8)
-                    Text("Generuji náhled...")
-                        .font(.system(size: 11, weight: .medium))
-                        .foregroundStyle(.blue)
-                }
-            } else {
-                Button(action: generatePreview) {
-                    Text("Generovat náhled tréninku")
-                        .font(.system(size: 12, weight: .bold))
-                        .foregroundStyle(.white)
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 8)
-                        .background(RoundedRectangle(cornerRadius: 10).fill(Color.blue.opacity(0.8)))
-                }
-            }
+        VStack(spacing: 20) {
+            EmptyStateView(
+                icon: "wand.and.sparkles",
+                title: "Plán čeká na AI",
+                message: "Klikni na „Začít trénink“ pro okamžitý start, nebo si dopředu vygeneruj náhled tréninku na míru.",
+                actionLabel: isGeneratingPreview ? "Generuji náhled..." : "Generovat náhled tréninku",
+                action: generatePreview
+            )
+            .disabled(isGeneratingPreview)
         }
-        .padding(12)
-        .background(RoundedRectangle(cornerRadius: 12).fill(Color.blue.opacity(0.07))
-            .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.blue.opacity(0.2), lineWidth: 1)))
+        .padding(.vertical, 10)
     }
 
     private var previewExercisesListView: some View {
@@ -1008,7 +980,7 @@ struct WorkoutLaunchWrapper: View {
             return
         }
 
-        let cal = Calendar.current
+        let cal = Calendar.mondayStart
         let wd = cal.component(.weekday, from: day.date)
         let ourIdx = wd == 1 ? 7 : wd - 1
 

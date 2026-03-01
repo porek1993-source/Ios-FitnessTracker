@@ -44,7 +44,7 @@ public struct OneRepMaxCalculator {
     /// Vrací chronologicky seřazené pole (Date, Double).
     static func historical1RM(from entries: [WeightEntry], formula: OneRepMaxFormula = .brzycki) -> [(date: Date, OneRM: Double)] {
         var dailyMaxes: [Date: Double] = [:]
-        let calendar = Calendar.current
+        let calendar = Calendar.mondayStart
         
         for entry in entries {
             guard entry.wasSuccessful else { continue } // Neúspěšné série (failed) nepočítáme do progresu

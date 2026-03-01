@@ -11,7 +11,7 @@ public struct MuscleVolumeChart: View {
     public init() {}
 
     private var weeklyVolume: [(group: MuscleGroup, sets: Int)] {
-        let calendar = Calendar.current
+        let calendar = Calendar.mondayStart
         guard let sevenDaysAgo = calendar.date(byAdding: .day, value: -7, to: .now) else { return [] }
         
         var counts: [MuscleGroup: Int] = [:]

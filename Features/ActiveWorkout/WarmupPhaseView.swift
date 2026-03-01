@@ -2,10 +2,18 @@ import SwiftUI
 
 struct WarmupPhaseView: View {
     let exercises: [SessionExerciseState]
+    let aiExercises: [String]?
     let onFinishWarmup: () -> Void
     let onCancel: () -> Void
     
     @State private var generatedWarmups: [String] = []
+
+    init(exercises: [SessionExerciseState], aiExercises: [String]? = nil, onFinishWarmup: @escaping () -> Void, onCancel: @escaping () -> Void) {
+        self.exercises = exercises
+        self.aiExercises = aiExercises
+        self.onFinishWarmup = onFinishWarmup
+        self.onCancel = onCancel
+    }
     
     var body: some View {
         ZStack {
@@ -99,6 +107,11 @@ struct WarmupPhaseView: View {
     }
     
     private func generateWarmups() {
+        if let ai = aiExercises, !ai.isEmpty {
+            generatedWarmups = ai
+            return
+        }
+
         let firstEx = exercises.first?.exercise
         let muscles = firstEx?.musclesTarget ?? []
         let hasLegs = muscles.contains(.quads) || muscles.contains(.hamstrings) || muscles.contains(.glutes)

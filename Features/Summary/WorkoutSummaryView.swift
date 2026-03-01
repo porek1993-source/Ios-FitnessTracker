@@ -282,7 +282,7 @@ struct WorkoutSummaryView: View {
     /// Spočítá počet po sobě jdoucích dnů s tréninkem (streak)
     private func calculateCurrentStreak() -> Int {
         guard let plan = session.plan else { return 1 }
-        let calendar = Calendar.current
+        let calendar = Calendar.mondayStart
         
         // Deduplikuj na unikátní kalendářní dny (sestupně)
         let uniqueDays = Set(

@@ -23,11 +23,19 @@ struct ActiveSessionView: View {
     @State private var showCancelDlg  = false
     @State private var showPlateCalculator = false
     @State private var isWarmupDone   = false
+    
+    // Properties for finish and summary:
+    let onFinish: (([XPGain], [PREvent]) -> Void)?
+    @State private var showSummary = false
+    @State private var summaryXPGains: [XPGain] = []
+    @State private var summaryPREvents: [PREvent] = []
+    @State private var summaryCoachMsg = ""
 
-    init(session: WorkoutSession, plan: PlannedWorkoutDay, planLabel: String, bodyWeightKg: Double = 75.0) {
+    init(session: WorkoutSession, plan: PlannedWorkoutDay, planLabel: String, aiResponse: TrainerResponse? = nil, bodyWeightKg: Double = 75.0, onFinish: (([XPGain], [PREvent]) -> Void)? = nil) {
         _vm = StateObject(wrappedValue: WorkoutViewModel(
-            session: session, plan: plan, planLabel: planLabel, bodyWeightKg: bodyWeightKg
+            session: session, plan: plan, planLabel: planLabel, aiResponse: aiResponse, bodyWeightKg: bodyWeightKg
         ))
+        self.onFinish = onFinish
     }
 
     var body: some View {
@@ -75,6 +83,7 @@ struct ActiveSessionView: View {
             if !isWarmupDone {
                 WarmupPhaseView(
                     exercises: vm.exercises,
+                    aiExercises: vm.warmupExercises,
                     onFinishWarmup: {
                         withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) {
                             isWarmupDone = true
@@ -101,15 +110,14 @@ struct ActiveSessionView: View {
             }
         }
         .confirmationDialog("Dokončit trénink?", isPresented: $showFinishDlg, titleVisibility: .visible) {
-            Button("Uložit a ukončit") { vm.finishWorkout(modelContext: modelContext); dismiss() }
+            Button("Uložit a ukončit") { finishWorkout() }
             Button("Pokračovat", role: .cancel) {}
         } message: {
             Text("Všechny zalogované série budou uloženy.")
         }
         .confirmationDialog("Opravdu chceš trénink ukončit předčasně?", isPresented: $showCancelDlg, titleVisibility: .visible) {
             Button("Ukončit a uložit") {
-                vm.finishWorkout(modelContext: modelContext) // Uloží dosavadní progress
-                dismiss()
+                finishWorkout()
             }
             Button("Zrušit trénink (zahodit data)", role: .destructive) {
                 vm.cancelWorkout(modelContext: modelContext)
@@ -135,6 +143,60 @@ struct ActiveSessionView: View {
         .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("ShowPlateCalculator"))) { _ in
             showPlateCalculator = true
         }
+        .fullScreenCover(isPresented: $showSummary) {
+            WorkoutSummaryView(
+                session: vm.session,
+                coachMessage: summaryCoachMsg,
+                xpGains: summaryXPGains,
+                prEvents: summaryPREvents,
+                hkResult: vm.hkWriteResult,
+                onDismiss: {
+                    showSummary = false
+                    dismiss()
+                }
+            )
+        }
+    }
+    
+    // MARK: - Finish Workout Helpers
+    
+    private func finishWorkout() {
+        let (xpGains, prEvents) = vm.finishWorkout(
+            modelContext: modelContext
+        )
+
+        summaryPREvents = prEvents
+        summaryXPGains = xpGains
+        summaryCoachMsg = buildCoachMessage(gains: summaryXPGains, prs: summaryPREvents)
+
+        if !prEvents.isEmpty {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                for pr in prEvents {
+                    NotificationService.shared.sendPersonalRecordNotification(
+                        exerciseName: pr.exerciseName,
+                        weight: pr.newValue
+                    )
+                }
+            }
+        }
+
+        onFinish?(summaryXPGains, summaryPREvents)
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+            withAnimation { showSummary = true }
+        }
+    }
+
+    private func buildCoachMessage(gains: [XPGain], prs: [PREvent]) -> String {
+        if !prs.isEmpty {
+            return "Nový osobní rekord na \(prs.first!.exerciseName)! \(String(format: "%.1f", prs.first!.newValue)) kg — jsi silnější než kdy dřív. 💪"
+        }
+        let levelUps = gains.filter { $0.didLevelUp }
+        if !levelUps.isEmpty {
+            return "Level up! \(levelUps.first!.muscleGroup.displayName) → \(levelUps.first!.newLevel.displayName). Tvůj panáček roste! 🔥"
+        }
+        let vol = Int(gains.reduce(0) { $0 + $1.volumeKg })
+        return "Hotovo! \(vol) kg objemu. Každý trénink tě posouvá blíž k cíli."
     }
 }
 
@@ -164,24 +226,35 @@ private struct SessionHeaderBar: View {
             Spacer()
 
             HStack(spacing: 7) {
-                ForEach(vm.exercises.indices, id: \.self) { i in
-                    let ex = vm.exercises[i]
+                // ── ROZCIČKA (pokud AI vygenerovala) ───────────────────────
+                if !vm.warmupExercises.isEmpty {
+                    WarmupPhaseView(exercises: vm.warmupExercises)
+                        .padding(.horizontal, 16)
+                        .padding(.bottom, 24)
+                }
+
+                ForEach(Array(vm.exercises.enumerated()), id: \.element.id) { i, ex in
                     let isSupersetWithNext = i < vm.exercises.count - 1 && ex.supersetId != nil && ex.supersetId == vm.exercises[i + 1].supersetId
-                    
-                    HStack(spacing: 7) {
+                    let isSupersetWithPrev = i > 0 && ex.supersetId != nil && ex.supersetId == vm.exercises[i - 1].supersetId
+                    let isActive = i == vm.currentExerciseIndex
+
+                    ZStack(alignment: .center) {
+                        // Superset spojnice (horizontální linka mezi tečkami)
+                        if isSupersetWithNext {
+                            Rectangle()
+                                .fill(AppColors.primaryAccent.opacity(0.4))
+                                .frame(width: 14, height: 1.5)
+                                .offset(x: 10)
+                        }
+
                         ExerciseDot(
-                            state: i < vm.currentExerciseIndex ? .done
-                                 : i == vm.currentExerciseIndex ? .active
-                                 : .pending,
+                            state: ex.sets.allSatisfy { $0.isCompleted } ? .done : (isActive ? .active : .pending),
                             isSuperset: ex.supersetId != nil
                         )
-                        
-                        if isSupersetWithNext {
-                            // Spojovací linka mezi cviky v supersérii (HStack)
-                            Rectangle()
-                                .fill(AppColors.primaryAccent.opacity(0.8))
-                                .frame(width: 12, height: 2)
-                                .padding(.horizontal, -4)
+                        .onTapGesture {
+                            withAnimation(.spring(response: 0.4)) {
+                                vm.currentExerciseIndex = i
+                            }
                         }
                     }
                 }
@@ -225,8 +298,17 @@ private struct SessionHeaderBar: View {
                                 .overlay(Capsule().stroke(isWorkoutComplete ? Color.green.opacity(0.3) : .white.opacity(0.11), lineWidth: 1))
                         )
                 }
+                
+                // Audio coach toggle
+                Button { vm.toggleAudio() } label: {
+                    Image(systemName: vm.audioEnabled ? "speaker.wave.2.fill" : "speaker.slash.fill")
+                        .font(.system(size: 15))
+                        .foregroundStyle(vm.audioEnabled ? .blue : .white.opacity(0.35))
+                        .frame(width: 38, height: 38)
+                        .background(Circle().fill(Color.white.opacity(0.09)))
+                }
             }
-            .frame(width: 120, alignment: .trailing)
+            .frame(width: 160, alignment: .trailing)
         }
         .padding(.horizontal, 22)
         .padding(.top, 56)
@@ -650,6 +732,7 @@ private struct SetLoggerBlock: View {
                             setNumber: 0,
                             currentSet: $exercise.sets[i],
                             isActive: i == exercise.nextIncompleteSetIndex,
+                            isSuperset: exercise.supersetId != nil,
                             onComplete: { onComplete(i) }
                         )
                     }
@@ -668,6 +751,7 @@ private struct SetLoggerBlock: View {
                             setNumber: calculateWorkingSetNumber(for: i),
                             currentSet: $exercise.sets[i],
                             isActive: i == exercise.nextIncompleteSetIndex,
+                            isSuperset: exercise.supersetId != nil,
                             onComplete: { onComplete(i) }
                         )
                     }

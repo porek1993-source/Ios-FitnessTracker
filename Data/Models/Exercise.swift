@@ -95,11 +95,11 @@ enum Equipment: String, Codable, CaseIterable {
     case cable          = "cable"
     case machine        = "machine"
     case bodyweight     = "bodyweight"
-    case resistanceBand = "resistanceBand"
     case kettlebell     = "kettlebell"
+    case resistanceBand = "resistanceBand"
     case pullupBar      = "pullupBar"
-    case band           = "band"
-    case trx            = "trx"
+    case bench          = "bench"
+    case smith          = "smith"
 
     var emoji: String {
         switch self {
@@ -108,9 +108,11 @@ enum Equipment: String, Codable, CaseIterable {
         case .cable:          return "⚙️"
         case .machine:        return "🦾"
         case .bodyweight:     return "🤸"
-        case .resistanceBand, .band: return "🎗️"
         case .kettlebell:     return "🔔"
-        case .pullupBar, .trx: return "🧗"
+        case .resistanceBand: return "🎗️"
+        case .pullupBar:      return "🧗"
+        case .bench:          return "🪑"
+        case .smith:          return "🏗️"
         }
     }
 
@@ -121,9 +123,11 @@ enum Equipment: String, Codable, CaseIterable {
         case .cable:          return "Kladka"
         case .machine:        return "Stroj"
         case .bodyweight:     return "Vlastní váha"
-        case .resistanceBand, .band: return "Odporová guma"
         case .kettlebell:     return "Kettlebell"
-        case .pullupBar, .trx: return "Hrazda / TRX"
+        case .resistanceBand: return "Odporová guma"
+        case .pullupBar:      return "Hrazda"
+        case .bench:          return "Lavice"
+        case .smith:          return "Multipress"
         }
     }
 }
