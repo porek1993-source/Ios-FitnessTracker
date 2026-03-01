@@ -12,6 +12,7 @@ final class AITrainerModelsTests: XCTestCase {
             "exercises": [
                 {
                     "name": "Dřep",
+                    "nameEN": "Squat",
                     "slug": "squat",
                     "coachTip": "Kolena nepřesahují špičky",
                     "sets": 3,

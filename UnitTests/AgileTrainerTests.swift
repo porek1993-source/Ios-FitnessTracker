@@ -30,6 +30,7 @@ final class AIResponseParsingTests: XCTestCase {
                     "exercises": [
                         {
                             "name": "Bench Press",
+                            "nameEN": "Bench Press",
                             "slug": "bench-press",
                             "sets": 4,
                             "repsMin": 8,

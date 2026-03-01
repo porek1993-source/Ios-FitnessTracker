@@ -255,7 +255,7 @@ struct MainBlock: Codable {
 
 struct ResponseExercise: Codable {
     let name: String
-    let nameEN: String
+    let nameEN: String?
     let slug: String
     let sets: Int
     let repsMin: Int
