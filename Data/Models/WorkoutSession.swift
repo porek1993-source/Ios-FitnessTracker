@@ -43,7 +43,7 @@ final class WorkoutSession {
         self.id = UUID()
         self.startedAt = .now
         self.durationMinutes = 0
-        self.status = .inProgress
+        self.statusRaw = SessionStatus.inProgress.rawValue
         self.plan = plan
         self.plannedDay = plannedDay
         self.exercises = []

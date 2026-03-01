@@ -11,11 +11,11 @@ final class DataExportManager {
     func generateCSV(context: ModelContext) -> URL? {
         let completedVal = SessionStatus.completed.rawValue
         let descriptor = FetchDescriptor<WorkoutSession>(
-            predicate: #Predicate { $0.statusRaw == completedVal },
-            sortBy: [SortDescriptor(\.startedAt, order: .reverse)]
+            predicate: #Predicate { $0.statusRaw == completedVal }
         )
         
-        guard let sessions = try? context.fetch(descriptor) else { return nil }
+        guard let fetchedSessions = try? context.fetch(descriptor) else { return nil }
+        let sessions = fetchedSessions.sorted(by: { $0.startedAt > $1.startedAt })
         
         var csvString = "Datum,Cvik,TypSérie,Váha_kg,Opakování\n"
         
