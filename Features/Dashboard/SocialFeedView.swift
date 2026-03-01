@@ -27,13 +27,16 @@ class BuddyManager: ObservableObject {
     
     func giveKudos(to activityId: UUID) {
         if let index = feed.firstIndex(where: { $0.id == activityId }) {
-            if !feed[index].hasGivenKudos {
+            if feed[index].hasGivenKudos {
+                // Remove Kudos
+                feed[index].kudosCount -= 1
+                feed[index].hasGivenKudos = false
+                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+            } else {
+                // Add Kudos
                 feed[index].kudosCount += 1
                 feed[index].hasGivenKudos = true
                 UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-                
-                // Supabase Sync:
-                // Task { await supabase.from("kudos").insert(["activity_id": activityId, "user_id": myId]).execute() }
             }
         }
     }

@@ -72,7 +72,18 @@ final class DashboardViewModel: ObservableObject {
         hrv        = summary.hrv
         restingHR  = summary.restingHeartRate
 
-        let score = calculateReadiness(summary: summary)
+        // ✅ FIX: Dashboard původně počítal readiness vlastním algoritmem (jednoduchý součet),
+        // zatímco HealthBackgroundManager ukládal skóre přes ReadinessCalculator (váhové složky).
+        // Tato nekonzistence způsobovala, že Dashboard zobrazoval jiné skóre než to uložené v DB.
+        // Nyní oba používají ReadinessCalculator.compute() — jednoznačný výsledek.
+        let tempSnapshot = buildTempSnapshot(from: summary)
+        let score: Double
+        if let result = ReadinessCalculator.compute(snapshot: tempSnapshot) {
+            score = result.score
+        } else {
+            score = 65
+        }
+
         withAnimation(.spring(response: 0.8)) {
             readinessScore = score
         }
@@ -90,35 +101,18 @@ final class DashboardViewModel: ObservableObject {
         }
     }
 
-    private func calculateReadiness(summary: HKDailySummary) -> Double {
-        var score = 70.0
-
-        // Sleep contribution (max ±20)
-        if let sleep = summary.sleepDurationHours {
-            if sleep >= 8   { score += 15 }
-            else if sleep >= 7 { score += 8 }
-            else if sleep >= 6 { score += 0 }
-            else if sleep >= 5 { score -= 15 }
-            else               { score -= 25 }
-        }
-
-        // HRV contribution (max ±15)
-        if let hrv = summary.hrv {
-            if hrv > 70      { score += 12 }
-            else if hrv > 50 { score += 5 }
-            else if hrv > 30 { score -= 5 }
-            else             { score -= 12 }
-        }
-
-        // Resting HR contribution (max ±10)
-        if let rhr = summary.restingHeartRate {
-            if rhr < 55      { score += 8 }
-            else if rhr < 65 { score += 4 }
-            else if rhr > 75 { score -= 6 }
-            else if rhr > 85 { score -= 10 }
-        }
-
-        return max(10, min(99, score))
+    /// Vytvoří dočasný snapshot z HKDailySummary pro použití s ReadinessCalculator.
+    /// Snapshot není uložen do DB — slouží pouze pro výpočet skóre v reálném čase.
+    private func buildTempSnapshot(from summary: HKDailySummary) -> HealthMetricsSnapshot {
+        let snap = HealthMetricsSnapshot(date: .now)
+        snap.sleepDurationHours   = summary.sleepDurationHours
+        snap.sleepEfficiencyPct   = summary.sleepEfficiencyPct
+        snap.heartRateVariabilityMs = summary.hrv
+        snap.restingHeartRate     = summary.restingHeartRate
+        // Baseline není k dispozici při real-time výpočtu → ReadinessCalculator použije absolutní fallback
+        snap.hrvBaselineAvg       = nil
+        snap.restingHRBaseline    = nil
+        return snap
     }
 
     private func buildGreenMessage(summary: HKDailySummary) -> String {
@@ -175,17 +169,19 @@ final class DashboardViewModel: ObservableObject {
     private func loadWeekStats(profile: UserProfile) {
         guard let plan = profile.workoutPlans.first(where: { $0.isActive }) else { return }
 
-        let calendar = Calendar.current
-        let startOfWeek = calendar.dateInterval(of: .weekOfYear, for: .now)?.start ?? .now
-        let todayIndex = calendar.component(.weekday, from: .now)
-        let normalizedToday = todayIndex == 1 ? 6 : todayIndex - 2 // 0=Mon ... 6=Sun
+        // ✅ FIX: Calendar.mondayStart zajišťuje pondělní začátek týdne nezávisle na locale.
+        // Calendar.current na US zařízeních (locale en_US) má firstWeekday=1 (neděle),
+        // což způsobovalo špatné zařazení session do týdnů a posunuté indexy stavů dnů.
+        let startOfWeek = Calendar.mondayStart.dateInterval(of: .weekOfYear, for: .now)?.start ?? .now
+        // date.weekday = 1=Po..7=Ne → 0-based index do states[]: 0=Po..6=Ne
+        let normalizedToday = Date.now.weekday - 1
         
         var states: [DailyWorkoutState] = Array(repeating: .empty, count: 7)
 
         // 1. Plánované dny
         for i in 0..<7 {
-            // "Date.weekday extension vrací naši konvenci: 1=Pondělí … 7=Neděle"
-            let dayToFind = i + 1 
+            // date.weekday extension: 1=Pondělí … 7=Neděle; states[i] = i+1 den
+            let dayToFind = i + 1
             let isPlanned = plan.scheduledDays.contains(where: { $0.dayOfWeek == dayToFind && !$0.isRestDay })
             if isPlanned {
                 states[i] = (i < normalizedToday) ? .missed : (i == normalizedToday ? .todayPlanned : .planned)
@@ -200,8 +196,8 @@ final class DashboardViewModel: ObservableObject {
         }
         
         for session in completedThisWeekSessions {
-            let compDay = calendar.component(.weekday, from: session.startedAt)
-            let normCompDay = compDay == 1 ? 6 : compDay - 2
+            // date.weekday = 1=Po..7=Ne → 0-based index do states[]
+            let normCompDay = session.startedAt.weekday - 1
             if normCompDay >= 0 && normCompDay < 7 {
                 states[normCompDay] = .completed
             }

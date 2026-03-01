@@ -15,6 +15,7 @@ struct OnboardingView: View {
     @State private var weightKg: Double = 75.0
     @State private var heightCm: Double = 175.0
     @State private var selectedGoal: FitnessGoal = .hypertrophy
+    @State private var selectedFitnessLevel: FitnessLevel = .beginner
     @State private var primarySport: String = ""
     @State private var daysPerWeek: Double = 4.0
     
@@ -32,8 +33,11 @@ struct OnboardingView: View {
                 // Krok 3: Cíl
                 goalStep.tag(2)
                 
-                // Krok 4: Sport & Frekvence
-                lifestyleStep.tag(3)
+                // Krok 4: Úroveň zdatnosti
+                fitnessLevelStep.tag(3)
+                
+                // Krok 5: Sport & Frekvence
+                lifestyleStep.tag(4)
             }
             .tabViewStyle(.page(indexDisplayMode: .never))
             .animation(.easeInOut, value: currentStep)
@@ -44,7 +48,7 @@ struct OnboardingView: View {
                 
                 // Indikátor kroků
                 HStack(spacing: 8) {
-                    ForEach(0..<4) { i in
+                    ForEach(0..<5) { i in
                         Circle()
                             .fill(i == currentStep ? AppColors.primaryAccent : AppColors.borderActive)
                             .frame(width: i == currentStep ? 10 : 8, height: i == currentStep ? 10 : 8)
@@ -55,7 +59,7 @@ struct OnboardingView: View {
                 
                 VStack(spacing: 16) {
                     Button(action: nextStep) {
-                        Text(currentStep == 3 ? "Jdeme na to!" : "Pokračovat")
+                        Text(currentStep == 4 ? "Jdeme na to!" : "Pokračovat")
                             .font(.system(size: 18, weight: .bold))
                             .foregroundStyle(.white)
                             .frame(maxWidth: .infinity)
@@ -197,6 +201,52 @@ struct OnboardingView: View {
         }
     }
     
+    private var fitnessLevelStep: some View {
+        VStack(spacing: 24) {
+            Spacer()
+            Text("Tvoje zkušenosti")
+                .font(.system(size: 32, weight: .bold, design: .rounded))
+                .foregroundStyle(AppColors.textPrimary)
+
+            VStack(spacing: 12) {
+                ForEach(FitnessLevel.allCases, id: \.self) { level in
+                    Button {
+                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                        withAnimation { selectedFitnessLevel = level }
+                    } label: {
+                        HStack(spacing: 16) {
+                            Image(systemName: level.icon)
+                                .font(.system(size: 24))
+                                .foregroundStyle(selectedFitnessLevel == level ? .white : AppColors.textTertiary)
+                                .frame(width: 32)
+
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(level.displayName)
+                                    .font(.system(size: 16, weight: .bold))
+                                    .foregroundStyle(selectedFitnessLevel == level ? .white : AppColors.textSecondary)
+                                Text(level.description)
+                                    .font(.system(size: 12))
+                                    .foregroundStyle(AppColors.textTertiary)
+                                    .multilineTextAlignment(.leading)
+                            }
+                            Spacer()
+                            if selectedFitnessLevel == level {
+                                Image(systemName: "checkmark.circle.fill")
+                                    .foregroundStyle(AppColors.primaryAccent)
+                            }
+                        }
+                        .padding(16)
+                        .background(selectedFitnessLevel == level ? AppColors.primaryAccent.opacity(0.15) : AppColors.secondaryBg)
+                        .clipShape(RoundedRectangle(cornerRadius: 16))
+                        .overlay(RoundedRectangle(cornerRadius: 16).stroke(selectedFitnessLevel == level ? AppColors.primaryAccent : AppColors.border, lineWidth: 1))
+                    }
+                }
+            }
+            .padding(.horizontal, 24)
+            Spacer()
+        }
+    }
+
     private var lifestyleStep: some View {
         VStack(spacing: 32) {
             Spacer()
@@ -244,7 +294,7 @@ struct OnboardingView: View {
     
     private func nextStep() {
         UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-        if currentStep < 3 {
+        if currentStep < 4 {
             withAnimation { currentStep += 1 }
         } else {
             finishOnboarding()
@@ -258,11 +308,16 @@ struct OnboardingView: View {
             heightCm: heightCm,
             weightKg: weightKg,
             primaryGoal: selectedGoal,
+            fitnessLevel: selectedFitnessLevel,
             availableDaysPerWeek: Int(daysPerWeek)
         )
         newProfile.primarySport = primarySport.isEmpty ? nil : primarySport
         
         modelContext.insert(newProfile)
+        
+        // ✅ FIX: Generujeme tréninkový plán ihned po vytvoření profilu.
+        // Bez tohoto volání by dashboard byl prázdný (žádný aktivní plán).
+        WorkoutPlanGenerator.generate(for: newProfile, in: modelContext)
         
         do {
             try modelContext.save()

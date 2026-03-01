@@ -75,12 +75,11 @@ final class HeatmapViewModel: ObservableObject {
                 affectedAreas.append(FatigueEntry(areaSlug: area.slug, severity: severity, isJointPain: isJointPain))
             }
         }
-        // FatigueStore refaktoring na areaSlug namísto celého klonovaného objektu
-        // FatigueStore.save(affectedAreas) - Tohle zkontroluji v dalším kroku
+        FatigueStore.save(affectedAreas)
     }
 
     func removeFatigue(area: MuscleArea) {
         affectedAreas.removeAll { $0.areaSlug == area.slug }
-        // FatigueStore.save(affectedAreas)
+        FatigueStore.save(affectedAreas)
     }
 }

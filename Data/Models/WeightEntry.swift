@@ -53,10 +53,12 @@ final class WeightEntry {
     }
 }
 
-// MARK: - Convenience init for WorkoutViewModel
+// MARK: - Factory method for WorkoutViewModel
+// Poznámka: @Model třídy nepodporují convenience init (SwiftData generuje vlastní inits).
+// Místo toho použijeme static factory metodu.
 
 extension WeightEntry {
-    convenience init(
+    static func create(
         exercise: Exercise?,
         sessionId: UUID,
         weightKg: Double,
@@ -65,8 +67,8 @@ extension WeightEntry {
         wasSuccessful: Bool,
         setNumber: Int = 0,
         type: SetType = .normal
-    ) {
-        self.init(
+    ) -> WeightEntry {
+        WeightEntry(
             weightKg: weightKg,
             reps: reps,
             rpe: rpe.map { Double($0) },

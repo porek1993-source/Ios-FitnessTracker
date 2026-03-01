@@ -524,7 +524,7 @@ final class WorkoutViewModel: ObservableObject {
                 // Bodyweight cviky mohou mít weightKg = nil nebo 0
                 let weight = set.weightKg
                 guard let reps = set.reps, reps > 0 else { continue }
-                let entry = WeightEntry(
+                let entry = WeightEntry.create(
                     exercise: exercise,
                     sessionId: session.id,
                     weightKg: weight,
@@ -760,8 +760,9 @@ struct SessionExerciseState: Identifiable {
         self.sets = (0..<max(1, planned.targetSets)).map { _ in
             SetState(
                 type: .normal,
-                targetRepsMin: planned.targetRepsMax, // Using max as the primary target
-                weightKg: planned.exercise?.lastUsedWeight ?? 0, // Default to 0 if nil
+                targetRepsMin: planned.targetRepsMin,
+                targetRepsMax: planned.targetRepsMax,
+                weightKg: planned.exercise?.lastUsedWeight ?? 0,
                 previousWeightKg: planned.exercise?.lastUsedWeight
             )
         }
@@ -782,8 +783,9 @@ struct SessionExerciseState: Identifiable {
         self.sets = (0..<response.sets).map { _ in
             SetState(
                 type: .normal,
-                targetRepsMin: response.repsMax, // Using max as the primary target
-                weightKg: response.weightKg ?? 0, // Default to 0 if nil
+                targetRepsMin: response.repsMin,
+                targetRepsMax: response.repsMax,
+                weightKg: response.weightKg ?? 0,
                 previousWeightKg: response.weightKg
             )
         }

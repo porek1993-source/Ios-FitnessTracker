@@ -140,6 +140,22 @@ enum FitnessLevel: String, Codable, CaseIterable {
         case .advanced:     return "Expert"
         }
     }
+
+    var icon: String {
+        switch self {
+        case .beginner:     return "figure.walk"
+        case .intermediate: return "figure.strengthtraining.traditional"
+        case .advanced:     return "flame.fill"
+        }
+    }
+
+    var description: String {
+        switch self {
+        case .beginner:     return "Méně než 1 rok pravidelného cvičení"
+        case .intermediate: return "1–3 roky, znám základní techniky"
+        case .advanced:     return "Více než 3 roky, trénuji systematicky"
+        }
+    }
 }
 
 enum Gender: String, Codable, CaseIterable {

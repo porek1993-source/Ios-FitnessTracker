@@ -247,6 +247,18 @@ final class ActiveSessionViewModel: ObservableObject {
                     UINotificationFeedbackGenerator().notificationOccurred(.success)
                 }
                 
+                // ✅ FIX: Odesílání push notifikací za PR (bylo chybějící oproti WorkoutViewModel)
+                if !prEvents.isEmpty {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                        for pr in prEvents {
+                            NotificationService.shared.sendPersonalRecordNotification(
+                                exerciseName: pr.exerciseName,
+                                weight: pr.newValue
+                            )
+                        }
+                    }
+                }
+                
                 self.saveSessionToSwiftData(session: sessionCopy, context: modelContext, exercises: exercisesCopy)
                 self.hkWriteResult = hkResult
                 self.isFinishing   = false
@@ -516,7 +528,7 @@ final class ActiveSessionViewModel: ObservableObject {
                 let weight = set.weightKg
                 guard let reps = set.reps, reps > 0 else { continue }
                 let isSuccess = (set.rpe ?? 5) <= 9 // RPE 10 znamená selhání
-                let entry = WeightEntry(
+                let entry = WeightEntry.create(
                     exercise: exerciseDB,
                     sessionId: session.id,
                     weightKg: weight,
