@@ -203,6 +203,7 @@ struct RollingWeekView: View {
     @State private var selectedDayForEdit: WeekDay?
     @State private var selectedWorkoutDay: WeekDay?    // Den pro zobrazení cviků
     @State private var showWorkout = false
+    @State private var showAIWeekExplainer = false      // ✅ Nové: expandovatelné vysvětlení
     @Query private var profiles: [UserProfile]
     @Environment(\.modelContext) private var modelContext
 
@@ -222,32 +223,46 @@ struct RollingWeekView: View {
                 
                 Spacer()
 
-                // ✅ NOVÉ TLAČÍTKO: Batch AI tréninky pro celý týden
+                // ✅ AI TÝDEN: generátor + expandovatelné vysvětlení
                 if let plan = activePlan, !vm.isRecalculating {
-                    Button {
-                        if let ai = env.aiTrainerService, let p = profile {
-                            Task {
-                                HapticManager.shared.playSuccess()
-                                await ai.generateFullWeek(profile: p, plan: plan)
+                    HStack(spacing: 8) {
+                        // Info tlačítko — rozbalí vysvětlení
+                        Button {
+                            withAnimation(.spring(response: 0.35, dampingFraction: 0.75)) {
+                                showAIWeekExplainer.toggle()
                             }
+                        } label: {
+                            Image(systemName: showAIWeekExplainer ? "info.circle.fill" : "info.circle")
+                                .font(.system(size: 14))
+                                .foregroundStyle(.blue.opacity(0.7))
                         }
-                    } label: {
-                        HStack(spacing: 5) {
-                            if env.aiTrainerService?.isLoading == true {
-                                ProgressView().tint(.blue).scaleEffect(0.6)
-                            } else {
-                                Image(systemName: "wand.and.stars")
-                                    .font(.system(size: 10))
+
+                        // Generátor
+                        Button {
+                            if let ai = env.aiTrainerService, let p = profile {
+                                Task {
+                                    HapticManager.shared.playSuccess()
+                                    await ai.generateFullWeek(profile: p, plan: plan)
+                                }
                             }
-                            Text("AI TÝDEN")
-                                .font(.system(size: 10, weight: .black))
+                        } label: {
+                            HStack(spacing: 5) {
+                                if env.aiTrainerService?.isLoading == true {
+                                    ProgressView().tint(.blue).scaleEffect(0.6)
+                                } else {
+                                    Image(systemName: "wand.and.stars")
+                                        .font(.system(size: 10))
+                                }
+                                Text("AI TÝDEN")
+                                    .font(.system(size: 10, weight: .black))
+                            }
+                            .foregroundStyle(.blue)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 6)
+                            .background(Capsule().fill(Color.blue.opacity(0.12)))
                         }
-                        .foregroundStyle(.blue)
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 6)
-                        .background(Capsule().fill(Color.blue.opacity(0.12)))
+                        .disabled(env.aiTrainerService?.isLoading == true)
                     }
-                    .disabled(env.aiTrainerService?.isLoading == true)
                 }
                 
                 if vm.isRecalculating {
@@ -261,7 +276,14 @@ struct RollingWeekView: View {
                 }
             }
 
-            // 7denní scroll
+            // ✅ Expandovatelné vysvětlení AI TÝDEN
+            if showAIWeekExplainer {
+                AIWeekExplainerCard(plan: activePlan)
+                    .transition(.asymmetric(
+                        insertion: .move(edge: .top).combined(with: .opacity),
+                        removal: .opacity
+                    ))
+            }
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 10) {
                     ForEach(vm.days) { day in
@@ -350,6 +372,73 @@ struct RollingWeekView: View {
                     }
                 }
             }
+        }
+    }
+}
+
+// MARK: - AI Week Explainer Card
+
+private struct AIWeekExplainerCard: View {
+    let plan: WorkoutPlan?
+
+    private var workoutDaysCount: Int {
+        plan?.scheduledDays.filter { !$0.isRestDay }.count ?? 0
+    }
+    private var planTitle: String {
+        plan?.title ?? "Tréninkový plán"
+    }
+    private var splitType: String {
+        guard let plan else { return "Push/Pull/Legs" }
+        let labels = plan.scheduledDays.compactMap { $0.isRestDay ? nil : $0.label }
+        return labels.isEmpty ? "Vlastní split" : labels.prefix(3).joined(separator: " · ")
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 8) {
+                Image(systemName: "sparkles")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(.blue)
+                Text("Jak AI TÝDEN funguje")
+                    .font(.system(size: 13, weight: .bold))
+                    .foregroundStyle(.white)
+            }
+
+            VStack(alignment: .leading, spacing: 8) {
+                ExplainerRow(icon: "brain.head.profile", text: "AI analyzuje tvůj profil, historii vah a aktuální připravenost.")
+                ExplainerRow(icon: "calendar.badge.checkmark", text: "Vygeneruje cviky pro všech \(workoutDaysCount) tréninkových dní v plánu \"\(planTitle)\".")
+                ExplainerRow(icon: "arrow.triangle.2.circlepath", text: "Každý den dostane jiný split: \(splitType).")
+                ExplainerRow(icon: "scalemass", text: "Váhy jsou navrhnuty na základě tvé poslední výkonnosti a progressive overloadu.")
+                ExplainerRow(icon: "wifi.slash", text: "Pokud AI není dostupná, použije se offline záloha s ověřenými cviky.")
+            }
+
+            Text("Tlačítko generuje pouze dny, které ještě nemají naplánované cviky.")
+                .font(.system(size: 11))
+                .foregroundStyle(.white.opacity(0.35))
+                .padding(.top, 2)
+        }
+        .padding(14)
+        .background(
+            RoundedRectangle(cornerRadius: 14)
+                .fill(Color.blue.opacity(0.08))
+                .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.blue.opacity(0.18), lineWidth: 1))
+        )
+    }
+}
+
+private struct ExplainerRow: View {
+    let icon: String
+    let text: String
+    var body: some View {
+        HStack(alignment: .top, spacing: 10) {
+            Image(systemName: icon)
+                .font(.system(size: 12))
+                .foregroundStyle(.blue.opacity(0.7))
+                .frame(width: 16)
+            Text(text)
+                .font(.system(size: 12))
+                .foregroundStyle(.white.opacity(0.65))
+                .fixedSize(horizontal: false, vertical: true)
         }
     }
 }

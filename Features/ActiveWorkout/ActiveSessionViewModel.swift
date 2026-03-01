@@ -135,7 +135,7 @@ final class ActiveSessionViewModel: ObservableObject {
 
     // MARK: - Video URL Enrichment (Bug #1 Fix)
 
-    /// Pro cviky, kde videoUrl chybí (sync nestihl spárovat), načte data přímo ze Supabase.
+    /// ✅ FIX: Hledání primárně přes nameEN (anglický název) — MuscleWiki DB je v angličtině.
     private func enrichWithVideoURLs() async {
         guard exercises.contains(where: { $0.videoUrl == nil }) else { return }
         do {
@@ -145,29 +145,45 @@ final class ActiveSessionViewModel: ObservableObject {
 
             for i in exercises.indices {
                 guard exercises[i].videoUrl == nil else { continue }
-                let searchName = exercises[i].exercise?.nameEN ?? exercises[i].name
-                let searchLower = searchName.lowercased()
-                    .folding(options: .diacriticInsensitive, locale: .current)
-                if let match = wikiAll.first(where: { wiki in
-                    let wikiLower = wiki.name.lowercased()
-                        .folding(options: .diacriticInsensitive, locale: .current)
-                    return wikiLower == searchLower
-                        || wikiLower.contains(searchLower)
-                        || searchLower.contains(wikiLower)
-                }) {
+
+                let nameEN  = exercises[i].exercise?.nameEN ?? ""
+                let slug    = exercises[i].exercise?.slug ?? exercises[i].slug
+                let nameCZ  = exercises[i].name
+
+                func clean(_ s: String) -> String {
+                    s.lowercased().folding(options: .diacriticInsensitive, locale: .current)
+                }
+                let enClean   = clean(nameEN).replacingOccurrences(of: " ", with: "")
+                let slugClean = clean(slug).replacingOccurrences(of: "-", with: "")
+                let czClean   = clean(nameCZ).replacingOccurrences(of: " ", with: "")
+
+                let match = wikiAll.first(where: { wiki in
+                    let wikiClean = clean(wiki.name).replacingOccurrences(of: " ", with: "")
+                    if !enClean.isEmpty && (wikiClean == enClean || wikiClean == slugClean) { return true }
+                    if wikiClean == slugClean { return true }
+                    if enClean.count >= 4 && (wikiClean.contains(enClean) || enClean.contains(wikiClean)) { return true }
+                    if slugClean.count >= 4 && (wikiClean.contains(slugClean) || slugClean.contains(wikiClean)) { return true }
+                    if nameEN.isEmpty && czClean.count >= 5 && wikiClean.count >= 5 &&
+                       (wikiClean.contains(czClean) || czClean.contains(wikiClean)) { return true }
+                    return false
+                })
+
+                if let match {
                     exercises[i].videoUrl = match.videoUrl
-                    // Uložit zpět do SwiftData pro budoucí spuštění
+                    AppLogger.info("✅ [ActiveSession.enrichVideo] \(exercises[i].name) (EN: \(nameEN)) → \(match.name)")
                     if let ex = exercises[i].exercise {
-                        let slug = ex.slug
+                        let exSlug = ex.slug
                         if let localEx = try? bgContext.fetch(
-                            FetchDescriptor<Exercise>(predicate: #Predicate { $0.slug == slug })
-                        ).first {
+                            FetchDescriptor<Exercise>(predicate: #Predicate { $0.slug == exSlug })
+                        ).first, localEx.videoURL != match.videoUrl {
                             localEx.videoURL = match.videoUrl
                             try? bgContext.save()
                         }
                     }
+                } else {
+                    AppLogger.error("❌ [ActiveSession.enrichVideo] Nenalezeno: \(exercises[i].name) (EN:\(nameEN), slug:\(slug))")
                 }
-                // Doplnit coachTip pokud chybí
+
                 if exercises[i].coachTip == nil,
                    let instructions = exercises[i].exercise?.instructions,
                    !instructions.isEmpty {

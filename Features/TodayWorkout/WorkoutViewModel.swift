@@ -193,10 +193,9 @@ final class WorkoutViewModel: ObservableObject {
     // MARK: - Video URL Enrichment (Bug #1 Fix)
 
     /// Pro cviky, kde videoUrl nebo coachTip chybí (sync nestihl spárovat), načte data přímo ze Supabase.
+    /// ✅ FIX: Hledání primárně přes nameEN (anglický název) — MuscleWiki databáze je v angličtině.
     private func enrichWithVideoURLs() async {
-        let needsEnrich = exercises.contains(where: { $0.videoUrl == nil })
-        guard needsEnrich else { return }
-
+        guard exercises.contains(where: { $0.videoUrl == nil }) else { return }
         do {
             let repo = SupabaseExerciseRepository()
             let wikiAll = try await repo.fetchMuscleWikiAll()
@@ -205,31 +204,51 @@ final class WorkoutViewModel: ObservableObject {
             for i in exercises.indices {
                 guard exercises[i].videoUrl == nil else { continue }
 
-                let searchName = exercises[i].exercise?.nameEN
-                    ?? exercises[i].name
+                // ✅ Hledání: 1) nameEN, 2) slug, 3) český název jako poslední záchrana
+                let nameEN  = exercises[i].exercise?.nameEN ?? ""
+                let slug    = exercises[i].exercise?.slug ?? exercises[i].slug
+                let nameCZ  = exercises[i].name
 
-                // Hledáme shodu podle anglického jména nebo části jména
-                let searchLower = searchName.lowercased()
-                    .folding(options: .diacriticInsensitive, locale: .current)
-                if let match = wikiAll.first(where: { wiki in
-                    let wikiLower = wiki.name.lowercased()
-                        .folding(options: .diacriticInsensitive, locale: .current)
-                    return wikiLower == searchLower
-                        || wikiLower.contains(searchLower)
-                        || searchLower.contains(wikiLower)
-                }) {
+                func clean(_ s: String) -> String {
+                    s.lowercased().folding(options: .diacriticInsensitive, locale: .current)
+                }
+
+                let enClean   = clean(nameEN).replacingOccurrences(of: " ", with: "")
+                let slugClean = clean(slug).replacingOccurrences(of: "-", with: "")
+                let czClean   = clean(nameCZ).replacingOccurrences(of: " ", with: "")
+
+                let match = wikiAll.first(where: { wiki in
+                    let wikiClean = clean(wiki.name).replacingOccurrences(of: " ", with: "")
+                    // 1. Přesná shoda EN jménem nebo slugem
+                    if !enClean.isEmpty && (wikiClean == enClean || wikiClean == slugClean) { return true }
+                    // 2. Slug match
+                    if wikiClean == slugClean { return true }
+                    // 3. Obsahová shoda EN (min. 4 znaky pro prevenci false matches)
+                    if enClean.count >= 4 && (wikiClean.contains(enClean) || enClean.contains(wikiClean)) { return true }
+                    // 4. Slug obsahová shoda
+                    if slugClean.count >= 4 && (wikiClean.contains(slugClean) || slugClean.contains(wikiClean)) { return true }
+                    // 5. Český název — jen pokud nemáme EN a wiki je aspoň 5 znaků
+                    if nameEN.isEmpty && czClean.count >= 5 && wikiClean.count >= 5 &&
+                       (wikiClean.contains(czClean) || czClean.contains(wikiClean)) { return true }
+                    return false
+                })
+
+                if let match {
                     exercises[i].videoUrl = match.videoUrl
+                    AppLogger.info("✅ [enrichVideo] \(exercises[i].name) (EN: \(nameEN)) → \(match.name)")
 
-                    // Uložit zpět do SwiftData Exercise pro budoucí spuštění
+                    // Uložit zpět do SwiftData Exercise pro budoucí offline spuštění
                     if let ex = exercises[i].exercise {
-                        let slug = ex.slug
+                        let exSlug = ex.slug
                         if let localEx = try? bgContext.fetch(
-                            FetchDescriptor<Exercise>(predicate: #Predicate { $0.slug == slug })
-                        ).first {
+                            FetchDescriptor<Exercise>(predicate: #Predicate { $0.slug == exSlug })
+                        ).first, localEx.videoURL != match.videoUrl {
                             localEx.videoURL = match.videoUrl
                             try? bgContext.save()
                         }
                     }
+                } else {
+                    AppLogger.error("❌ [enrichVideo] Nenalezeno: \(exercises[i].name) (EN:\(nameEN), slug:\(slug))")
                 }
 
                 // Doplnit coachTip pokud chybí — coachTip je nyní var

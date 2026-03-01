@@ -1,6 +1,6 @@
+// MuscleMapView.swift
 import SwiftUI
 
-/// Prémiová svalová mapa využívající SVG modely (DetailedBodyFigureView)
 struct MuscleMapView: View {
     @ObservedObject var vm: HeatmapViewModel
     let onTap: (MuscleArea) -> Void
@@ -14,31 +14,29 @@ struct MuscleMapView: View {
             }
             .pickerStyle(.segmented)
             .padding(.horizontal, 60)
+            .animation(.easeInOut(duration: 0.2), value: showingFront)
 
-            ZStack {
-                // ✅ NOVÁ PRÉMIOVÁ ANATOMICKÁ SILUETA (SVG) s přímým tapováním
-                DetailedBodyFigureView(
-                    muscleStates: vm.muscleGroupIntensity,
-                    isFront: showingFront,
-                    onTapMuscle: { tappedGroup in
-                        // Cílem je najít odpovídající MuscleArea pro tento MuscleGroup
-                        let areas = showingFront ? MuscleArea.frontAreas : MuscleArea.backAreas
-                        // Mapujeme supabase klíč MuscleGroup zpět na MuscleArea.slug
-                        if let matchedArea = areas.first(where: { $0.slug == tappedGroup.rawValue }) {
-                            HapticManager.shared.playSelection()
-                            onTap(matchedArea)
-                        } else {
-                            // Některé Svaly jako 'abs'/'abdominals' mohou mít trochu jiné slugy v UI a v DB
-                            // Zkusíme fuzzy match
-                            if let fallback = areas.first(where: { tappedGroup.rawValue.contains($0.slug) || $0.slug.contains(tappedGroup.rawValue) || $0.id == tappedGroup.rawValue }) {
-                                HapticManager.shared.playSelection()
-                                onTap(fallback)
-                            }
-                        }
+            // ✅ Pevný aspect ratio — figurína vždy vycentrovaná a správně proporcionální
+            DetailedBodyFigureView(
+                muscleStates: vm.muscleGroupIntensity,
+                isFront: showingFront,
+                highlightColor: AppColors.primaryAccent,
+                onTapMuscle: { tappedGroup in
+                    let areas = showingFront ? MuscleArea.frontAreas : MuscleArea.backAreas
+                    // Hledáme MuscleArea podle slug (přesná shoda nebo obsahová)
+                    if let matched = areas.first(where: { $0.slug == tappedGroup.rawValue })
+                        ?? areas.first(where: { tappedGroup.rawValue.contains($0.slug) || $0.slug.contains(tappedGroup.rawValue) }) {
+                        HapticManager.shared.playSelection()
+                        onTap(matched)
                     }
-                )
-                .frame(maxWidth: .infinity, maxHeight: 420)
-            }
+                }
+            )
+            .frame(maxWidth: 260)
+            .aspectRatio(0.52, contentMode: .fit) // proporce těla: šířka:výška ≈ 1:1.9
+            .frame(maxWidth: .infinity)            // vystředit horizontálně
+            .transition(.opacity.combined(with: .scale(scale: 0.97)))
+            .animation(.easeInOut(duration: 0.25), value: showingFront)
+            .id(showingFront) // force redraw při přepnutí
         }
     }
 }

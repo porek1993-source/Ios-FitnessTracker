@@ -1,315 +1,145 @@
 // DetailedBodyFigureView.swift
-// Nová prémiová anatomická mapa založená na SVG modelech.
+// ✅ REWRITE v3: Figurína kreslena přes MuscleArea souřadnice — jeden zdroj pravdy, vždy vycentrovaná.
 
 import SwiftUI
 
+// MARK: - BodySilhouette (tělní kontura jako pozadí)
+
+private struct BodySilhouette: View {
+    let size: CGSize
+    private let fill = Color(white: 0.16)
+    private let stroke = Color.white.opacity(0.12)
+
+    var body: some View {
+        let w = size.width
+        let h = size.height
+        Canvas { ctx, _ in
+            // Hlava
+            let head = Path(ellipseIn: CGRect(x: w*0.38, y: h*0.01, width: w*0.24, height: h*0.075))
+            ctx.fill(head, with: .color(fill))
+            ctx.stroke(head, with: .color(stroke), lineWidth: 1)
+            // Krk
+            let neck = Path { p in
+                p.move(to:    CGPoint(x: w*0.44, y: h*0.082))
+                p.addLine(to: CGPoint(x: w*0.56, y: h*0.082))
+                p.addLine(to: CGPoint(x: w*0.57, y: h*0.12))
+                p.addLine(to: CGPoint(x: w*0.43, y: h*0.12))
+                p.closeSubpath()
+            }
+            ctx.fill(neck, with: .color(fill))
+            // Trup
+            let torso = Path(roundedRect: CGRect(x: w*0.30, y: h*0.12, width: w*0.40, height: h*0.33), cornerRadius: 8)
+            ctx.fill(torso, with: .color(fill))
+            ctx.stroke(torso, with: .color(stroke), lineWidth: 1)
+            // Pas
+            let waist = Path(roundedRect: CGRect(x: w*0.33, y: h*0.44, width: w*0.34, height: h*0.05), cornerRadius: 4)
+            ctx.fill(waist, with: .color(fill))
+            // Boky
+            let hips = Path(roundedRect: CGRect(x: w*0.27, y: h*0.47, width: w*0.46, height: h*0.08), cornerRadius: 6)
+            ctx.fill(hips, with: .color(fill))
+            ctx.stroke(hips, with: .color(stroke), lineWidth: 1)
+            // Stehna L/P
+            let lThigh = Path(roundedRect: CGRect(x: w*0.28, y: h*0.54, width: w*0.18, height: h*0.22), cornerRadius: 10)
+            let rThigh = Path(roundedRect: CGRect(x: w*0.54, y: h*0.54, width: w*0.18, height: h*0.22), cornerRadius: 10)
+            ctx.fill(lThigh, with: .color(fill)); ctx.stroke(lThigh, with: .color(stroke), lineWidth: 1)
+            ctx.fill(rThigh, with: .color(fill)); ctx.stroke(rThigh, with: .color(stroke), lineWidth: 1)
+            // Holeně L/P
+            let lShin = Path(roundedRect: CGRect(x: w*0.30, y: h*0.77, width: w*0.14, height: h*0.19), cornerRadius: 8)
+            let rShin = Path(roundedRect: CGRect(x: w*0.56, y: h*0.77, width: w*0.14, height: h*0.19), cornerRadius: 8)
+            ctx.fill(lShin, with: .color(fill)); ctx.stroke(lShin, with: .color(stroke), lineWidth: 1)
+            ctx.fill(rShin, with: .color(fill)); ctx.stroke(rShin, with: .color(stroke), lineWidth: 1)
+            // Paže L/P (horní)
+            let lArm = Path(roundedRect: CGRect(x: w*0.14, y: h*0.13, width: w*0.13, height: h*0.28), cornerRadius: 8)
+            let rArm = Path(roundedRect: CGRect(x: w*0.73, y: h*0.13, width: w*0.13, height: h*0.28), cornerRadius: 8)
+            ctx.fill(lArm, with: .color(fill)); ctx.stroke(lArm, with: .color(stroke), lineWidth: 1)
+            ctx.fill(rArm, with: .color(fill)); ctx.stroke(rArm, with: .color(stroke), lineWidth: 1)
+            // Předloktí L/P
+            let lFA = Path(roundedRect: CGRect(x: w*0.15, y: h*0.41, width: w*0.10, height: h*0.18), cornerRadius: 6)
+            let rFA = Path(roundedRect: CGRect(x: w*0.75, y: h*0.41, width: w*0.10, height: h*0.18), cornerRadius: 6)
+            ctx.fill(lFA, with: .color(fill)); ctx.stroke(lFA, with: .color(stroke), lineWidth: 1)
+            ctx.fill(rFA, with: .color(fill)); ctx.stroke(rFA, with: .color(stroke), lineWidth: 1)
+        }
+        .frame(width: size.width, height: size.height)
+    }
+}
+
+// MARK: - DetailedBodyFigureView
+
 struct DetailedBodyFigureView: View {
-    let muscleStates: [MuscleGroup: Double] // 0.0 až 1.0 (intenzita barvy)
+    let muscleStates: [MuscleGroup: Double]
     let isFront: Bool
     var highlightColor: Color = AppColors.primaryAccent
     var onTapMuscle: ((MuscleGroup) -> Void)? = nil
-    
-    // Základní barvy
-    private let baseFill = Color(white: 0.25)
-    
+
+    private var areas: [MuscleArea] { isFront ? MuscleArea.frontAreas : MuscleArea.backAreas }
+    private let baseColor = Color(white: 0.28)
+    private let strokeColor = Color.white.opacity(0.32)
+
+    // Map MuscleArea slug → MuscleGroup
+    private let slugToGroup: [String: MuscleGroup] = {
+        var d: [String: MuscleGroup] = [:]
+        for g in MuscleGroup.allCases { d[g.rawValue] = g }
+        return d
+    }()
+
     var body: some View {
         GeometryReader { geo in
-            let svgWidth: CGFloat = 400
-            let svgHeight: CGFloat = 850
-            
-            // Proporcionální škálování podle dostupné velikosti
-            let scaleX = geo.size.width / svgWidth
-            let scaleY = geo.size.height / svgHeight
-            let finalScale = min(scaleX, scaleY)
-            
-            let drawWidth = svgWidth * finalScale
-            let drawHeight = svgHeight * finalScale
-            
-            // Vystředění obsahu v dostupné šířce (nahoře zarovnané)
-            let offsetX = (geo.size.width - drawWidth) / 2
-            let offsetY = (geo.size.height - drawHeight) / 2
-            
-            if isFront {
-                ZStack(alignment: .top) {
-                    // Iterujeme přes definované části těla z AnatomySVGPath
-                    ForEach(0..<AnatomySVGPath.allFrontParts.count, id: \.self) { index in
-                        let part = AnatomySVGPath.allFrontParts[index]
-                        
-                        SVGShape(path: part.path, viewBox: part.viewBox)
-                            .fill(getColor(for: part.muscleGroups))
-                            .overlay(
-                                SVGShape(path: part.path, viewBox: part.viewBox)
-                                    .stroke(Color.white.opacity(0.35), lineWidth: 1.2)
-                            )
-                            .frame(width: part.size.width, height: part.size.height)
-                            // Offset pro absolutní posun vůči středu v neškálovaném kontextu (X) a vršku (Y)
-                            .offset(x: part.offset.x + (part.size.width / 2), y: part.offset.y)
-                            // Přidání interakce přímo na SVG křivku (contentShape(svg) zajišťuje, že tap se trefí pouze na vybarvené pixely)
-                            .contentShape(SVGShape(path: part.path, viewBox: part.viewBox))
-                            .onTapGesture {
-                                if let primaryGroup = part.muscleGroups.first {
-                                    onTapMuscle?(primaryGroup)
-                                }
-                            }
-                    }
-                }
-                .frame(width: svgWidth, height: svgHeight)
-                // Škálování podle okna z levého horního rohu před posunem
-                .scaleEffect(finalScale, anchor: .top)
-                .offset(x: offsetX, y: offsetY)
-                
-            } else {
-                // Záloha pro zadní stranu dokud nemáme SVG
-                ZStack(alignment: .top) {
-                    RoundedRectangle(cornerRadius: 30)
-                        .fill(baseFill)
-                        .frame(width: 150, height: 400)
+            let size = geo.size
+            ZStack {
+                // 1. Kontura těla jako pozadí
+                BodySilhouette(size: size)
+
+                // 2. Zvýrazněné svalové oblasti přes MuscleArea souřadnice
+                ForEach(areas) { area in
+                    let rect = area.relativeRect(in: size)
+                    let group = slugToGroup[area.slug]
+                    let intensity = group.flatMap { muscleStates[$0] } ?? 0
+
+                    RoundedRectangle(cornerRadius: area.cornerRadius)
+                        .fill(intensity > 0
+                              ? highlightColor.opacity(0.30 + intensity * 0.60)
+                              : baseColor.opacity(0.6))
                         .overlay(
-                            Text("Záda\n(Připravujeme)")
-                                .multilineTextAlignment(.center)
-                                .foregroundStyle(.white.opacity(0.3))
-                                .font(.caption)
+                            RoundedRectangle(cornerRadius: area.cornerRadius)
+                                .stroke(intensity > 0
+                                        ? highlightColor.opacity(0.5 + intensity * 0.4)
+                                        : strokeColor,
+                                        lineWidth: intensity > 0 ? 1.5 : 0.8)
                         )
+                        .frame(width: rect.width, height: rect.height)
+                        .position(x: rect.midX, y: rect.midY)
+                        .onTapGesture {
+                            guard let g = group else { return }
+                            HapticManager.shared.playSelection()
+                            onTapMuscle?(g)
+                        }
+                        // Pulzující animace pro aktivní svaly
+                        .scaleEffect(intensity > 0.7 ? 1.03 : 1.0)
+                        .animation(.easeInOut(duration: 1.2).repeatForever(autoreverses: true).delay(Double.random(in: 0...0.5)), value: intensity)
                 }
-                .frame(width: svgWidth, height: svgHeight)
-                .scaleEffect(finalScale, anchor: .top)
-                .offset(x: offsetX, y: offsetY)
             }
         }
     }
-    
-    /// Získá nejvyšší intenzitu barvy pro pole svalových skupin.
-    private func getColor(for groups: [MuscleGroup]) -> Color {
-        let maxIntensity = groups.map { muscleStates[$0] ?? 0.0 }.max() ?? 0.0
-        if maxIntensity > 0 {
-            return highlightColor.opacity(0.4 + (maxIntensity * 0.6))
-        }
-        return baseFill
-    }
 }
 
-// MARK: - SVG Shape Component
+// MARK: - Preview
+#Preview {
+    ZStack {
+        Color.black.ignoresSafeArea()
+        HStack(spacing: 20) {
+            DetailedBodyFigureView(
+                muscleStates: [.chest: 0.9, .biceps: 0.6, .abdominals: 0.4, .quads: 0.8],
+                isFront: true,
+                highlightColor: .blue
+            )
+            .frame(width: 160, height: 380)
 
-struct SVGShape: Shape {
-    let path: String
-    let viewBox: CGRect
-    
-    func path(in rect: CGRect) -> Path {
-        let svgPath = Path(fromSVG: path)
-        
-        // Škálování z viewBox souřadnic na cílový rect
-        let scaleX = rect.width / viewBox.width
-        let scaleY = rect.height / viewBox.height
-        let scale = min(scaleX, scaleY)
-        
-        return svgPath
-            .applying(CGAffineTransform(scaleX: scale, y: scale))
-    }
-}
-
-// MARK: - Simple Path Parser (SVG subset)
-// SwiftUI Path nemá nativní parse ze stringu v iOS < 17 (v Preview/SwiftData),
-// zde je minimalistický parser pro základní Path data.
-
-extension Path {
-    init(fromSVG pathString: String) {
-        // Implementace pomocí CoreGraphics CGPath
-        self.init(UIBezierPath(svgPath: pathString).cgPath)
-    }
-}
-
-extension UIBezierPath {
-    convenience init(svgPath: String) {
-        self.init()
-        let commandChars = CharacterSet(charactersIn: "MLHVZCQSamlhvzcqs")
-        
-        // 1. Přidat mezery před příkazy a před mínusy, abychom usnadnili split
-        var formattedPath = svgPath
-            .replacingOccurrences(of: "-", with: " -")
-            .replacingOccurrences(of: ",", with: " ")
-        
-        // Přidat mezery před znaky příkazů
-        for char in "MLHVZCQSamlhvzcqs" {
-            formattedPath = formattedPath.replacingOccurrences(of: String(char), with: " \(char) ")
-        }
-        
-        // 2. Tokenizovat string (odstranit prázdné stringy)
-        let tokens = formattedPath.components(separatedBy: .whitespacesAndNewlines).filter { !$0.isEmpty }
-        
-        var currentCmd = ""
-        var cmdCoords: [Double] = []
-        var commands: [(String, [Double])] = []
-        
-        for token in tokens {
-            if token.count == 1, token.rangeOfCharacter(from: commandChars) != nil {
-                // Nový příkaz
-                if !currentCmd.isEmpty {
-                    commands.append((currentCmd, cmdCoords))
-                }
-                currentCmd = token
-                cmdCoords = []
-            } else if let val = Double(token) {
-                // Není to striktně nový příkaz, ale číslo k aktuálnímu
-                cmdCoords.append(val)
-            }
-            // (Pokud chybí Command char ale jdou jen čísla, ignorujeme implicitní L/C logiku pro zjednodušení. 
-            // Plný SVG parser by pokračoval v aktuálním příkazu).
-        }
-        if !currentCmd.isEmpty {
-            commands.append((currentCmd, cmdCoords))
-        }
-        
-        var currentPoint = CGPoint.zero
-        
-        for (cmdStr, coords) in commands {
-            switch cmdStr {
-            case "M":
-                if coords.count >= 2 { 
-                    currentPoint = CGPoint(x: coords[0], y: coords[1])
-                    self.move(to: currentPoint) 
-                }
-            case "m":
-                if coords.count >= 2 { 
-                    currentPoint = CGPoint(x: currentPoint.x + coords[0], y: currentPoint.y + coords[1])
-                    self.move(to: currentPoint) 
-                }
-            case "L":
-                var i = 0
-                while i + 1 < coords.count {
-                    currentPoint = CGPoint(x: coords[i], y: coords[i+1])
-                    self.addLine(to: currentPoint)
-                    i += 2
-                }
-            case "l":
-                var i = 0
-                while i + 1 < coords.count {
-                    currentPoint = CGPoint(x: currentPoint.x + coords[i], y: currentPoint.y + coords[i+1])
-                    self.addLine(to: currentPoint)
-                    i += 2
-                }
-            case "H":
-                for x in coords {
-                    currentPoint = CGPoint(x: x, y: currentPoint.y)
-                    self.addLine(to: currentPoint)
-                }
-            case "h":
-                for x in coords {
-                    currentPoint = CGPoint(x: currentPoint.x + x, y: currentPoint.y)
-                    self.addLine(to: currentPoint)
-                }
-            case "V":
-                for y in coords {
-                    currentPoint = CGPoint(x: currentPoint.x, y: y)
-                    self.addLine(to: currentPoint)
-                }
-            case "v":
-                for y in coords {
-                    currentPoint = CGPoint(x: currentPoint.x, y: currentPoint.y + y)
-                    self.addLine(to: currentPoint)
-                }
-            case "C":
-                var i = 0
-                while i + 5 < coords.count {
-                    let cp1 = CGPoint(x: coords[i], y: coords[i+1])
-                    let cp2 = CGPoint(x: coords[i+2], y: coords[i+3])
-                    currentPoint = CGPoint(x: coords[i+4], y: coords[i+5])
-                    self.addCurve(to: currentPoint, controlPoint1: cp1, controlPoint2: cp2)
-                    i += 6
-                }
-            case "c":
-                var i = 0
-                while i + 5 < coords.count {
-                    let cp1 = CGPoint(x: currentPoint.x + coords[i], y: currentPoint.y + coords[i+1])
-                    let cp2 = CGPoint(x: currentPoint.x + coords[i+2], y: currentPoint.y + coords[i+3])
-                    currentPoint = CGPoint(x: currentPoint.x + coords[i+4], y: currentPoint.y + coords[i+5])
-                    self.addCurve(to: currentPoint, controlPoint1: cp1, controlPoint2: cp2)
-                    i += 6
-                }
-            case "S":
-                // Zjednodušený S příkaz (bez předchozí kontroly zrcadlení, pouze mapováno na C s předchozím CP = aktuální bod pro tento mock)
-                // Plné SVG vyžaduje trackování předchozího CP2
-                var i = 0
-                while i + 3 < coords.count {
-                    let cp2 = CGPoint(x: coords[i], y: coords[i+1])
-                    let end = CGPoint(x: coords[i+2], y: coords[i+3])
-                    self.addCurve(to: end, controlPoint1: currentPoint, controlPoint2: cp2)
-                    currentPoint = end
-                    i += 4
-                }
-            case "s":
-                var i = 0
-                while i + 3 < coords.count {
-                    let cp2 = CGPoint(x: currentPoint.x + coords[i], y: currentPoint.y + coords[i+1])
-                    let end = CGPoint(x: currentPoint.x + coords[i+2], y: currentPoint.y + coords[i+3])
-                    self.addCurve(to: end, controlPoint1: currentPoint, controlPoint2: cp2)
-                    currentPoint = end
-                    i += 4
-                }
-            case "Z", "z":
-                self.close()
-            case "A":
-                // SVG absolute arc: rx ry xRotation largeArcFlag sweepFlag x y
-                var i = 0
-                while i + 6 < coords.count {
-                    let end = CGPoint(x: coords[i+5], y: coords[i+6])
-                    // Přiblížení arku kubickou Bezierovou křivkou
-                    let cp1 = CGPoint(x: (currentPoint.x + end.x) / 2, y: currentPoint.y)
-                    let cp2 = CGPoint(x: (currentPoint.x + end.x) / 2, y: end.y)
-                    self.addCurve(to: end, controlPoint1: cp1, controlPoint2: cp2)
-                    currentPoint = end
-                    i += 7
-                }
-            case "a":
-                // SVG relative arc: rx ry xRotation largeArcFlag sweepFlag dx dy
-                var i = 0
-                while i + 6 < coords.count {
-                    let end = CGPoint(x: currentPoint.x + coords[i+5], y: currentPoint.y + coords[i+6])
-                    let cp1 = CGPoint(x: (currentPoint.x + end.x) / 2, y: currentPoint.y)
-                    let cp2 = CGPoint(x: (currentPoint.x + end.x) / 2, y: end.y)
-                    self.addCurve(to: end, controlPoint1: cp1, controlPoint2: cp2)
-                    currentPoint = end
-                    i += 7
-                }
-            case "Q":
-                // SVG absolute quadratic bezier: cpx cpy x y
-                var i = 0
-                while i + 3 < coords.count {
-                    let cp = CGPoint(x: coords[i], y: coords[i+1])
-                    let end = CGPoint(x: coords[i+2], y: coords[i+3])
-                    self.addQuadCurve(to: end, controlPoint: cp)
-                    currentPoint = end
-                    i += 4
-                }
-            case "q":
-                // SVG relative quadratic bezier: dcpx dcpy dx dy
-                var i = 0
-                while i + 3 < coords.count {
-                    let cp = CGPoint(x: currentPoint.x + coords[i], y: currentPoint.y + coords[i+1])
-                    let end = CGPoint(x: currentPoint.x + coords[i+2], y: currentPoint.y + coords[i+3])
-                    self.addQuadCurve(to: end, controlPoint: cp)
-                    currentPoint = end
-                    i += 4
-                }
-            case "T":
-                // SVG absolute smooth quadratic bezier: x y (CP je zrcadlo předchozího)
-                var i = 0
-                while i + 1 < coords.count {
-                    let end = CGPoint(x: coords[i], y: coords[i+1])
-                    self.addLine(to: end) // zjednodušení: bez sledování předchozího CP
-                    currentPoint = end
-                    i += 2
-                }
-            case "t":
-                var i = 0
-                while i + 1 < coords.count {
-                    let end = CGPoint(x: currentPoint.x + coords[i], y: currentPoint.y + coords[i+1])
-                    self.addLine(to: end)
-                    currentPoint = end
-                    i += 2
-                }
-            default:
-                break
-            }
+            DetailedBodyFigureView(
+                muscleStates: [.lats: 0.8, .hamstrings: 0.5, .glutes: 0.9, .lowerback: 0.3],
+                isFront: false,
+                highlightColor: .orange
+            )
+            .frame(width: 160, height: 380)
         }
     }
 }
