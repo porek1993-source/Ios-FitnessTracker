@@ -375,12 +375,12 @@ extension RollingWeekViewModel {
         let context   = SharedModelContainer.container.mainContext
         let weekStart = days.first?.date ?? Date()
         let weekEnd   = days.last?.date  ?? Date()
-        let statusCompleted = SessionStatus.completed
+        let statusCompletedRaw = SessionStatus.completed.rawValue
 
         // Načti dokončené tréninky v rozsahu aktuálního týdne
         let descriptor = FetchDescriptor<WorkoutSession>(
             predicate: #Predicate<WorkoutSession> {
-                $0.status.rawValue == statusCompleted.rawValue &&
+                $0.statusRaw == statusCompletedRaw &&
                 $0.startedAt >= weekStart &&
                 $0.startedAt <= weekEnd
             }
