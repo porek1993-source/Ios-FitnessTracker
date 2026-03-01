@@ -226,13 +226,6 @@ private struct SessionHeaderBar: View {
             Spacer()
 
             HStack(spacing: 7) {
-                // ── ROZCIČKA (pokud AI vygenerovala) ───────────────────────
-                if !vm.warmupExercises.isEmpty {
-                    WarmupPhaseView(exercises: vm.warmupExercises)
-                        .padding(.horizontal, 16)
-                        .padding(.bottom, 24)
-                }
-
                 ForEach(Array(vm.exercises.enumerated()), id: \.element.id) { i, ex in
                     let isSupersetWithNext = i < vm.exercises.count - 1 && ex.supersetId != nil && ex.supersetId == vm.exercises[i + 1].supersetId
                     let isSupersetWithPrev = i > 0 && ex.supersetId != nil && ex.supersetId == vm.exercises[i - 1].supersetId

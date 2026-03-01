@@ -554,7 +554,7 @@ final class ActiveSessionViewModel: ObservableObject {
                     rpe: set.rpe,
                     wasSuccessful: isSuccess,
                     setNumber: setIdx + 1,
-                    type: set.setType // ✅ Fix: Store correct set type (Normal, Failure, etc.)
+                    type: set.type // ✅ Fix: Store correct set type (Normal, Failure, etc.)
                 )
                 context.insert(entry)
             }

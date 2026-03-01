@@ -286,7 +286,7 @@ struct TrainerDashboardView: View {
                         .padding(.top, 16)
 
                         // ── Monthly Heatmap Calendar ─────────────────────
-                        WorkoutCalendarView(workoutDates: vm.sessionDates)
+                        WorkoutCalendarView(workoutDates: vm.sessionDates, accentColor: .blue)
                             .padding(.horizontal, 18)
                             .padding(.top, 16)
 

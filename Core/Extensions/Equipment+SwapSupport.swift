@@ -22,7 +22,7 @@ extension Equipment {
         case .cable:         return "Kladka"
         case .machine:       return "Stroj"
         case .bodyweight:    return "Vlastní váha"
-        case .resistanceBand,.band: return "Odporová guma"
+        case .resistanceBand: return "Odporová guma"
         case .kettlebell:    return "Kettlebell"
         case .pullupBar:     return "Hrazda"
         case .trx:           return "TRX"
@@ -37,7 +37,7 @@ extension Equipment {
         case .cable:          return "arrow.up.and.down.circle.fill"
         case .machine:        return "gearshape.fill"
         case .bodyweight:     return "figure.walk"
-        case .resistanceBand, .band: return "arrow.left.and.right.circle.fill"
+        case .resistanceBand: return "arrow.left.and.right.circle.fill"
         case .kettlebell:     return "circle.fill"
         case .pullupBar:      return "figure.gymnastics"
         case .trx:            return "rectangle.and.arrow.up.right.and.arrow.down.left"
@@ -47,7 +47,7 @@ extension Equipment {
     /// Zda je toto vybavení dostupné bez tělocvičny (pro home workout filtraci)
     var isHomeCompatible: Bool {
         switch self {
-        case .bodyweight, .resistanceBand, .band, .dumbbell, .kettlebell, .trx: return true
+        case .bodyweight, .resistanceBand, .dumbbell, .kettlebell, .trx: return true
         default: return false
         }
     }
