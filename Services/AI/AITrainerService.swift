@@ -286,22 +286,23 @@ private extension AITrainerService {
             // Kolik % plánu má hotovo? Pokud má v plánu 4 dny a do konce týdne zbývají 2 dny a on odcvičil jen 1.
             let daysInWeekComplete = activePlan.sessions.filter { history in
                 // Je to ze současného týdne?
-                Calendar.current.isDate(history.startedAt, equalTo: date, toGranularity: .weekOfYear)
+                // ✅ FIX: Calendar.mondayStart pro konzistentní pondělní začátek týdne
+            Calendar.mondayStart.isDate(history.startedAt, equalTo: date, toGranularity: .weekOfYear)
             }.count
             
             let plannedDaysPerWeek = activePlan.scheduledDays.count
             
             // Kolik dnů zbývá do konce týdne (Neděle jako konec)
-            let weekday = Calendar.current.component(.weekday, from: date) // Neděle = 1, Pondělí = 2...
-            // V Evropě je začátek pondělí. Takže pondělí = 1, neděle = 7
-            let adjustedWeekday = weekday == 1 ? 7 : weekday - 1
+            // ✅ FIX: Používáme date.weekday extension (1=Po...7=Ne) místo raw Calendar.component
+            // pro konzistenci s ostatními místy v kódu.
+            let adjustedWeekday = date.weekday  // 1=Po ... 7=Ne
             let daysRemainingInWeek = 7 - adjustedWeekday
             
             let workoutsRemaining = plannedDaysPerWeek - daysInWeekComplete
             
             // Pokud mu zbývá víc tréninků, než kolik je dnů v týdnu (nebo stejně a je konec týdne),
             // chceme Gemini, aby ty partie sloučilo do Fullbody nebo jinak strukturálně vyřešilo zpoždění.
-            if workoutsRemaining > daysRemainingInWeek.magnitude && workoutsRemaining > 0 {
+            if workoutsRemaining > daysRemainingInWeek && workoutsRemaining > 0 {
                 return true
             }
         }

@@ -76,12 +76,13 @@ final class TrainerContextBuilder {
         }
 
         // --- MISSING DAYS CALCULATION ---
-        let weekday = Calendar.current.component(.weekday, from: date)
-        let adjustedWeekday = weekday == 1 ? 7 : weekday - 1
+        // ✅ FIX: Používáme date.weekday extension (1=Po...7=Ne) pro konzistenci s celou app
+        let adjustedWeekday = date.weekday  // 1=Po ... 7=Ne
         let daysRemainingInWeek = 7 - adjustedWeekday
         
         let daysInWeekComplete = activePlan.sessions.filter { history in
-            Calendar.current.isDate(history.startedAt, equalTo: date, toGranularity: .weekOfYear)
+            // ✅ FIX: Calendar.mondayStart pro konzistentní pondělní začátek týdne
+            Calendar.mondayStart.isDate(history.startedAt, equalTo: date, toGranularity: .weekOfYear)
         }.count
         let plannedDaysPerWeek = activePlan.scheduledDays.count
         let workoutsRemaining = plannedDaysPerWeek - daysInWeekComplete
