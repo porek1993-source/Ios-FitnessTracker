@@ -701,7 +701,7 @@ private struct VolumeSummary: View {
     let sets: [SetState]
     private var done: [SetState] { sets.filter(\.isCompleted) }
     private var volume: Double {
-        done.reduce(0) { $0 + ($1.weightKg * Double($1.reps)) }
+        done.reduce(0) { $0 + ($1.weightKg * Double($1.reps ?? 0)) }
     }
     private var avgRPE: Double? {
         let r = done.compactMap(\.rpe); guard !r.isEmpty else { return nil }

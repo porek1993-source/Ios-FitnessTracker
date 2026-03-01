@@ -148,25 +148,6 @@ struct WorkoutSetRowView: View {
         onComplete()
     }
 
-    private var enhancedRowBackground: some View {
-        RoundedRectangle(cornerRadius: 14, style: .continuous)
-            .fill(isActive
-                   ? Color(red: 0.14, green: 0.14, blue: 0.20)
-                   : Color.clear)
-            .overlay(
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .stroke(
-                        isActive
-                            ? AppColors.primaryAccent.opacity(0.6)
-                            : Color.clear,
-                        lineWidth: isActive ? 1.5 : 0
-                    )
-            )
-            .shadow(
-                color: isActive ? AppColors.primaryAccent.opacity(0.15) : .clear,
-                radius: 8, x: 0, y: 0
-            )
-    }
 
     private var rowOpacity: Double {
         if currentSet.isCompleted { return 0.85 }

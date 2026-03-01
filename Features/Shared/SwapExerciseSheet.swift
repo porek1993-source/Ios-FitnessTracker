@@ -925,6 +925,7 @@ extension ExerciseCategory {
         case .core:      return "Core"
         case .cardio:    return "Cardio"
         case .olympic:   return "Olymp."
+        case .strength:  return "Silový t."
         }
     }
 }

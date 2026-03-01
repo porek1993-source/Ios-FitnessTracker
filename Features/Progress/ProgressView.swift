@@ -39,10 +39,14 @@ struct AppProgressView: View {
         if grouped.isEmpty {
             for session in completedSessions {
                 let key = yearWeekKey(from: session.startedAt)
-                let vol = session.exercises
-                    .flatMap { $0.completedSets }
-                    .filter { $0.setType == .normal || $0.setType == .failure }
-                    .reduce(0.0) { $0 + $1.weightKg * Double($1.reps) }
+                var vol = 0.0
+                for ex in session.exercises {
+                    for set in ex.completedSets {
+                        if set.setType == .normal || set.setType == .failure {
+                            vol += set.weightKg * Double(set.reps ?? 0)
+                        }
+                    }
+                }
                 grouped[key, default: 0] += vol
             }
         }
@@ -61,7 +65,9 @@ struct AppProgressView: View {
             .filter { $0.setType == .normal || $0.setType == .failure }
             
         if show1RM {
-            return OneRepMaxCalculator.historical1RM(from: relevantEntries).suffix(12)
+            return OneRepMaxCalculator.historical1RM(from: relevantEntries)
+                .suffix(12)
+                .map { (date: $0.date, weight: $0.OneRM) }
         } else {
             return relevantEntries // používáme filtrované pole
                 .sorted { $0.loggedAt < $1.loggedAt }
@@ -79,11 +85,17 @@ struct AppProgressView: View {
         if fromEntries > 0 { return fromEntries }
         
         // Fallback
-        return completedSessions
-            .flatMap { $0.exercises }
-            .flatMap { $0.completedSets }
-            .filter { $0.setType == .normal || $0.setType == .failure }
-            .reduce(0) { $0 + $1.weightKg * Double($1.reps) }
+        var fallbackVol = 0.0
+        for session in completedSessions {
+            for ex in session.exercises {
+                for set in ex.completedSets {
+                    if set.setType == .normal || set.setType == .failure {
+                        fallbackVol += set.weightKg * Double(set.reps ?? 0)
+                    }
+                }
+            }
+        }
+        return fallbackVol
     }
 
     private var personalRecordsCount: Int {
