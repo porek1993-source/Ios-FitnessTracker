@@ -285,7 +285,7 @@ private struct ExerciseHero: View {
             ExerciseMediaView(
                 gifURL: exercise.videoUrl.flatMap { URL(string: $0) },
                 exerciseName: exercise.name,
-                exerciseNameEn: exercise.exercise?.nameEN
+                exerciseNameEn: exercise.nameEN.isEmpty ? exercise.exercise?.nameEN : exercise.nameEN
             )
             .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
 

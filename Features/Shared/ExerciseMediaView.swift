@@ -64,27 +64,43 @@ struct ExerciseMediaView: View {
                     isLoading = true
                     let repo = SupabaseExerciseRepository()
                     let all = try await repo.fetchMuscleWikiAll()
-                    
-                    var foundURL: URL? = nil
-                    
-                    if let enName = exerciseNameEn,
-                       let match = all.first(where: { $0.name.lowercased() == enName.lowercased() }) {
-                        foundURL = URL(string: match.videoUrl)
-                    } else if let match = all.first(where: { $0.name.lowercased() == exerciseName.lowercased() }) {
-                        foundURL = URL(string: match.videoUrl)
+
+                    func clean(_ s: String) -> String {
+                        s.lowercased()
+                            .folding(options: .diacriticInsensitive, locale: .current)
+                            .replacingOccurrences(of: " ", with: "")
                     }
-                    
+
+                    let enClean = clean(exerciseNameEn ?? "")
+                    let czClean = clean(exerciseName)
+
+                    // Slug odvodíme z exerciseName (fallback)
+                    let slugClean = czClean.replacingOccurrences(of: "-", with: "")
+
+                    let match = all.first(where: { wiki in
+                        let wikiClean = clean(wiki.name)
+                        // 1. Přesná shoda EN
+                        if !enClean.isEmpty && (wikiClean == enClean) { return true }
+                        // 2. Containment EN (obousměrný, min 4 znaky)
+                        if enClean.count >= 4 && (wikiClean.contains(enClean) || enClean.contains(wikiClean)) { return true }
+                        // 3. Slug match
+                        if slugClean.count >= 4 && (wikiClean.contains(slugClean) || slugClean.contains(wikiClean)) { return true }
+                        // 4. Český fallback pokud nemáme EN (min 5 znaků)
+                        if enClean.isEmpty && czClean.count >= 5 && (wikiClean.contains(czClean) || czClean.contains(wikiClean)) { return true }
+                        return false
+                    })
+
                     await MainActor.run {
-                        if let validURL = foundURL {
-                            self.dynamicURL = validURL
-                            // Necháme isLoading běžet, dokud WebView nenačte frame
+                        if let match, let url = URL(string: match.videoUrl) {
+                            self.dynamicURL = url
+                            // isLoading zůstane true, dokud WebView nenačte frame
                         } else {
                             self.loadFailed = true
                             self.isLoading = false
                         }
                     }
                 } catch {
-                    AppLogger.error("ExerciseMediaView: Nepodařilo se dohledat video pro \(exerciseName)")
+                    AppLogger.error("ExerciseMediaView: Nepodařilo se dohledat video pro \(exerciseName) (EN: \(exerciseNameEn ?? "–"))")
                     await MainActor.run {
                         self.loadFailed = true
                         self.isLoading = false

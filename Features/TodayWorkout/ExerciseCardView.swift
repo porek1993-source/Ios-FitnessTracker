@@ -14,7 +14,7 @@ struct ExerciseCardView: View {
                 ExerciseAnimationView(
                     slug: exercise.slug,
                     nameCz: exercise.name,
-                    nameEn: exercise.exercise?.nameEN,
+                    nameEn: exercise.nameEN.isEmpty ? exercise.exercise?.nameEN : exercise.nameEN,
                     videoUrl: exercise.videoUrl   // ✅ Předáváme videoUrl z muscle_wiki_data_full
                 )
                 .frame(height: 260)

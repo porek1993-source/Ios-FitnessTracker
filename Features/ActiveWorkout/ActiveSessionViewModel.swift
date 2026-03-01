@@ -170,6 +170,7 @@ final class ActiveSessionViewModel: ObservableObject {
 
                 if let match {
                     exercises[i].videoUrl = match.videoUrl
+                    if exercises[i].nameEN.isEmpty { exercises[i].nameEN = match.name }  // ✅ doplnit EN název
                     AppLogger.info("✅ [ActiveSession.enrichVideo] \(exercises[i].name) (EN: \(nameEN)) → \(match.name)")
                     if let ex = exercises[i].exercise {
                         let exSlug = ex.slug
@@ -591,6 +592,7 @@ final class ActiveSessionViewModel: ObservableObject {
 
                     if let exercise = matchedExercise {
                         state.exercise = exercise
+                        state.nameEN = exercise.nameEN  // ✅ Anglický název pro video lookup
 
                         // Video URL z DB
                         if let videoURL = exercise.videoURL {

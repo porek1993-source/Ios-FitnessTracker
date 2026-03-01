@@ -107,9 +107,10 @@ final class WorkoutViewModel: ObservableObject {
                     }
 
                     state.exercise = exerciseRef
-                    // ✅ Předej videoURL z Exercise DB modelu do session state
-                    if let videoURL = exerciseRef?.videoURL {
-                        state.videoUrl = videoURL
+                    // ✅ Předej videoURL a nameEN z Exercise DB modelu do session state
+                    if let ref = exerciseRef {
+                        if let videoURL = ref.videoURL { state.videoUrl = videoURL }
+                        state.nameEN = ref.nameEN  // ✅ Anglický název pro ExerciseMediaView lookup
                     }
 
                     // Warmup pouze pro první working cvik v celém tréninku (ne warmup bloky)
@@ -235,6 +236,8 @@ final class WorkoutViewModel: ObservableObject {
 
                 if let match {
                     exercises[i].videoUrl = match.videoUrl
+                    // ✅ Také doplníme nameEN pokud chybí — pro budoucí lookups
+                    if exercises[i].nameEN.isEmpty { exercises[i].nameEN = match.name }
                     AppLogger.info("✅ [enrichVideo] \(exercises[i].name) (EN: \(nameEN)) → \(match.name)")
 
                     // Uložit zpět do SwiftData Exercise pro budoucí offline spuštění
@@ -690,19 +693,21 @@ final class WorkoutViewModel: ObservableObject {
 
 struct SessionExerciseState: Identifiable {
     let id: UUID
-    var name: String
+    var name: String       // Česky (pro UI)
+    var nameEN: String     // ✅ Anglicky — pro MuscleWiki lookup (videoUrl matching)
     var slug: String
-    var coachTip: String?  // ✅ var — může být doplněno asynchronně z DB/Supabase
+    var coachTip: String?  // var — může být doplněno asynchronně
     let tempo: String?
     let restSeconds: Int
     var sets: [SetState]
     var isWarmupOnly: Bool
-    var exercise: Exercise?        // Reference na DB model (pokud existuje)
-    var videoUrl: String?          // ✅ URL videa z muscle_wiki_data_full (Supabase Storage)
+    var exercise: Exercise?
+    var videoUrl: String?
 
-    init(id: UUID = UUID(), name: String, slug: String, coachTip: String? = nil, tempo: String? = nil, restSeconds: Int = 60, sets: [SetState] = [], isWarmupOnly: Bool = false, exercise: Exercise? = nil, videoUrl: String? = nil) {
+    init(id: UUID = UUID(), name: String, nameEN: String = "", slug: String, coachTip: String? = nil, tempo: String? = nil, restSeconds: Int = 60, sets: [SetState] = [], isWarmupOnly: Bool = false, exercise: Exercise? = nil, videoUrl: String? = nil) {
         self.id = id
         self.name = name
+        self.nameEN = nameEN.isEmpty ? (exercise?.nameEN ?? name) : nameEN
         self.slug = slug
         self.coachTip = coachTip
         self.tempo = tempo
@@ -719,10 +724,10 @@ struct SessionExerciseState: Identifiable {
 
     init(from planned: PlannedExercise) {
         self.id          = UUID()
-        // ✅ FIX Bug #3: Použij fallbackName pokud exercise relationship chybí
         let exerciseName = planned.exercise?.name ?? planned.fallbackName ?? planned.exercise?.nameEN ?? "Cvik"
         let exerciseSlug = planned.exercise?.slug ?? planned.fallbackSlug ?? "unknown-\(UUID().uuidString.prefix(8))"
         self.name        = exerciseName
+        self.nameEN      = planned.exercise?.nameEN ?? ""  // ✅ Anglický název pro video matching
         self.slug        = exerciseSlug
         self.coachTip    = planned.exercise?.instructions.isEmpty == false ? planned.exercise?.instructions : nil
         self.tempo       = nil
@@ -736,13 +741,14 @@ struct SessionExerciseState: Identifiable {
         }
         self.isWarmupOnly = false
         self.exercise = planned.exercise
-        self.videoUrl = planned.exercise?.videoURL  // ✅ Video z DB
+        self.videoUrl = planned.exercise?.videoURL
     }
 
     init(from response: ResponseExercise) {
         self.id          = UUID()
         self.name        = response.name
-        // ✅ Normalizuj slug pro správné napárování videoUrl z muscle_wiki_data_full
+        // AI vrací česká jména — slug normalizujeme pro DB matching
+        self.nameEN      = ""  // ✅ Bude naplněno v WorkoutViewModel po nalezení exerciseRef
         self.slug        = FallbackWorkoutGenerator.normalizedSlug(response.slug)
         self.coachTip    = response.coachTip
         self.tempo       = response.tempo
@@ -755,8 +761,7 @@ struct SessionExerciseState: Identifiable {
             )
         }
         self.isWarmupOnly = false
-        // ✅ Zkusíme najít exercise v DB a vzít z něj video URL
-        self.videoUrl = nil  // bude nastaveno v linkExercisesWithDB()
+        self.videoUrl = nil  // bude nastaveno po nalezení exerciseRef
     }
 
     static func warmupExercise(_ wu: WarmUpExercise) -> SessionExerciseState {
