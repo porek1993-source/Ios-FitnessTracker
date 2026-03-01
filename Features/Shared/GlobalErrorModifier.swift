@@ -169,37 +169,7 @@ private struct ToastView: View {
     }
 }
 
-// MARK: ═══════════════════════════════════════════════════════════════════════
-// MARK: NetworkMonitor — real-time detekce connectivity
-// MARK: ═══════════════════════════════════════════════════════════════════════
 
-@MainActor
-final class NetworkMonitor: ObservableObject {
-    @Published private(set) var isConnected: Bool = true
-
-    private let monitor:  NWPathMonitor
-    private let queue:    DispatchQueue
-
-    init() {
-        self.monitor = NWPathMonitor()
-        self.queue   = DispatchQueue(label: "com.agilefitness.netmonitor", qos: .utility)
-        startMonitoring()
-    }
-
-    deinit {
-        monitor.cancel()
-    }
-
-    private func startMonitoring() {
-        monitor.pathUpdateHandler = { [weak self] path in
-            // ⚠️ pathUpdateHandler volán na background queue → přepni na MainActor
-            Task { @MainActor [weak self] in
-                self?.isConnected = path.status == .satisfied
-            }
-        }
-        monitor.start(queue: queue)
-    }
-}
 
 // MARK: ═══════════════════════════════════════════════════════════════════════
 // MARK: View Extension — sugar syntax pro snazší použití

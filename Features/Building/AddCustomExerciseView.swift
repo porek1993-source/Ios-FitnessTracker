@@ -59,21 +59,18 @@ struct AddCustomExerciseView: View {
         let slug = "custom-\(UUID().uuidString.prefix(8).lowercased())"
         
         let newExercise = Exercise(
+            slug: slug,
             name: name.trimmingCharacters(in: .whitespacesAndNewlines),
-            nameEN: "", // Není potřeba překládat vlastní cviky
+            nameEN: name, // Fallback
             category: .strength,
-            movementPattern: .isolation, // Fallback pattern pro custom cviky
+            movementPattern: .isolation,
             equipment: [],
-            musclesTarget: [selectedMuscle.rawValue], // Ukládáme jako string podle původní struktury
+            musclesTarget: [selectedMuscle],
             musclesSecondary: [],
             isUnilateral: isUnilateral,
             instructions: notes
         )
-        newExercise.slug = slug
-        // Nastavení flagu isCustom = true je definováno přímo v inicializátoru Exercise.swift (resp. my jsme přidali default = false)
         newExercise.isCustom = true 
-        // Taky potřebujeme naplnit legacy `muscle_group` z Exercise.swift
-        newExercise.muscle_group = selectedMuscle.rawValue
         
         modelContext.insert(newExercise)
         try? modelContext.save()

@@ -141,7 +141,7 @@ struct WorkoutSetRowView: View {
         withAnimation(.spring(response: 0.35, dampingFraction: 0.55).delay(0.1)) { bounce = 1.0 }
         
         // Globální haptická odezva! ✅
-        HapticManager.shared.setCompleted()
+        HapticManager.shared.playHeavyClick()
         
         onComplete()
     }

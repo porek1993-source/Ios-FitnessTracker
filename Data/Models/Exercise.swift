@@ -30,6 +30,22 @@ final class Exercise {
     @Relationship(deleteRule: .nullify)
     var sessionExercises: [SessionExercise] = []
 
+    // MARK: - Legacy Helpers for Custom Builder
+    
+    var primaryMuscleGroup: MuscleGroup? {
+        musclesTarget.first
+    }
+    
+    var muscle_group: String {
+        get { musclesTarget.first?.rawValue ?? "" }
+        set { 
+            if let group = MuscleGroup(rawValue: newValue) {
+                if musclesTarget.isEmpty { musclesTarget = [group] }
+                else { musclesTarget[0] = group }
+            }
+        }
+    }
+
     // MARK: - Progressive Overload Memory
 
     var lastUsedWeight: Double? {
@@ -121,6 +137,7 @@ enum ExerciseCategory: String, Codable, CaseIterable {
     case core       = "core"
     case cardio     = "cardio"
     case olympic    = "olympic"
+    case strength   = "strength"
 }
 
 enum MovementPattern: String, Codable, CaseIterable {

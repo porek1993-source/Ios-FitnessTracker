@@ -132,7 +132,6 @@ struct ActiveSessionView: View {
                     .presentationBackground(AppColors.secondaryBg)
             }
         }
-        }
         .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("ShowPlateCalculator"))) { _ in
             showPlateCalculator = true
         }
@@ -303,7 +302,7 @@ struct ExercisePageView: View {
 
                     SetLoggerBlock(exercise: $exercise, onComplete: onComplete)
                     
-                    if exercise.exercise?.equipment == .barbell {
+                    if exercise.exercise?.equipment.contains(.barbell) == true {
                         Button {
                             // Nastavíme showPlateCalculator (musíme to propagovat přes binding,
                             // nebo použít notifikaci/callback, protože jsme v oddělené view hierarchii.

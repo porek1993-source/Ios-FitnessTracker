@@ -39,8 +39,8 @@ final class LiveActivityManager: ObservableObject {
             restEndsAt:          Date.now.addingTimeInterval(Double(restSeconds)),
             totalRestSeconds:    restSeconds,
             currentExerciseName: currentExercise.name,
-            nextSetInfo:         "Série \(nextSetNumber) · \(nextSet.targetRepsMin)–\(nextSet.targetRepsMax) opakování",
-            suggestedWeightKg:   nextSet.weightKg ?? nextSet.previousWeightKg,
+            nextSetInfo:         "Série \(nextSetNumber) · \(nextSet.targetRepsMin)\(nextSet.targetRepsMin != nextSet.targetRepsMax ? "–\(nextSet.targetRepsMax)" : "") opakování",
+            suggestedWeightKg:   nextSet.weightKg,
             sessionProgress:     SessionProgress(
                 completedSets:      completedSets,
                 totalSets:          totalSets,

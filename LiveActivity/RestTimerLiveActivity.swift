@@ -7,16 +7,7 @@ import SwiftUI
 
 // MARK: - Attributes Data Model
 // Definuje statická (neměnná) data pro Live Activity
-struct RestTimerAttributes: ActivityAttributes {
-    public struct ContentState: Codable, Hashable {
-        // Dynamická data, která se průběžně mění (zbývající čas, RPE...)
-        var remainingSeconds: Int
-    }
 
-    // Statická data (odpovídají jedné pauze)
-    var exerciseName: String
-    var nextSetNumber: Int
-}
 
 // MARK: - Live Activity UI
 // (Tento kód je nutné přiřadit do widget targetu)
@@ -32,51 +23,48 @@ struct RestTimerLiveActivity: Widget {
                         .font(.headline)
                         .foregroundStyle(.white)
                     Spacer()
-                    Text("\(context.state.remainingSeconds) s")
+                    Text(timerInterval: context.state.restEndsAt.addingTimeInterval(-Double(context.state.totalRestSeconds))...context.state.restEndsAt, countsDown: true)
                         .font(.title)
                         .bold()
                         .foregroundStyle(.orange)
-                        .contentTransition(.numericText())
+                        .monospacedDigit()
                 }
                 
-                Text("Další: \(context.attributes.exerciseName) (Série \(context.attributes.nextSetNumber))")
+                Text("Další: \(context.state.currentExerciseName) • \(context.state.nextSetInfo)")
                     .font(.subheadline)
                     .foregroundStyle(.white.opacity(0.8))
+                
+                ProgressView(value: context.state.sessionProgress.completedSets, total: context.state.sessionProgress.totalSets)
+                    .tint(.orange)
             }
             .padding()
-            // Barva pozadí Live Activity
             .activityBackgroundTint(Color.black.opacity(0.8))
-            .activitySystemActionForegroundColor(Color.orange)
 
         } dynamicIsland: { context in
-            // UI pro Dynamic Island
             DynamicIsland {
-                // Expanded UI
                 DynamicIslandExpandedRegion(.leading) {
-                    Label("Pauza", systemImage: "timer")
-                        .foregroundStyle(.orange)
+                    Label("Pauza", systemImage: "timer").foregroundStyle(.orange)
                 }
                 DynamicIslandExpandedRegion(.trailing) {
-                    Text("\(context.state.remainingSeconds)s")
+                    Text(timerInterval: context.state.restEndsAt.addingTimeInterval(-Double(context.state.totalRestSeconds))...context.state.restEndsAt, countsDown: true)
                         .font(.title3.bold())
                         .foregroundStyle(.orange)
                 }
                 DynamicIslandExpandedRegion(.bottom) {
-                    Text("\(context.attributes.exerciseName) • Série \(context.attributes.nextSetNumber)")
-                        .font(.caption)
-                        .foregroundStyle(.gray)
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(context.state.currentExerciseName).bold()
+                        Text(context.state.nextSetInfo).font(.caption).foregroundStyle(.gray)
+                    }
                 }
             } compactLeading: {
-                Image(systemName: "timer")
-                    .foregroundStyle(.orange)
+                Image(systemName: "timer").foregroundStyle(.orange)
             } compactTrailing: {
-                Text("\(context.state.remainingSeconds)")
+                Text(timerInterval: context.state.restEndsAt.addingTimeInterval(-Double(context.state.totalRestSeconds))...context.state.restEndsAt, countsDown: true)
                     .foregroundStyle(.orange)
+                    .monospacedDigit()
             } minimal: {
-                Image(systemName: "timer")
-                    .foregroundStyle(.orange)
+                Image(systemName: "timer").foregroundStyle(.orange)
             }
-            .widgetURL(URL(string: "http://www.apple.com"))
             .keylineTint(Color.orange)
         }
     }

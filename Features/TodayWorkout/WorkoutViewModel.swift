@@ -545,7 +545,7 @@ final class WorkoutViewModel: ObservableObject {
             
             do {
                 try await HealthWorkoutWriter.shared.saveStrengthWorkout(
-                    startDate: session.date,
+                    startDate: session.startedAt,
                     endDate: session.finishedAt ?? Date(),
                     activeEnergyBurnedKcal: estimatedKcal,
                     metadata: ["Plan": planLabel]
@@ -812,17 +812,13 @@ struct SessionExerciseState: Identifiable {
     }
 }
 
-enum SetType: String, Codable {
-    case normal
-    case warmup
-    case dropset
-    case failure
-}
+
 
 struct SetState: Identifiable {
     let id: UUID
     var type: SetType
-    var targetReps: Int
+    var targetRepsMin: Int
+    var targetRepsMax: Int
     var weightKg: Double
     var reps: Int?
     var rpe: Int?
@@ -831,13 +827,15 @@ struct SetState: Identifiable {
     var historicalWeightKg: Double?
     var historicalReps: Int?
     
-    // Pro zpětnou kompatibilitu isWarmup = (type == .warmup)
+    // Pro zpětnou kompatibilitu
+    var targetReps: Int { targetRepsMin }
     var isWarmup: Bool { type == .warmup }
     
-    init(id: UUID = UUID(), type: SetType = .normal, targetReps: Int, weightKg: Double, reps: Int? = nil, rpe: Int? = nil, previousWeightKg: Double? = nil, historicalWeightKg: Double? = nil, historicalReps: Int? = nil, isCompleted: Bool = false) {
+    init(id: UUID = UUID(), type: SetType = .normal, targetRepsMin: Int, targetRepsMax: Int? = nil, weightKg: Double, reps: Int? = nil, rpe: Int? = nil, previousWeightKg: Double? = nil, historicalWeightKg: Double? = nil, historicalReps: Int? = nil, isCompleted: Bool = false) {
         self.id = id
         self.type = type
-        self.targetReps = targetReps
+        self.targetRepsMin = targetRepsMin
+        self.targetRepsMax = targetRepsMax ?? targetRepsMin
         self.weightKg = weightKg
         self.reps = reps
         self.rpe = rpe
@@ -846,7 +844,8 @@ struct SetState: Identifiable {
         self.historicalReps = historicalReps
         self.isCompleted = isCompleted
     }
+    
+    // Legacy init
+    init(type: SetType, targetReps: Int, weightKg: Double) {
+        self.init(type: type, targetRepsMin: targetReps, targetRepsMax: targetReps, weightKg: weightKg)
 }
-
-// Double.rounded(toNearest:) přesunuto do Core/Extensions/Extensions.swift
-```

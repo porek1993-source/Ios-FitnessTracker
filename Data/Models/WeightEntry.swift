@@ -35,7 +35,6 @@ final class WeightEntry {
         rir: Int? = nil,
         wasSuccessful: Bool,
         sessionId: UUID,
-        sessionId: UUID,
         setNumber: Int,
         exercise: Exercise?,
         type: SetType = .normal
@@ -47,7 +46,6 @@ final class WeightEntry {
         self.rir = rir
         self.wasSuccessful = wasSuccessful
         self.loggedAt = .now
-        self.sessionId = sessionId
         self.sessionId = sessionId
         self.setNumber = setNumber
         self.exercise = exercise
@@ -63,7 +61,6 @@ extension WeightEntry {
         sessionId: UUID,
         weightKg: Double,
         reps: Int,
-        reps: Int,
         rpe: Int?,
         wasSuccessful: Bool,
         setNumber: Int = 0,
@@ -75,7 +72,6 @@ extension WeightEntry {
             rpe: rpe.map { Double($0) },
             rir: nil,
             wasSuccessful: wasSuccessful,
-            sessionId: sessionId,
             sessionId: sessionId,
             setNumber: setNumber,
             exercise: exercise,
