@@ -91,6 +91,9 @@ final class ActiveSessionViewModel: ObservableObject {
         buildExerciseStates(from: plan, aiResponse: aiResponse)
         startElapsedTimer()
         audioCoach = AudioCoachService()
+
+        // ✅ FIX Bug #1: Dohledat chybějící videoURL přímo ze Supabase
+        Task { [weak self] in await self?.enrichWithVideoURLs() }
     }
 
     // MARK: - deinit: KRITICKY DŮLEŽITÉ pro prevenci memory leaků
@@ -128,6 +131,52 @@ final class ActiveSessionViewModel: ObservableObject {
         // AI API VOLÁNÍ DEAKTIVOVÁNO PRO ÚSPORU. Proaktivní tipy vypnuty.
         coachTipTask?.cancel()
         coachMessage = "Soustřeď se na techniku a dýchání. 💪"
+    }
+
+    // MARK: - Video URL Enrichment (Bug #1 Fix)
+
+    /// Pro cviky, kde videoUrl chybí (sync nestihl spárovat), načte data přímo ze Supabase.
+    private func enrichWithVideoURLs() async {
+        guard exercises.contains(where: { $0.videoUrl == nil }) else { return }
+        do {
+            let repo = SupabaseExerciseRepository()
+            let wikiAll = try await repo.fetchMuscleWikiAll()
+            let bgContext = ModelContext(SharedModelContainer.container)
+
+            for i in exercises.indices {
+                guard exercises[i].videoUrl == nil else { continue }
+                let searchName = exercises[i].exercise?.nameEN ?? exercises[i].name
+                let searchLower = searchName.lowercased()
+                    .folding(options: .diacriticInsensitive, locale: .current)
+                if let match = wikiAll.first(where: { wiki in
+                    let wikiLower = wiki.name.lowercased()
+                        .folding(options: .diacriticInsensitive, locale: .current)
+                    return wikiLower == searchLower
+                        || wikiLower.contains(searchLower)
+                        || searchLower.contains(wikiLower)
+                }) {
+                    exercises[i].videoUrl = match.videoUrl
+                    // Uložit zpět do SwiftData pro budoucí spuštění
+                    if let ex = exercises[i].exercise {
+                        let slug = ex.slug
+                        if let localEx = try? bgContext.fetch(
+                            FetchDescriptor<Exercise>(predicate: #Predicate { $0.slug == slug })
+                        ).first {
+                            localEx.videoURL = match.videoUrl
+                            try? bgContext.save()
+                        }
+                    }
+                }
+                // Doplnit coachTip pokud chybí
+                if exercises[i].coachTip == nil,
+                   let instructions = exercises[i].exercise?.instructions,
+                   !instructions.isEmpty {
+                    exercises[i].coachTip = instructions
+                }
+            }
+        } catch {
+            AppLogger.error("ActiveSessionViewModel.enrichWithVideoURLs: \(error)")
+        }
     }
 
     // MARK: ═══════════════════════════════════════════════════════════════════

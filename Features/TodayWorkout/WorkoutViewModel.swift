@@ -184,6 +184,64 @@ final class WorkoutViewModel: ObservableObject {
 
         // Init audio coach
         audioCoach = AudioCoachService()
+
+        // ✅ FIX Bug #1: Dohledat chybějící videoURL a coachTip přímo z Supabase MuscleWiki
+        // Spustíme async, nezablokujeme UI — výsledky se propisují do @Published exercises
+        Task { await enrichWithVideoURLs() }
+    }
+
+    // MARK: - Video URL Enrichment (Bug #1 Fix)
+
+    /// Pro cviky, kde videoUrl nebo coachTip chybí (sync nestihl spárovat), načte data přímo ze Supabase.
+    private func enrichWithVideoURLs() async {
+        let needsEnrich = exercises.contains(where: { $0.videoUrl == nil })
+        guard needsEnrich else { return }
+
+        do {
+            let repo = SupabaseExerciseRepository()
+            let wikiAll = try await repo.fetchMuscleWikiAll()
+            let bgContext = ModelContext(SharedModelContainer.container)
+
+            for i in exercises.indices {
+                guard exercises[i].videoUrl == nil else { continue }
+
+                let searchName = exercises[i].exercise?.nameEN
+                    ?? exercises[i].name
+
+                // Hledáme shodu podle anglického jména nebo části jména
+                let searchLower = searchName.lowercased()
+                    .folding(options: .diacriticInsensitive, locale: .current)
+                if let match = wikiAll.first(where: { wiki in
+                    let wikiLower = wiki.name.lowercased()
+                        .folding(options: .diacriticInsensitive, locale: .current)
+                    return wikiLower == searchLower
+                        || wikiLower.contains(searchLower)
+                        || searchLower.contains(wikiLower)
+                }) {
+                    exercises[i].videoUrl = match.videoUrl
+
+                    // Uložit zpět do SwiftData Exercise pro budoucí spuštění
+                    if let ex = exercises[i].exercise {
+                        let slug = ex.slug
+                        if let localEx = try? bgContext.fetch(
+                            FetchDescriptor<Exercise>(predicate: #Predicate { $0.slug == slug })
+                        ).first {
+                            localEx.videoURL = match.videoUrl
+                            try? bgContext.save()
+                        }
+                    }
+                }
+
+                // Doplnit coachTip pokud chybí — coachTip je nyní var
+                if exercises[i].coachTip == nil,
+                   let dbInstructions = exercises[i].exercise?.instructions,
+                   !dbInstructions.isEmpty {
+                    exercises[i].coachTip = dbInstructions
+                }
+            }
+        } catch {
+            AppLogger.error("WorkoutViewModel.enrichWithVideoURLs: \(error)")
+        }
     }
 
     // MARK: - RPE-aware progression (přesunuto do ProgressionEngine)
@@ -615,7 +673,7 @@ struct SessionExerciseState: Identifiable {
     let id: UUID
     var name: String
     var slug: String
-    let coachTip: String?
+    var coachTip: String?  // ✅ var — může být doplněno asynchronně z DB/Supabase
     let tempo: String?
     let restSeconds: Int
     var sets: [SetState]
@@ -642,9 +700,9 @@ struct SessionExerciseState: Identifiable {
 
     init(from planned: PlannedExercise) {
         self.id          = UUID()
-        // Bezpečný fallback pokud exercise relationship chybí (seed race condition)
-        let exerciseName = planned.exercise?.name ?? planned.exercise?.nameEN ?? "Cvik"
-        let exerciseSlug = planned.exercise?.slug ?? "unknown-\(UUID().uuidString.prefix(8))"
+        // ✅ FIX Bug #3: Použij fallbackName pokud exercise relationship chybí
+        let exerciseName = planned.exercise?.name ?? planned.fallbackName ?? planned.exercise?.nameEN ?? "Cvik"
+        let exerciseSlug = planned.exercise?.slug ?? planned.fallbackSlug ?? "unknown-\(UUID().uuidString.prefix(8))"
         self.name        = exerciseName
         self.slug        = exerciseSlug
         self.coachTip    = planned.exercise?.instructions.isEmpty == false ? planned.exercise?.instructions : nil

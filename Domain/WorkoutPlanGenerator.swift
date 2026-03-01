@@ -269,7 +269,7 @@ enum WorkoutPlanGenerator {
             return ExerciseConfig(
                 exercise: exercise,
                 fallbackSlug: slug,
-                fallbackName: nil,
+                fallbackName: exercise?.name ?? slug.replacingOccurrences(of: "-", with: " ").capitalized,  // ✅ FIX Bug #3: vždy vyplnit
                 sets: isCompound ? baseSets : max(baseSets - 1, 2),
                 repsMin: isCompound ? repsMin : repsMin + 2,
                 repsMax: isCompound ? repsMax : repsMax + 4,

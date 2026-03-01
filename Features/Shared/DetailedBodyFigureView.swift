@@ -247,6 +247,66 @@ extension UIBezierPath {
                 }
             case "Z", "z":
                 self.close()
+            case "A":
+                // SVG absolute arc: rx ry xRotation largeArcFlag sweepFlag x y
+                var i = 0
+                while i + 6 < coords.count {
+                    let end = CGPoint(x: coords[i+5], y: coords[i+6])
+                    // Přiblížení arku kubickou Bezierovou křivkou
+                    let cp1 = CGPoint(x: (currentPoint.x + end.x) / 2, y: currentPoint.y)
+                    let cp2 = CGPoint(x: (currentPoint.x + end.x) / 2, y: end.y)
+                    self.addCurve(to: end, controlPoint1: cp1, controlPoint2: cp2)
+                    currentPoint = end
+                    i += 7
+                }
+            case "a":
+                // SVG relative arc: rx ry xRotation largeArcFlag sweepFlag dx dy
+                var i = 0
+                while i + 6 < coords.count {
+                    let end = CGPoint(x: currentPoint.x + coords[i+5], y: currentPoint.y + coords[i+6])
+                    let cp1 = CGPoint(x: (currentPoint.x + end.x) / 2, y: currentPoint.y)
+                    let cp2 = CGPoint(x: (currentPoint.x + end.x) / 2, y: end.y)
+                    self.addCurve(to: end, controlPoint1: cp1, controlPoint2: cp2)
+                    currentPoint = end
+                    i += 7
+                }
+            case "Q":
+                // SVG absolute quadratic bezier: cpx cpy x y
+                var i = 0
+                while i + 3 < coords.count {
+                    let cp = CGPoint(x: coords[i], y: coords[i+1])
+                    let end = CGPoint(x: coords[i+2], y: coords[i+3])
+                    self.addQuadCurve(to: end, controlPoint: cp)
+                    currentPoint = end
+                    i += 4
+                }
+            case "q":
+                // SVG relative quadratic bezier: dcpx dcpy dx dy
+                var i = 0
+                while i + 3 < coords.count {
+                    let cp = CGPoint(x: currentPoint.x + coords[i], y: currentPoint.y + coords[i+1])
+                    let end = CGPoint(x: currentPoint.x + coords[i+2], y: currentPoint.y + coords[i+3])
+                    self.addQuadCurve(to: end, controlPoint: cp)
+                    currentPoint = end
+                    i += 4
+                }
+            case "T":
+                // SVG absolute smooth quadratic bezier: x y (CP je zrcadlo předchozího)
+                var i = 0
+                while i + 1 < coords.count {
+                    let end = CGPoint(x: coords[i], y: coords[i+1])
+                    self.addLine(to: end) // zjednodušení: bez sledování předchozího CP
+                    currentPoint = end
+                    i += 2
+                }
+            case "t":
+                var i = 0
+                while i + 1 < coords.count {
+                    let end = CGPoint(x: currentPoint.x + coords[i], y: currentPoint.y + coords[i+1])
+                    self.addLine(to: end)
+                    currentPoint = end
+                    i += 2
+                }
             default:
                 break
             }
