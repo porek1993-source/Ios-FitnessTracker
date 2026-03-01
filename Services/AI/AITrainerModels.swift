@@ -294,10 +294,11 @@ extension UserContextProfile {
 
 extension TrainerResponse {
     /// Převede offline `ResponsePlan` na plnohodnotný `TrainerResponse`.
-    static func fromFallback(_ plan: ResponsePlan) -> TrainerResponse {
-        TrainerResponse(
+    static func fromFallback(_ plan: ResponsePlan, dayLabel: String = "") -> TrainerResponse {
+        let label = dayLabel.isEmpty ? plan.motivationalMessage.prefix(30).description : dayLabel
+        return TrainerResponse(
             coachMessage: plan.motivationalMessage,
-            sessionLabel: "Offline Fallback",
+            sessionLabel: label,
             readinessLevel: "orange",
             adaptationReason: "Offline režim — generováno lokálně.",
             estimatedDurationMinutes: plan.exercises.count * 10,

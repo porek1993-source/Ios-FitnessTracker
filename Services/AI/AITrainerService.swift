@@ -176,7 +176,7 @@ final class AITrainerService: ObservableObject {
                     day: plannedDay,
                     context: modelContext
                 )
-                finalResponse = TrainerResponse.fromFallback(fallback)
+                finalResponse = TrainerResponse.fromFallback(fallback, dayLabel: plannedDay.label)
             }
 
             // ── KROK 3: Validace počtu cviků a uložení do cache ─────────────────
@@ -215,7 +215,7 @@ final class AITrainerService: ObservableObject {
             )
 
             offlineMessage = "iKorba je momentálně offline — tady je tvůj standardní plán. 💪"
-            return TrainerResponse.fromFallback(fallback)
+            return TrainerResponse.fromFallback(fallback, dayLabel: plannedDay.label)
         }
     }
 
