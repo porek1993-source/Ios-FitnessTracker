@@ -12,7 +12,8 @@ struct RescheduledDay: Codable {
     /// ✅ FIX #13: Původní kód force-unwrapoval Calendar.date(byAdding:) výsledek.
     /// Ačkoli je selhání hypotetické, force-unwrap je špatná praxe — nahrazeno ?? .now.
     var date: Date {
-        Calendar.current.date(byAdding: .day, value: dayIndex, to: Calendar.current.startOfDay(for: .now)) ?? .now
+        let wd = Calendar.mondayStart.component(.weekday, from: .now)
+        return Calendar.mondayStart.date(byAdding: .day, value: dayIndex, to: Calendar.mondayStart.startOfDay(for: .now)) ?? .now
     }
 }
 

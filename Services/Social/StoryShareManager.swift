@@ -63,6 +63,27 @@ public final class StoryShareManager {
         UIPasteboard.general.setItems([pasteboardItems], options: pasteboardOptions)
 
         // Odskok do IG
-        UIApplication.shared.open(url, options: [:], completionHandler: nil)
+        if UIApplication.shared.canOpenURL(url) {
+            UIApplication.shared.open(url, options: [:], completionHandler: nil)
+        } else {
+            // Backup: Standardní iOS Share Sheet pokud IG chybí
+            shareGeneric(image: image)
+        }
+    }
+
+    private func shareGeneric(image: UIImage) {
+        let vc = UIActivityViewController(activityItems: [image], applicationActivities: nil)
+        if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+           let rootVC = windowScene.windows.first?.rootViewController {
+            
+            // iPad support
+            if let popover = vc.popoverPresentationController {
+                popover.sourceView = rootVC.view
+                popover.sourceRect = CGRect(x: rootVC.view.bounds.midX, y: rootVC.view.bounds.midY, width: 0, height: 0)
+                popover.permittedArrowDirections = []
+            }
+            
+            rootVC.present(vc, animated: true)
+        }
     }
 }

@@ -233,12 +233,13 @@ struct ResponsePlan: Codable {
 struct TrainerResponse: Codable {
     let coachMessage: String
     let sessionLabel: String
-    let readinessLevel: String
+    let readinessLevel: String // green, orange, red
     let adaptationReason: String?
     let estimatedDurationMinutes: Int
     let warmUp: [WarmUpExercise]
     let mainBlocks: [MainBlock]
     let coolDown: [CoolDownExercise]
+    var warmupExercises: [String]? = []
 }
 
 struct WarmUpExercise: Codable {

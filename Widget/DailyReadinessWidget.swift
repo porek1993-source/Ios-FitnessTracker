@@ -48,7 +48,7 @@ struct ReadinessTimelineProvider: TimelineProvider {
         let entry = buildEntry(from: modelContext)
         
         // Aktualizujeme každých 30 minut
-        let nextUpdate = Calendar.current.date(byAdding: .minute, value: 30, to: .now)!
+        let nextUpdate = Calendar.mondayStart.date(byAdding: .minute, value: 30, to: .now)!
         let timeline = Timeline(entries: [entry], policy: .after(nextUpdate))
         completion(timeline)
     }
@@ -69,8 +69,7 @@ struct ReadinessTimelineProvider: TimelineProvider {
         }
 
         let today = Date.now
-        let weekday = Calendar.current.component(.weekday, from: today)
-        let dayIndex = weekday == 1 ? 7 : weekday - 1 // 1=Po ... 7=Ne
+        let dayIndex = today.weekday // 1=Po ... 7=Ne
         let todayDay = activePlan.scheduledDays.first { $0.dayOfWeek == dayIndex }
         let label = todayDay?.label ?? "Odpočinkový den"
 
@@ -85,7 +84,7 @@ struct ReadinessTimelineProvider: TimelineProvider {
 
         // Jednoduchá heatmapa — zátěž podle posledních 48h tréninků
         var muscleLoad: [String: Double] = [:]
-        let cutoff = Calendar.current.date(byAdding: .hour, value: -48, to: today)!
+        let cutoff = Calendar.mondayStart.date(byAdding: .hour, value: -48, to: today)!
         let recentSessions = activePlan.sessions.filter { $0.startedAt > cutoff }
         for session in recentSessions {
             for exercise in session.exercises {

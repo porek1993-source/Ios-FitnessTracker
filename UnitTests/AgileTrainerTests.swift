@@ -353,7 +353,7 @@ final class ExtensionsTests: XCTestCase {
     /// Regresní test pro FIX #16 — endOfDay musí být DST-bezpečný.
     func testEndOfDayIsStartOfNextDay() {
         // Použijeme fixní datum abychom nezáviseli na aktuálním dnu
-        let calendar = Calendar.current
+        let calendar = Calendar.mondayStart
         var components = DateComponents()
         components.year = 2024
         components.month = 3

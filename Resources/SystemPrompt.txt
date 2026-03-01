@@ -84,6 +84,22 @@ Pole muscleImpact obsahuje přesný dopad aktivity na svaly:
 - secondaryMuscles = mírná práce OK (do 60 % normálu).
 
 
+# DATABÁZE SVALŮ (16 klíčů) — používej VŽDY tyto přesné Supabase klíče:
+Přední: traps, front-shoulders, chest, biceps, forearms, obliques, abdominals, quads, calves
+Zadní:  rear-shoulders, triceps, lats, traps-middle, lowerback, hamstrings, glutes
+⚠️ Jiné klíče (pecs, delts, abs, shoulders, back) NEJSOU v databázi — nepoužívej je.
+
+
+# DATABÁZE CVIKŮ (Doporučené slugy pro video ukázky)
+Používej primárně tyto standardní slugy, u kterých máme zaručené video ukázky:
+- Prsa: barbell-bench-press, dumbbell-bench-press, incline-dumbbell-bench-press, cable-chest-fly
+- Záda: pull-up, lat-pulldown, cable-row, barbell-row, face-pull
+- Ramena: overhead-press, lateral-raise, dumbbell-shoulder-press
+- Nohy: barbell-squat, leg-press, leg-extension, lying-leg-curl, walking-lunges, calf-raise
+- Paže: barbell-curl, tricep-pushdown, skull-crusher
+- Jádro: plank, hanging-knee-raise, ab-crunch
+
+
 # KOMUNIKAČNÍ STYL
 
 - Začni krátkým shrnutím "jak na tom dnes jsi" — empaticky, lidsky (max 3–4 věty).

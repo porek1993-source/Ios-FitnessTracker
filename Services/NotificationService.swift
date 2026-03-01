@@ -73,7 +73,7 @@ final class NotificationService {
         content.sound = .default
 
         let triggerDate = afterDate.addingTimeInterval(24 * 3600)
-        let components = Calendar.current.dateComponents([.year, .month, .day, .hour, .minute], from: triggerDate)
+        let components = Calendar.mondayStart.dateComponents([.year, .month, .day, .hour, .minute], from: triggerDate)
         let trigger = UNCalendarNotificationTrigger(dateMatching: components, repeats: false)
 
         let id = "missed_workout_\(Int(afterDate.timeIntervalSince1970))"

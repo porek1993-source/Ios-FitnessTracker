@@ -186,6 +186,10 @@ targets:
         NSMicrophoneUsageDescription: >-
           Aplikace nepoužívá mikrofon — ale systém tuto hodnotu vyžaduje pro AVAudioSession.
 
+        # Povolení pro otevírání Instagramu (sdílení Stories)
+        LSApplicationQueriesSchemes:
+          - instagram-stories
+
     # ── Entitlements (capabilities) ──────────────────────────────────
     # KRITICKÉ: tyto hodnoty MUSÍ odpovídat nastavení v Apple Developer Portal.
     # Pokud Capability v portálu chybí → build selže při signing.

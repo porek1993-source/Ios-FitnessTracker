@@ -21,7 +21,7 @@ enum FatigueStore {
         // Platí jen pro dnešek
         if let savedTimestamp = UserDefaults.standard.object(forKey: dateKey) as? TimeInterval {
             let savedDate = Date(timeIntervalSince1970: savedTimestamp)
-            guard Calendar.current.isDateInToday(savedDate) else {
+            guard savedDate.isSameDay(as: .now) else {
                 UserDefaults.standard.removeObject(forKey: key)
                 return []
             }

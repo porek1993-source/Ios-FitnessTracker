@@ -70,8 +70,8 @@ final class HealthBackgroundManager {
         let request = BGAppRefreshTaskRequest(identifier: Self.healthSyncTaskIdentifier)
         
         // Nastavíme spuštění nejdříve na zítra ve 4:00 ráno
-        if let tomorrow = Calendar.current.date(byAdding: .day, value: 1, to: Date()),
-           let next4AM = Calendar.current.date(bySettingHour: 4, minute: 0, second: 0, of: tomorrow) {
+        if let tomorrow = Calendar.mondayStart.date(byAdding: .day, value: 1, to: Date()),
+           let next4AM = Calendar.mondayStart.date(bySettingHour: 4, minute: 0, second: 0, of: tomorrow) {
             request.earliestBeginDate = next4AM
         } else {
             // Fallback na 8 hodin od teď
@@ -234,9 +234,12 @@ final class HealthBackgroundManager {
         }
         
         if hrvDeclining || rhrRising {
+            profile.isDeloadRecommended = true
             Task { @MainActor in
                 NotificationService.shared.scheduleDeloadReminder()
             }
+        } else {
+            profile.isDeloadRecommended = false
         }
     }
 }

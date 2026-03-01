@@ -31,7 +31,7 @@ struct Provider: TimelineProvider {
     func getTimeline(in context: Context, completion: @escaping (Timeline<Entry>) -> ()) {
         // Obnova každou hodinu + po každém otevření appky (reloadAllTimelines z hlavní appky)
         let entries = [fetchEntry()]
-        let nextUpdate = Calendar.current.date(byAdding: .hour, value: 1, to: Date())!
+        let nextUpdate = Calendar.mondayStart.date(byAdding: .hour, value: 1, to: Date())!
         let timeline = Timeline(entries: entries, policy: .after(nextUpdate))
         completion(timeline)
     }

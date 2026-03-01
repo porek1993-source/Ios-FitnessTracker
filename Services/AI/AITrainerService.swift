@@ -62,6 +62,9 @@ final class AITrainerService: ObservableObject {
         Zadní:  rear-shoulders, triceps, lats, traps-middle, lowerback, hamstrings, glutes
         ⚠️ Jiné klíče (pecs, delts, abs, shoulders, back) NEJSOU v databázi — nepoužívej je.
 
+        DATABÁZE CVIKŮ (Doporučené slugy pro video ukázky):
+        Používej primárně tyto standardní slugy: barbell-bench-press, dumbbell-bench-press, incline-dumbbell-bench-press, cable-chest-fly, pull-up, lat-pulldown, cable-row, barbell-row, face-pull, overhead-press, lateral-raise, dumbbell-shoulder-press, barbell-squat, leg-press, leg-extension, lying-leg-curl, walking-lunges, calf-raise, barbell-curl, tricep-pushdown, skull-crusher, plank, hanging-knee-raise, ab-crunch.
+
         BIOMECHANIKA TRÉNINKU:
         • PUSH split: chest, front-shoulders, triceps
         • PULL split: lats, traps-middle, rear-shoulders, biceps, forearms
@@ -147,7 +150,10 @@ final class AITrainerService: ObservableObject {
         // ── KROK 2: Smart API Routing ─────────────────────────────────────────
         
         // Získáme dnešní snapshot (HealthBackgroundManager jej ukládal)
-        let healthSnapshot = profile.healthMetricsHistory.first(where: { Calendar.current.isDate($0.date, inSameDayAs: date) })
+        // Získáme dnešní snapshot
+        let healthSnapshot = profile.healthMetricsHistory.first(where: { 
+            Calendar.mondayStart.isDate($0.date, inSameDayAs: date) 
+        })
         
         let shouldCallAI = shouldUseGemini(profile: profile, date: date, healthSnapshot: healthSnapshot)
 
@@ -235,9 +241,9 @@ final class AITrainerService: ObservableObject {
         for day in daysToProcess {
             // ✅ FIX: Používáme Date.weekday extension (1=Po...7=Ne) místo inline konverze
             // která duplicovala logiku a mohla vnést nekonzistenci.
-            let calendar = Calendar.current
+            let calendar = Calendar.mondayStart
             let today = Date.now
-            let ourTodayIdx = today.weekday   // 1=Po ... 7=Ne (konverze v Extensions.swift)
+            let ourTodayIdx = today.weekday
             
             let diff = day.dayOfWeek - ourTodayIdx
             let targetDate = calendar.date(byAdding: .day, value: (diff < 0 ? diff + 7 : diff), to: today) ?? today
@@ -379,6 +385,12 @@ private extension AITrainerService {
         var promptStr = "Vygeneruj trénink. Odpověz POUZE JSON:\n\(json)\n\n"
         
         // --- 🧠 ZVLÁŠTNÍ INSTRUKCE PRO GEMINI (Obrana proti hloupnutí AI) ---
+        
+        // 0. DELOAD (Kritické vyvolání z Health trendů)
+        if let plan = try? context.modelContext.fetch(FetchDescriptor<UserProfile>()).first, plan.isDeloadRecommended {
+             promptStr += "⚠️ KRITICKÝ POKYN (DELOAD): Uživatel vykazuje známky vysoké akumulované únavy (HRV/RHR trend). Vygeneruj DELOAD trénink: max 4 cviky, intenzita 60 %, max 2 série na cvik. Zaměř se na techniku a regeneraci.\n"
+        }
+
         // 1. Zkontrolujeme sportovní vyčerpání
         if !context.healthMetrics.externalActivities.isEmpty {
             let totalActivityKcal = context.healthMetrics.externalActivities.reduce(0) { $0 + $1.energyKcal }
@@ -396,6 +408,9 @@ private extension AITrainerService {
         if let workouts = context.workoutsRemainingInWeek, let days = context.daysRemainingInWeek, workouts > days && workouts > 0 {
             promptStr += "⚠️ POKYNY K ADAPTACI (Zpoždění): Uživatel je ve skluzu. Chybí mu odcvičit \(workouts) tréninků, ale do konce týdne zbývá už jen \(days) dní. Chytře spoj nevycvičené svalové partie do dnešního tréninku, ať dožene ztrátu.\n"
         }
+        
+        // 4. ROZCVIČKA (Warmup phase)
+        promptStr += "⚠️ ROZCVIČKA: Přidej k tréninku klíč 'warmupExercises' (pole Stringů), které bude obsahovat 3 specifické dynamické cviky na rozcvičení cílových svalů dne (např. 'Kroužení rameny', 'Výpady bez váhy').\n"
                 
         return promptStr
     }
@@ -415,9 +430,12 @@ private extension AITrainerService {
             throw GeminiError.emptyResponse
         }
 
-        // Najdi začátek JSON objektu (ochrana před prose před JSON)
-        let jsonStart = cleaned.firstIndex(of: "{") ?? cleaned.startIndex
-        let jsonSlice = String(cleaned[jsonStart...])
+        // Najdi rozsah JSON objektu (ochrana před prose před/za JSON)
+        guard let jsonStart = cleaned.firstIndex(of: "{"),
+              let jsonEnd   = cleaned.lastIndex(of: "}") else {
+            throw GeminiError.jsonParsingFailed("Nenalezeny JSON složené závorky { }")
+        }
+        let jsonSlice = String(cleaned[jsonStart...jsonEnd])
 
         guard let data = jsonSlice.data(using: .utf8) else {
             throw GeminiError.jsonParsingFailed("Nelze převést na Data — invalid encoding")
