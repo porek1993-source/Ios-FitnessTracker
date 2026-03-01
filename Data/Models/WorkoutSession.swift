@@ -22,6 +22,8 @@ final class WorkoutSession {
 
     var plannedDay: PlannedWorkoutDay?
 
+    var isSynced: Bool = false
+
     var plannedDayName: String {
         plannedDay?.label ?? "Trénink"
     }
@@ -83,11 +85,17 @@ final class CompletedSet {
     var reps: Int
     var rpe: Double?
     var durationSeconds: Int?
-    var isWarmupSet: Bool
+    var isWarmupSet: Bool // Lze smazat výhledově
+    var setTypeStr: String
+    
+    var setType: SetType {
+        get { SetType(rawValue: setTypeStr) ?? (isWarmupSet ? .warmup : .normal) }
+        set { setTypeStr = newValue.rawValue }
+    }
 
     var sessionExercise: SessionExercise?
 
-    var isWarmup: Bool { isWarmupSet }
+    var isWarmup: Bool { setType == .warmup || isWarmupSet }
 
     init(
         setNumber: Int,
@@ -95,7 +103,8 @@ final class CompletedSet {
         reps: Int,
         rpe: Double? = nil,
         durationSeconds: Int? = nil,
-        isWarmupSet: Bool = false
+        isWarmupSet: Bool = false,
+        type: SetType = .normal
     ) {
         self.setNumber = setNumber
         self.weightKg = weightKg
@@ -103,6 +112,7 @@ final class CompletedSet {
         self.rpe = rpe
         self.durationSeconds = durationSeconds
         self.isWarmupSet = isWarmupSet
+        self.setTypeStr = type.rawValue
     }
 }
 

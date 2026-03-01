@@ -214,6 +214,16 @@ extension EmptyStateView {
         )
     }
 
+    // ── Klidový tep (nové) ────────────────────────────────────────────────────
+    static func restingHeartRate() -> EmptyStateView {
+        EmptyStateView(
+            icon:      "heart.slash.fill",
+            title:     "Žádná data o klidovém tepu",
+            message:   "Klidový tep ukazuje kardiovaskulární zdatnost. Apple Watch ho měří automaticky.",
+            iconColor: Color(red: 0.92, green: 0.35, blue: 0.52)
+        )
+    }
+
     // ── Trénink nenalezen (nové) ───────────────────────────────────────────────
     static func noWorkout(onGenerate: (() -> Void)? = nil) -> EmptyStateView {
         EmptyStateView(

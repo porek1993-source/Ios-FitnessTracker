@@ -38,19 +38,8 @@ struct OneRepMaxChartView: View {
             }
             
             if filteredRecords.isEmpty {
-                VStack {
-                    Spacer()
-                    Image(systemName: "chart.line.uptrend.xyaxis")
-                        .font(.system(size: 40))
-                        .foregroundStyle(.white.opacity(0.1))
-                    Text("Zatím žádná data")
-                        .font(.system(size: 14))
-                        .foregroundStyle(.white.opacity(0.3))
-                        .padding(.top, 8)
-                    Spacer()
-                }
-                .frame(height: 200)
-                .frame(maxWidth: .infinity)
+                EmptyStateView.oneRepMax()
+                    .frame(height: 200)
             } else {
                 Chart(filteredRecords) { record in
                     LineMark(

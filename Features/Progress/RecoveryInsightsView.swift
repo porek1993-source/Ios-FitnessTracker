@@ -196,37 +196,7 @@ struct DailyInsightCard: View {
 
 // MARK: - Empty State Fallback
 
-private struct ChartEmptyState: View {
-    let icon: String
-    let title: String
-    let subtitle: String
-    let iconColor: Color
-    
-    var body: some View {
-        VStack(spacing: 14) {
-            ZStack {
-                Circle()
-                    .fill(iconColor.opacity(0.10))
-                    .frame(width: 64, height: 64)
-                Image(systemName: icon)
-                    .font(.system(size: 26))
-                    .foregroundStyle(iconColor.opacity(0.6))
-            }
-            
-            Text(title)
-                .font(AppTypography.callout)
-                .foregroundStyle(AppColors.textSecondary)
-            
-            Text(subtitle)
-                .font(AppTypography.footnote)
-                .foregroundStyle(AppColors.textTertiary)
-                .multilineTextAlignment(.center)
-                .padding(.horizontal, 20)
-        }
-        .frame(height: 180)
-        .frame(maxWidth: .infinity)
-    }
-}
+
 
 // MARK: - Charts
 
@@ -252,12 +222,8 @@ struct SleepChartCard: View {
                 .foregroundStyle(AppColors.textTertiary)
             
             if data.isEmpty || data.allSatisfy({ $0.sleepDurationHours == nil }) {
-                ChartEmptyState(
-                    icon: "moon.zzz.fill",
-                    title: "Žádná data o spánku",
-                    subtitle: "Připoj Apple Watch nebo zadej spánek v Zdraví pro sledování kvality odpočinku.",
-                    iconColor: .indigo
-                )
+                EmptyStateView.sleep()
+                    .frame(height: 200)
             } else {
                 Chart(data) { item in
                     AreaMark(
@@ -340,12 +306,8 @@ struct HRVChartCard: View {
                 .foregroundStyle(AppColors.textTertiary)
             
             if data.isEmpty || data.allSatisfy({ $0.heartRateVariabilityMs == nil }) {
-                ChartEmptyState(
-                    icon: "waveform.path.ecg",
-                    title: "Žádná HRV data",
-                    subtitle: "HRV měří tvoji schopnost zotavení. Nos Apple Watch přes noc pro automatické měření.",
-                    iconColor: chartColor
-                )
+                EmptyStateView.hrv()
+                    .frame(height: 200)
             } else {
                 Chart(data) { item in
                     AreaMark(
@@ -429,12 +391,8 @@ struct RestingHRChartCard: View {
                 .foregroundStyle(AppColors.textTertiary)
             
             if data.isEmpty || data.allSatisfy({ $0.restingHeartRate == nil }) {
-                ChartEmptyState(
-                    icon: "heart.slash.fill",
-                    title: "Žádná data o klidovém tepu",
-                    subtitle: "Klidový tep ukazuje kardiovaskulární zdatnost. Apple Watch ho měří automaticky.",
-                    iconColor: chartColor
-                )
+                EmptyStateView.restingHeartRate()
+                    .frame(height: 200)
             } else {
                 Chart(data) { item in
                     if let rhr = item.restingHeartRate {

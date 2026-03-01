@@ -60,6 +60,7 @@ struct RootView: View {
     @Environment(\.modelContext) private var modelContext
     @EnvironmentObject private var appEnv: AppEnvironment
 
+    @AppStorage("hasSeenOnboarding") private var hasSeenOnboarding = false
     @State private var showChat = false
 
     var body: some View {
@@ -71,7 +72,7 @@ struct RootView: View {
                     .transition(.opacity)
 
             // ── Onboarding ────────────────────────────────────────────────────
-            } else if profiles.isEmpty {
+            } else if !hasSeenOnboarding || profiles.isEmpty {
                 onboardingFlow
                     .transition(.opacity)
 
@@ -99,25 +100,9 @@ struct RootView: View {
 
     @ViewBuilder
     private var onboardingFlow: some View {
-        if showChat {
-            OnboardingChatView()
-                .transition(.asymmetric(
-                    insertion: .move(edge: .trailing),
-                    removal:   .opacity
-                ))
-        } else {
-            WelcomeView(
-                onStart: {
-                    withAnimation(.spring(response: 0.44, dampingFraction: 0.80)) {
-                        showChat = true
-                    }
-                },
-                onSkip: {
-                    injectMockProfile()
-                }
-            )
+        // Zde přesměrujeme na nový OnboardingView z Fáze 6
+        OnboardingView()
             .transition(.opacity)
-        }
     }
     
     // MARK: - Mock Bypassing (Testování)

@@ -76,6 +76,7 @@ struct ProfileSettingsForm: View {
     @State private var draftEquipment: Set<Equipment> = [.barbell, .dumbbell, .cable, .machine]
     @State private var draftWeightKg: Double = 75.0
     @State private var draftWeightText: String = "75"
+    @State private var reminderTime: Date = Calendar.current.date(bySettingHour: 17, minute: 0, second: 0, of: .now) ?? .now
     @EnvironmentObject private var healthKitService: HealthKitService
 
     var body: some View {
@@ -205,27 +206,22 @@ struct ProfileSettingsForm: View {
 
                 // MARK: — Notifikace
                 settingsSection(title: "Připomínky", icon: "bell.fill") {
-                    VStack(spacing: 12) {
+                    VStack(alignment: .leading, spacing: 12) {
                         Text("Denní připomínka tréninku")
                             .font(.system(size: 14)).foregroundStyle(.white.opacity(0.7))
 
-                        HStack(spacing: 8) {
-                            ForEach([6, 7, 8, 9, 12, 17, 18, 19], id: \.self) { hour in
-                                Button {
-                                    NotificationService.shared.scheduleWorkoutReminder(hour: hour, minute: 0)
-                                } label: {
-                                    Text("\(hour):00")
-                                        .font(.system(size: 12, weight: .medium))
-                                        .foregroundStyle(.white.opacity(0.7))
-                                        .padding(.horizontal, 8).padding(.vertical, 6)
-                                        .background(Color.white.opacity(0.08))
-                                        .clipShape(RoundedRectangle(cornerRadius: 8))
+                        DatePicker("Čas připomínky", selection: $reminderTime, displayedComponents: .hourAndMinute)
+                            .labelsHidden()
+                            .datePickerStyle(.compact)
+                            .environment(\.colorScheme, .dark)
+                            .onChange(of: reminderTime) { newValue in
+                                let comps = Calendar.current.dateComponents([.hour, .minute], from: newValue)
+                                if let h = comps.hour, let m = comps.minute {
+                                    NotificationService.shared.scheduleWorkoutReminder(hour: h, minute: m)
                                 }
                             }
-                        }
-                        .padding(.horizontal, 4)
 
-                        Text("Klepnutím nastavíš připomínku na vybraný čas.")
+                        Text("Klepnutím na čas nastavíš přesnou minutu.")
                             .font(.caption).foregroundStyle(.white.opacity(0.4))
                     }
                 }
@@ -235,6 +231,11 @@ struct ProfileSettingsForm: View {
                 // — lepší error handling, typované stavy, elegantní UX
                 settingsSection(title: "Apple Health", icon: "heart.fill") {
                     AppleHealthSection(healthKitService: healthKitService)
+                }
+
+                // MARK: — Export Dat
+                settingsSection(title: "Export Dat", icon: "doc.text.fill") {
+                    ExportButtonView()
                 }
 
                 // MARK: — Uložit
@@ -319,26 +320,35 @@ struct ProfileSettingsForm: View {
     }
 
     private func equipmentToggle(_ equip: Equipment) -> some View {
-        Button {
-            if draftEquipment.contains(equip) {
-                draftEquipment.remove(equip)
-            } else {
-                draftEquipment.insert(equip)
-            }
-        } label: {
-            HStack(spacing: 8) {
-                Text(equip.emoji).font(.system(size: 16))
-                Text(equip.rawValue)
-                    .font(.system(size: 13))
-                    .foregroundStyle(draftEquipment.contains(equip) ? .white : .white.opacity(0.5))
-                Spacer()
-                if draftEquipment.contains(equip) {
-                    Image(systemName: "checkmark").font(.caption).foregroundStyle(.blue)
+        let isSelected = draftEquipment.contains(equip)
+        return Button {
+            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                if isSelected {
+                    draftEquipment.remove(equip)
+                } else {
+                    draftEquipment.insert(equip)
                 }
             }
-            .padding(.horizontal, 10).padding(.vertical, 8)
-            .background(draftEquipment.contains(equip) ? Color.blue.opacity(0.15) : Color.white.opacity(0.05))
-            .clipShape(RoundedRectangle(cornerRadius: 10))
+        } label: {
+            VStack(spacing: 8) {
+                Text(equip.emoji).font(.system(size: 24))
+                Text(equip.localizedName)
+                    .font(.system(size: 13, weight: .medium, design: .rounded))
+                    .foregroundStyle(isSelected ? .white : .white.opacity(0.6))
+                    .multilineTextAlignment(.center)
+                    .lineLimit(2)
+                    .minimumScaleFactor(0.8)
+            }
+            .frame(maxWidth: .infinity, minHeight: 80)
+            .padding(10)
+            .background(
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .fill(isSelected ? Color.blue.opacity(0.2) : Color.white.opacity(0.05))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .stroke(isSelected ? Color.blue : Color.white.opacity(0.08), lineWidth: 1.5)
+            )
         }
     }
 

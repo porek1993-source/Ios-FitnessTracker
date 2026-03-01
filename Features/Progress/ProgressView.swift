@@ -12,6 +12,7 @@ struct AppProgressView: View {
 
     @State private var selectedExercise: Exercise?
     @State private var showExercisePicker = false
+    @State private var show1RM = false
 
     private var completedSessions: [WorkoutSession] {
         sessions.filter { $0.status == .completed }
@@ -30,8 +31,8 @@ struct AppProgressView: View {
             return (comps.yearForWeekOfYear ?? 0) * 100 + (comps.weekOfYear ?? 0)
         }
 
-        // Použij WeightEntry (přesná data ze všech typů tréninků)
-        for entry in weightEntries {
+        // Použij WeightEntry (pouze .normal a .failure)
+        for entry in weightEntries.filter({ $0.setType == .normal || $0.setType == .failure }) {
             grouped[yearWeekKey(from: entry.loggedAt), default: 0] += entry.weightKg * Double(entry.reps)
         }
         // Fallback na session.exercises pro zpětnou kompatibilitu
@@ -40,6 +41,7 @@ struct AppProgressView: View {
                 let key = yearWeekKey(from: session.startedAt)
                 let vol = session.exercises
                     .flatMap { $0.completedSets }
+                    .filter { $0.setType == .normal || $0.setType == .failure }
                     .reduce(0.0) { $0 + $1.weightKg * Double($1.reps) }
                 grouped[key, default: 0] += vol
             }
@@ -52,20 +54,35 @@ struct AppProgressView: View {
 
     private var exerciseHistory: [(date: Date, weight: Double)] {
         guard let ex = selectedExercise else { return [] }
-        return ex.weightHistory
-            .sorted { $0.loggedAt < $1.loggedAt }
-            .suffix(12)
-            .map { ($0.loggedAt, $0.weightKg) }
+        
+        // Filtrujeme vždy jen na .normal a .failure (případně ty, co flag nemají a spadnou pod .normal)
+        let relevantEntries = weightEntries
+            .filter { $0.exercise?.slug == ex.slug }
+            .filter { $0.setType == .normal || $0.setType == .failure }
+            
+        if show1RM {
+            return OneRepMaxCalculator.historical1RM(from: relevantEntries).suffix(12)
+        } else {
+            return relevantEntries // používáme filtrované pole
+                .sorted { $0.loggedAt < $1.loggedAt }
+                .suffix(12)
+                .map { ($0.loggedAt, $0.weightKg) }
+        }
     }
 
     private var totalVolume: Double {
-        // WeightEntry je přesný zdroj - zahrnuje AI workout data
-        let fromEntries = weightEntries.reduce(0.0) { $0 + $1.weightKg * Double($1.reps) }
+        // WeightEntry je přesný zdroj (jen pracovní a failure)
+        let fromEntries = weightEntries
+            .filter({ $0.setType == .normal || $0.setType == .failure })
+            .reduce(0.0) { $0 + $1.weightKg * Double($1.reps) }
+            
         if fromEntries > 0 { return fromEntries }
+        
         // Fallback
         return completedSessions
             .flatMap { $0.exercises }
             .flatMap { $0.completedSets }
+            .filter { $0.setType == .normal || $0.setType == .failure }
             .reduce(0) { $0 + $1.weightKg * Double($1.reps) }
     }
 
@@ -86,6 +103,9 @@ struct AppProgressView: View {
                         if !volumeByWeek.isEmpty {
                             weeklyVolumeChart.padding(.horizontal, 16)
                         }
+                        
+                        WorkoutCalendarView(workoutDates: completedSessions.map { $0.startedAt })
+                            .padding(.horizontal, 16)
 
                         exerciseProgressSection.padding(.horizontal, 16)
                         historySection.padding(.horizontal, 16).padding(.bottom, 40)
@@ -109,10 +129,14 @@ struct AppProgressView: View {
 
     // MARK: — Stats
 
+    // MARK: - Helpers
+    
+
+
     private var statsHeader: some View {
         HStack(spacing: 12) {
-            statCard(title: "Tréninků", value: "\(completedSessions.count)", icon: "checkmark.circle.fill", color: .blue)
-            statCard(title: "Celkem tun", value: formatKg(totalVolume), icon: "scalemass.fill", color: .orange)
+            statCard(title: "Tréninky", value: "\(completedSessions.count)", icon: "checkmark.circle.fill", color: .blue)
+            statCard(title: "Celkový objem", value: totalVolume.formatVolume(), icon: "scalemass.fill", color: .orange)
             statCard(title: "PR záznamy", value: "\(personalRecordsCount)", icon: "trophy.fill", color: .yellow)
         }
     }
@@ -164,6 +188,19 @@ struct AppProgressView: View {
                     .font(.system(size: 17, weight: .semibold, design: .rounded))
                     .foregroundStyle(.white)
                 Spacer()
+                
+                // Toggle 1RM
+                Button {
+                    withAnimation { show1RM.toggle() }
+                } label: {
+                    Text(show1RM ? "1RM" : "Váha")
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundStyle(show1RM ? .white : .blue)
+                        .padding(.horizontal, 8).padding(.vertical, 4)
+                        .background(show1RM ? Color.orange : Color.blue.opacity(0.15))
+                        .clipShape(Capsule())
+                }
+                
                 Button { showExercisePicker = true } label: {
                     HStack(spacing: 4) {
                         Text(selectedExercise?.name ?? "Vyber cvik").font(.system(size: 13, weight: .medium)).foregroundStyle(.blue)
@@ -176,15 +213,19 @@ struct AppProgressView: View {
             }
 
             if exerciseHistory.isEmpty {
-                Text("Žádná data. Začni odcvičovat a sleduj svůj progres! 💪")
-                    .font(.system(size: 14)).foregroundStyle(.white.opacity(0.5))
-                    .frame(maxWidth: .infinity, alignment: .center).padding(.vertical, 32)
+                EmptyStateView(
+                    icon: "chart.xyaxis.line",
+                    title: "Zatím žádná data",
+                    message: "Začni odcvičovat tento cvik a sleduj svůj progres! 💪",
+                    iconColor: .white.opacity(0.3)
+                )
             } else {
                 Chart(exerciseHistory, id: \.date) { entry in
+                    let color = show1RM ? Color.orange : Color.blue
                     LineMark(x: .value("Datum", entry.date), y: .value("Váha", entry.weight))
-                        .foregroundStyle(.blue).lineStyle(StrokeStyle(lineWidth: 2))
+                        .foregroundStyle(color).lineStyle(StrokeStyle(lineWidth: 2))
                     PointMark(x: .value("Datum", entry.date), y: .value("Váha", entry.weight))
-                        .foregroundStyle(.blue).symbolSize(40)
+                        .foregroundStyle(color).symbolSize(40)
                 }
                 .chartXAxis {
                     AxisMarks(values: .stride(by: .day, count: 7)) { value in
@@ -223,9 +264,12 @@ struct AppProgressView: View {
                 .font(.system(size: 20, weight: .bold, design: .rounded)).foregroundStyle(.white)
 
             if completedSessions.isEmpty {
-                Text("Ještě jsi neodcvičil žádný trénink. Hurá na to! 🏋️")
-                    .font(.system(size: 14)).foregroundStyle(.white.opacity(0.5))
-                    .frame(maxWidth: .infinity, alignment: .center).padding(.vertical, 32)
+                EmptyStateView(
+                    icon: "clock.arrow.circlepath",
+                    title: "Prázdná historie",
+                    message: "Ještě jsi neodcvičil žádný trénink. Hurá na to! 🏋️",
+                    iconColor: .white.opacity(0.3)
+                )
             } else {
                 LazyVStack(spacing: 12) {
                     ForEach(completedSessions.prefix(20)) { session in
@@ -237,10 +281,19 @@ struct AppProgressView: View {
     }
 
     private func sessionCard(_ session: WorkoutSession) -> some View {
-        // Výpočet objemu ze session WeightEntries (přesné pro AI workout)
-        let sessionVolume = weightEntries
+        // Výpočet objemu ze session WeightEntries (jen pracovní/selhání)
+        var sessionVolume = weightEntries
             .filter { $0.sessionId == session.id }
+            .filter { $0.setType == .normal || $0.setType == .failure }
             .reduce(0.0) { $0 + $1.weightKg * Double($1.reps) }
+            
+        // Fallback pro staré tréninky
+        if sessionVolume == 0 {
+            sessionVolume = session.exercises
+                .flatMap { $0.completedSets }
+                .filter { $0.setType == .normal || $0.setType == .failure }
+                .reduce(0.0) { $0 + $1.weightKg * Double($1.reps) }
+        }
 
         return HStack(spacing: 12) {
             RoundedRectangle(cornerRadius: 4).fill(Color.blue.opacity(0.8)).frame(width: 4)
@@ -251,7 +304,7 @@ struct AppProgressView: View {
                     Label("\(session.durationMinutes) min", systemImage: "clock")
                         .font(.system(size: 12)).foregroundStyle(.white.opacity(0.6))
                     if sessionVolume > 0 {
-                        Label(formatKg(sessionVolume), systemImage: "scalemass")
+                        Label(sessionVolume.formatVolume(), systemImage: "scalemass")
                             .font(.system(size: 12)).foregroundStyle(.white.opacity(0.6))
                     }
                     let exCount = session.exercises.count > 0 ? session.exercises.count : (session.plannedDay?.plannedExercises.count ?? 0)
@@ -306,9 +359,5 @@ struct AppProgressView: View {
         }
     }
 
-    private func formatKg(_ value: Double) -> String {
-        if value >= 1_000_000 { return String(format: "%.1fM", value / 1_000_000) }
-        if value >= 1_000 { return String(format: "%.0f t", value / 1_000) }
-        return String(format: "%.0f kg", value)
-    }
+
 }

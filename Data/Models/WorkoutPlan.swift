@@ -70,6 +70,7 @@ final class PlannedExercise {
     var exercise: Exercise?
     var fallbackSlug: String?
     var fallbackName: String?
+    var supersetId: String?
 
     var plannedDay: PlannedWorkoutDay?
 
@@ -82,7 +83,8 @@ final class PlannedExercise {
         targetRepsMin: Int = 8,
         targetRepsMax: Int = 12,
         targetRIR: Int = 2,
-        restSeconds: Int = 120
+        restSeconds: Int = 120,
+        supersetId: String? = nil
     ) {
         self.order = order
         self.exercise = exercise
@@ -93,5 +95,6 @@ final class PlannedExercise {
         self.targetRepsMax = targetRepsMax
         self.targetRIR = targetRIR
         self.restSeconds = restSeconds
+        self.supersetId = supersetId
     }
 }

@@ -16,6 +16,14 @@ final class WeightEntry {
     var loggedAt: Date
     var sessionId: UUID
     var setNumber: Int
+    
+    // Nový atribut pro uložení typu série (zpětně kompatibilní)
+    var setTypeStr: String
+
+    var setType: SetType {
+        get { SetType(rawValue: setTypeStr) ?? .normal }
+        set { setTypeStr = newValue.rawValue }
+    }
 
     @Relationship(inverse: \Exercise.weightHistory)
     var exercise: Exercise?
@@ -27,8 +35,10 @@ final class WeightEntry {
         rir: Int? = nil,
         wasSuccessful: Bool,
         sessionId: UUID,
+        sessionId: UUID,
         setNumber: Int,
-        exercise: Exercise?
+        exercise: Exercise?,
+        type: SetType = .normal
     ) {
         self.id = UUID()
         self.weightKg = weightKg
@@ -38,8 +48,10 @@ final class WeightEntry {
         self.wasSuccessful = wasSuccessful
         self.loggedAt = .now
         self.sessionId = sessionId
+        self.sessionId = sessionId
         self.setNumber = setNumber
         self.exercise = exercise
+        self.setTypeStr = type.rawValue
     }
 }
 
@@ -51,9 +63,11 @@ extension WeightEntry {
         sessionId: UUID,
         weightKg: Double,
         reps: Int,
+        reps: Int,
         rpe: Int?,
         wasSuccessful: Bool,
-        setNumber: Int = 0
+        setNumber: Int = 0,
+        type: SetType = .normal
     ) {
         self.init(
             weightKg: weightKg,
@@ -62,8 +76,10 @@ extension WeightEntry {
             rir: nil,
             wasSuccessful: wasSuccessful,
             sessionId: sessionId,
+            sessionId: sessionId,
             setNumber: setNumber,
-            exercise: exercise
+            exercise: exercise,
+            type: type
         )
     }
 }

@@ -250,6 +250,11 @@ final class ActiveSessionViewModel: ObservableObject {
                 self.saveSessionToSwiftData(session: sessionCopy, context: modelContext, exercises: exercisesCopy)
                 self.hkWriteResult = hkResult
                 self.isFinishing   = false
+                
+                Task {
+                    await LiveActivityManager.shared.endCurrentActivity()
+                }
+                
                 AppLogger.info("[ActiveSession] Trénink dokončen: \(completedExercises.count) cviků. Uloženo do SwiftData.")
             }
         }
@@ -363,6 +368,23 @@ final class ActiveSessionViewModel: ObservableObject {
         let restSeconds = exercises[exerciseIndex].restSeconds
         if restSeconds > 0 {
             startRestTimer(seconds: restSeconds)
+            
+            // Live Activity start
+            let completedExCount = exercises.prefix(exerciseIndex + 1).filter { ex in
+                ex.sets.contains(where: \.isCompleted)
+            }.count
+            
+            Task {
+                await LiveActivityManager.shared.startRestActivity(
+                    session: session,
+                    currentExercise: exercises[exerciseIndex],
+                    currentExerciseIndex: exerciseIndex,
+                    completedExercisesCount: completedExCount,
+                    completedSetIndex: setIndex,
+                    restSeconds: restSeconds,
+                    planLabel: session.plannedDay?.label ?? "Trénink"
+                )
+            }
         }
 
         HapticManager.shared.playMediumClick()
@@ -373,6 +395,10 @@ final class ActiveSessionViewModel: ObservableObject {
         restTask = nil
         isResting = false
         HapticManager.shared.playSelection()
+        
+        Task {
+            await LiveActivityManager.shared.endCurrentActivity()
+        }
     }
 
     func adjustRest(by delta: Int) {
@@ -641,13 +667,35 @@ final class ActiveSessionViewModel: ObservableObject {
             for (index, plannedEx) in plan.plannedExercises.sorted(by: { $0.order < $1.order }).enumerated() {
                 var state = SessionExerciseState(from: plannedEx)
 
-                // Progressive overload — přepočítej pokud máme historii (přesnější než lastUsedWeight)
+                // Progressive overload + Minulý výkon
                 if let exercise = plannedEx.exercise, !exercise.weightHistory.isEmpty {
                     let history = exercise.weightHistory
                         .sorted { $0.loggedAt > $1.loggedAt }
-                        .prefix(12)
-                    let completedSets = history.map {
-                        // ✅ FIX: Používáme SetSnapshot (ValueType) místo @Model CompletedSet
+                        
+                    // 1. Zjisti reálný minulý výkon pro každý set
+                    if let lastSessionId = history.first?.sessionId {
+                        let lastSessionEntries = history.filter { $0.sessionId == lastSessionId }
+                        for j in 0..<state.sets.count {
+                            // Přidáno: Pokud je to zahřívací série, historii working setu pro ni obvykle nehledáme 1:1, 
+                            // ale můžeme vzít první pracovní set jako referenci, nebo ji přeskočit.
+                            if state.sets[j].isWarmup { continue }
+                            
+                            // Výpočet indexu pracovního setu (1-based), aby odpovídal uložení v DB
+                            let workingSetNumber = state.sets[...j].filter { !$0.isWarmup }.count
+                            
+                            let matchingEntry = lastSessionEntries.first(where: { $0.setNumber == workingSetNumber }) 
+                                ?? lastSessionEntries.last
+                            
+                            if let entry = matchingEntry {
+                                state.sets[j].historicalWeightKg = entry.weightKg
+                                state.sets[j].historicalReps = entry.reps
+                            }
+                        }
+                    }
+
+                    // 2. Progresivní přetížení pro "suggestion" váhu, kterou chceme předvyplnit
+                    let recentSets = history.prefix(12)
+                    let completedSets = recentSets.map {
                         SetSnapshot(from: $0)
                     }
                     if let suggestion = ProgressionEngine.calculateNextTarget(
@@ -656,6 +704,10 @@ final class ActiveSessionViewModel: ObservableObject {
                         programRepsMax: plannedEx.targetRepsMax
                     ) {
                         for j in 0..<state.sets.count {
+                            // Pokud chceme "předvyplnit" suggestnutou váhu do pole, přepíšeme previousWeightKg
+                            // (ale my už ho používáme pro zobrazení "Minule", tak je lepší mít možná targetWeight zvlášť.
+                            // Nicméně v UI InlineField() používá previousWeightKg jako hint. 
+                            // Ukážeme suggestion vah v hintu a reálnou historii v malém textu.)
                             state.sets[j].previousWeightKg = suggestion.weight
                         }
                     }

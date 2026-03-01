@@ -316,7 +316,7 @@ final class WorkoutViewModel: ObservableObject {
 
         // Audio coach — série hotova (pochvala)
         if audioEnabled {
-            audioCoach?.speak(.greatSet)
+            AudioCoachManager.shared.announcePraise()
         }
 
         Task {
@@ -349,7 +349,7 @@ final class WorkoutViewModel: ObservableObject {
     func startTempoForCurrentExercise() {
         guard audioEnabled else { return }
         let ex = exercises[currentExerciseIndex]
-        let reps = ex.sets.first?.targetRepsMax ?? 10
+        let reps = ex.sets.first?.targetReps ?? 10
         audioCoach?.startTempo(tempoString: ex.tempo, reps: reps)
     }
     
@@ -363,9 +363,12 @@ final class WorkoutViewModel: ObservableObject {
         totalRestSeconds     = seconds
         restSecondsRemaining = seconds
         withAnimation { isResting = true }
+        
+        // Zapsání notifikace
+        RestTimerManager.shared.startRestTimer(seconds: seconds)
 
         if audioEnabled {
-            audioCoach?.speak(.restStarted(seconds))
+            AudioCoachManager.shared.announce(message: "Pauza, \(seconds) vteřin.")
         }
 
         restTimerTask = Task {
@@ -375,10 +378,10 @@ final class WorkoutViewModel: ObservableObject {
                 if restSecondsRemaining > 1 {
                     restSecondsRemaining -= 1
                     if restSecondsRemaining == 10 && audioEnabled {
-                        audioCoach?.speak(.restWarning(10))
+                        AudioCoachManager.shared.announce(message: "Zbývá 10 vteřin. Připrav se.")
                     }
                 } else {
-                    if audioEnabled { audioCoach?.speak(.restEnd) }
+                    if audioEnabled { AudioCoachManager.shared.announce(message: "Pauza skončila!") }
                     skipRest()
                     break
                 }
@@ -389,6 +392,10 @@ final class WorkoutViewModel: ObservableObject {
     func skipRest() {
         restTimerTask?.cancel()
         restTimerTask = nil
+        
+        // Zrušení případné běžící lokální notifikace
+        RestTimerManager.shared.cancelTimer()
+        
         withAnimation(.spring(response: 0.35)) { isResting = false }
         Task { await LiveActivityManager.shared.endWithDismissalDelay(2) }
 
@@ -429,7 +436,7 @@ final class WorkoutViewModel: ObservableObject {
         guard currentExerciseIndex < exercises.count - 1 else {
             // Všechny cviky dokončeny — upozorni UI
             withAnimation { allExercisesDone = true }
-            if audioEnabled { audioCoach?.speak(.sessionEnd) }  // ✅ Dedikovaná zpráva pro konec tréninku
+            if audioEnabled { AudioCoachManager.shared.announce(message: "Trénink dokončen! Skvělý výkon.") }  // ✅ Dedikovaná zpráva pro konec tréninku
             UINotificationFeedbackGenerator().notificationOccurred(.success)
             return
         }
@@ -439,8 +446,8 @@ final class WorkoutViewModel: ObservableObject {
         // Audio coach — příští cvik
         if audioEnabled {
             let next = exercises[min(currentExerciseIndex, exercises.count - 1)]
-            let workingSets = next.sets.filter { !$0.isWarmup }.count
-            audioCoach?.speak(.setStarting(1, workingSets))
+            let targetWeight = next.sets.first(where: { $0.type == .normal })?.weightKg ?? next.sets.first?.previousWeightKg
+            AudioCoachManager.shared.announceNextExercise(exerciseName: next.name, targetWeight: targetWeight)
         }
     }
 
@@ -480,7 +487,11 @@ final class WorkoutViewModel: ObservableObject {
     func toggleAudio() {
         audioEnabled.toggle()
         if audioEnabled {
-            audioCoach?.speak(.sessionStart)
+            AudioCoachManager.shared.enable()
+            AudioCoachManager.shared.announce(message: "Jdeme na to, zvuk zapnut!")
+        } else {
+            AudioCoachManager.shared.disable()
+            audioCoach?.disable() // Původní metronom atd.
         }
     }
 
@@ -502,10 +513,10 @@ final class WorkoutViewModel: ObservableObject {
             // Použij exercise přímo ze state (nastaveno v initu) - nepotřebujeme session.exercises lookup
             guard let exercise = ex.exercise else { continue }
 
-            let workingSets = ex.sets.filter { $0.isCompleted && !$0.isWarmup }
+            let workingSets = ex.sets.filter { $0.isCompleted && $0.type == .normal }
             for (setIdx, set) in workingSets.enumerated() {
                 // Bodyweight cviky mohou mít weightKg = nil nebo 0
-                let weight = set.weightKg ?? 0
+                let weight = set.weightKg
                 guard let reps = set.reps, reps > 0 else { continue }
                 let entry = WeightEntry(
                     exercise: exercise,
@@ -529,13 +540,19 @@ final class WorkoutViewModel: ObservableObject {
 
         // ── Zápis do Apple Health ──
         Task {
-            let writer = HealthKitWorkoutWriter()
-            let result = await writer.write(session: session, bodyWeightKg: bodyWeightKg)
-            self.hkWriteResult = result
-            if result.success {
-                AppLogger.info("[HealthKit] Trénink zapsán do Apple Health. Kalorie: \(result.caloriesWritten ?? 0) kcal")
-            } else {
-                print("[HealthKit] Zápis selhal: \(result.error?.localizedDescription ?? "neznámá chyba")")
+            // Vypočítáme odhad kalorií přes sdílenou utilitu
+            let estimatedKcal = HealthWorkoutWriter.estimateBurnedCalories(durationSeconds: TimeInterval(elapsedSeconds))
+            
+            do {
+                try await HealthWorkoutWriter.shared.saveStrengthWorkout(
+                    startDate: session.date,
+                    endDate: session.finishedAt ?? Date(),
+                    activeEnergyBurnedKcal: estimatedKcal,
+                    metadata: ["Plan": planLabel]
+                )
+                AppLogger.info("[HealthKit] Trénink úspěšně zapsán do Apple Health. \(Int(estimatedKcal)) kcal")
+            } catch {
+                AppLogger.error("[HealthKit] Zápis tréninku selhal: \(error)")
             }
         }
 
@@ -573,7 +590,7 @@ final class WorkoutViewModel: ObservableObject {
         var prs: [PREvent] = []
         for ex in exercises {
             guard let exercise = ex.exercise else { continue }
-            let maxWeight = ex.sets.filter { $0.isCompleted && !$0.isWarmup }
+            let maxWeight = ex.sets.filter { $0.isCompleted && $0.type == .normal }
                 .compactMap { $0.weightKg }.max() ?? 0
             let prev = exercise.lastUsedWeight ?? 0
             if maxWeight > prev && prev > 0 {
@@ -610,7 +627,7 @@ final class WorkoutViewModel: ObservableObject {
             }
 
             let setResults: [SessionGamificationInput.SetResult] = completed.map {
-                .init(weightKg: $0.weightKg ?? 0, reps: $0.reps ?? 0, isWarmup: $0.isWarmup)
+                .init(weightKg: $0.weightKg, reps: $0.reps ?? 0, isWarmup: $0.isWarmup)
             }
             return SessionGamificationInput.ExerciseResult(
                 exerciseName: state.name,
@@ -703,8 +720,9 @@ struct SessionExerciseState: Identifiable {
     var isWarmupOnly: Bool
     var exercise: Exercise?
     var videoUrl: String?
+    var supersetId: String? // Pro vizuální spojení supersérií
 
-    init(id: UUID = UUID(), name: String, nameEN: String = "", slug: String, coachTip: String? = nil, tempo: String? = nil, restSeconds: Int = 60, sets: [SetState] = [], isWarmupOnly: Bool = false, exercise: Exercise? = nil, videoUrl: String? = nil) {
+    init(id: UUID = UUID(), name: String, nameEN: String = "", slug: String, coachTip: String? = nil, tempo: String? = nil, restSeconds: Int = 60, sets: [SetState] = [], isWarmupOnly: Bool = false, exercise: Exercise? = nil, videoUrl: String? = nil, supersetId: String? = nil) {
         self.id = id
         self.name = name
         self.nameEN = nameEN.isEmpty ? (exercise?.nameEN ?? name) : nameEN
@@ -716,6 +734,7 @@ struct SessionExerciseState: Identifiable {
         self.isWarmupOnly = isWarmupOnly
         self.exercise = exercise
         self.videoUrl = videoUrl ?? exercise?.videoURL
+        self.supersetId = supersetId
     }
 
     var nextIncompleteSetIndex: Int? {
@@ -734,40 +753,43 @@ struct SessionExerciseState: Identifiable {
         self.restSeconds = planned.restSeconds
         self.sets = (0..<max(1, planned.targetSets)).map { _ in
             SetState(
-                targetRepsMin:    planned.targetRepsMin,
-                targetRepsMax:    planned.targetRepsMax,
+                type: .normal,
+                targetReps: planned.targetRepsMax, // Using max as the primary target
+                weightKg: planned.exercise?.lastUsedWeight ?? 0, // Default to 0 if nil
                 previousWeightKg: planned.exercise?.lastUsedWeight
             )
         }
         self.isWarmupOnly = false
         self.exercise = planned.exercise
         self.videoUrl = planned.exercise?.videoURL
+        self.supersetId = planned.supersetId
     }
 
     init(from response: ResponseExercise) {
         self.id          = UUID()
         self.name        = response.name
-        // AI vrací česká jména — slug normalizujeme pro DB matching
-        self.nameEN      = ""  // ✅ Bude naplněno v WorkoutViewModel po nalezení exerciseRef
+        self.nameEN      = response.nameEN
         self.slug        = FallbackWorkoutGenerator.normalizedSlug(response.slug)
         self.coachTip    = response.coachTip
         self.tempo       = response.tempo
         self.restSeconds = response.restSeconds
         self.sets = (0..<response.sets).map { _ in
             SetState(
-                targetRepsMin:    response.repsMin,
-                targetRepsMax:    response.repsMax,
+                type: .normal,
+                targetReps: response.repsMax, // Using max as the primary target
+                weightKg: response.weightKg ?? 0, // Default to 0 if nil
                 previousWeightKg: response.weightKg
             )
         }
         self.isWarmupOnly = false
         self.videoUrl = nil  // bude nastaveno po nalezení exerciseRef
+        self.supersetId = response.supersetId
     }
 
     static func warmupExercise(_ wu: WarmUpExercise) -> SessionExerciseState {
         let reps = Int(wu.reps.components(separatedBy: CharacterSet.decimalDigits.inverted).first ?? "10") ?? 10
         let sets = (0..<wu.sets).map { _ in
-            SetState(targetRepsMin: reps, targetRepsMax: reps, isWarmup: true)
+            SetState(type: .warmup, targetReps: reps, weightKg: 0) // Warmup sets typically start with 0 weight
         }
         return SessionExerciseState(
             name: wu.name,
@@ -783,32 +805,48 @@ struct SessionExerciseState: Identifiable {
         var state = SessionExerciseState(from: ex)
         state.isWarmupOnly = true
         for i in 0..<state.sets.count {
-            state.sets[i].isWarmup = true
+            state.sets[i].type = .warmup
+            state.sets[i].weightKg = 0 // Warmup sets typically start with 0 weight
         }
         return state
     }
 }
 
-struct SetState {
-    var weightKg: Double?
+enum SetType: String, Codable {
+    case normal
+    case warmup
+    case dropset
+    case failure
+}
+
+struct SetState: Identifiable {
+    let id: UUID
+    var type: SetType
+    var targetReps: Int
+    var weightKg: Double
     var reps: Int?
     var rpe: Int?
     var isCompleted: Bool
-    var isWarmup: Bool
-    let targetRepsMin: Int
-    let targetRepsMax: Int
     var previousWeightKg: Double?
-
-    init(targetRepsMin: Int, targetRepsMax: Int, weightKg: Double? = nil, reps: Int? = nil, rpe: Int? = nil, isCompleted: Bool = false, isWarmup: Bool = false, previousWeightKg: Double? = nil) {
-        self.targetRepsMin = targetRepsMin
-        self.targetRepsMax = targetRepsMax
+    var historicalWeightKg: Double?
+    var historicalReps: Int?
+    
+    // Pro zpětnou kompatibilitu isWarmup = (type == .warmup)
+    var isWarmup: Bool { type == .warmup }
+    
+    init(id: UUID = UUID(), type: SetType = .normal, targetReps: Int, weightKg: Double, reps: Int? = nil, rpe: Int? = nil, previousWeightKg: Double? = nil, historicalWeightKg: Double? = nil, historicalReps: Int? = nil, isCompleted: Bool = false) {
+        self.id = id
+        self.type = type
+        self.targetReps = targetReps
         self.weightKg = weightKg
         self.reps = reps
         self.rpe = rpe
-        self.isCompleted = isCompleted
-        self.isWarmup = isWarmup
         self.previousWeightKg = previousWeightKg
+        self.historicalWeightKg = historicalWeightKg
+        self.historicalReps = historicalReps
+        self.isCompleted = isCompleted
     }
 }
 
 // Double.rounded(toNearest:) přesunuto do Core/Extensions/Extensions.swift
+```

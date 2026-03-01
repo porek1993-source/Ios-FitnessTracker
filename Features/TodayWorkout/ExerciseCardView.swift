@@ -52,6 +52,9 @@ struct ExerciseCardView: View {
 
                     TechTipsRow(exercise: exercise)
                         .padding(.horizontal, 20)
+                    
+                    ExerciseNoteView(slug: exercise.slug)
+                        .padding(.horizontal, 16)
 
                     // ── Postup provedení ──
                     if let instructions = exercise.exercise?.instructions,

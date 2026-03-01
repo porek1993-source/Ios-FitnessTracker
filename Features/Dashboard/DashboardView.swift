@@ -33,6 +33,7 @@ final class DashboardViewModel: ObservableObject {
     @Published var weeklyStreak: Int          = 0
     @Published var completedThisWeek: Int     = 0
     @Published var plannedThisWeek: Int       = 0
+    @Published var weekDaysState: [DailyWorkoutState] = Array(repeating: .empty, count: 7)
 
     private var healthKit: HealthKitService?
 
@@ -176,39 +177,46 @@ final class DashboardViewModel: ObservableObject {
 
         let calendar = Calendar.current
         let startOfWeek = calendar.dateInterval(of: .weekOfYear, for: .now)?.start ?? .now
+        let todayIndex = calendar.component(.weekday, from: .now)
+        let normalizedToday = todayIndex == 1 ? 6 : todayIndex - 2 // 0=Mon ... 6=Sun
+        
+        var states: [DailyWorkoutState] = Array(repeating: .empty, count: 7)
 
-        let completedSessions = plan.sessions.filter {
+        // 1. Plánované dny
+        for i in 0..<7 {
+            let scheduleDayIndex = i == 6 ? 1 : i + 2 // swift weekday: 1=Sun, 2=Mon... My schedule uses 1=Mon?? Let's check DayOfWeek enum. Wait, `Date.weekday` returns 1=Mon .. 7=Sun in this app?
+            // "Date.weekday extension vrací naši konvenci: 1=Pondělí … 7=Neděle"
+            let dayToFind = i + 1 
+            let isPlanned = plan.scheduledDays.contains(where: { $0.dayOfWeek == dayToFind && !$0.isRestDay })
+            if isPlanned {
+                states[i] = (i < normalizedToday) ? .missed : (i == normalizedToday ? .todayPlanned : .planned)
+            } else {
+                states[i] = (i == normalizedToday) ? .todayEmpty : .empty
+            }
+        }
+
+        // 2. Hotové dny tento týden
+        let completedThisWeekSessions = plan.sessions.filter {
             $0.startedAt >= startOfWeek && $0.status == .completed
-        }.count
+        }
+        
+        for session in completedThisWeekSessions {
+            let compDay = calendar.component(.weekday, from: session.startedAt)
+            let normCompDay = compDay == 1 ? 6 : compDay - 2
+            if normCompDay >= 0 && normCompDay < 7 {
+                states[normCompDay] = .completed
+            }
+        }
 
+        self.weekDaysState = states
         plannedThisWeek   = profile.availableDaysPerWeek
-        completedThisWeek = completedSessions
+        completedThisWeek = completedThisWeekSessions.count
 
-        // Výpočet streaku: počet po sobě jdoucích týdnů s alespoň jedním tréninkem.
-        // Pokud aktuální týden ještě nemá trénink, přeskočí ho a počítá od minulého.
+        // Výpočet streaku pomocí dedikovaného StreakManageru
         let allCompleted = plan.sessions
             .filter { $0.status == .completed && $0.finishedAt != nil }
         
-        var streak = 0
-        var checkWeek = calendar.dateInterval(of: .weekOfYear, for: .now)?.start ?? .now
-        var skippedCurrentWeek = false
-        
-        for _ in 0..<52 {  // max 52 týdnů zpět
-            let weekEnd = calendar.date(byAdding: .day, value: 7, to: checkWeek) ?? checkWeek
-            let hasWorkout = allCompleted.contains { $0.startedAt >= checkWeek && $0.startedAt < weekEnd }
-            if hasWorkout {
-                streak += 1
-                checkWeek = calendar.date(byAdding: .day, value: -7, to: checkWeek) ?? checkWeek
-            } else if !skippedCurrentWeek && streak == 0 {
-                // Aktuální týden ještě nemá trénink — přeskoč ho a zkus minulý
-                skippedCurrentWeek = true
-                checkWeek = calendar.date(byAdding: .day, value: -7, to: checkWeek) ?? checkWeek
-            } else {
-                break
-            }
-        }
-        
-        weeklyStreak = streak
+        weeklyStreak = StreakManager.calculateWeeklyStreak(completedSessions: allCompleted)
     }
 
     private func makeGreeting() -> String {
@@ -235,6 +243,7 @@ struct TrainerDashboardView: View {
     @State private var showHeatmap  = false
     @State private var showWorkout  = false
     @State private var showPreview  = false
+    @State private var showBuilder  = false // Proměnná pro zobrazení Custom Workout Builderu
     @State private var appearedOnce = false
 
     var profile: UserProfile? { profiles.first }
@@ -262,9 +271,10 @@ struct TrainerDashboardView: View {
                             .padding(.horizontal, 18)
 
                         // ── Weekly Progress ───────────────────────────
-                        WeeklyProgressBar(
-                            completed: vm.completedThisWeek,
-                            planned:   vm.plannedThisWeek
+                        WeeklyCalendarView(
+                            completedCount: vm.completedThisWeek,
+                            plannedCount:   vm.plannedThisWeek,
+                            weekDaysState:  vm.weekDaysState
                         )
                         .padding(.horizontal, 18)
                         .padding(.top, 16)
@@ -276,6 +286,16 @@ struct TrainerDashboardView: View {
                         )
                         .padding(.horizontal, 18)
                         .padding(.top, 16)
+                        
+                        // ── Analytika svalového objemu (7 Dní) ────────
+                        MuscleVolumeChart()
+                            .padding(.horizontal, 18)
+                            .padding(.top, 16)
+                            
+                        // ── Sociální Feed (Aktivita přátel) ───────────
+                        SocialFeedView()
+                            .padding(.horizontal, 0) // Samo má padding
+                            .padding(.top, 16)
 
                         // ── Today's Plan ──────────────────────────────
                         TodayPlanCard(
@@ -353,6 +373,34 @@ struct TrainerDashboardView: View {
                         )
                         .ignoresSafeArea()
                     )
+                } else {
+                    VStack(spacing: 10) {
+                        // Sekundární CTA — Sestavit ručně
+                        Button(action: {
+                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                            showBuilder = true
+                        }) {
+                            Text("Sestavit ručně")
+                                .font(.system(size: 15, weight: .bold))
+                                .foregroundStyle(.white.opacity(0.8))
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 14)
+                                .background(Color.white.opacity(0.1))
+                                .clipShape(RoundedRectangle(cornerRadius: 16))
+                                .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.white.opacity(0.15), lineWidth: 1))
+                        }
+                        .padding(.horizontal, 22)
+                        .padding(.top, 4)
+                        
+                    }
+                    .padding(.bottom, 24)
+                    .background(
+                        LinearGradient(
+                            colors: [.clear, AppColors.background.opacity(0.9), AppColors.background.opacity(0.95)],
+                            startPoint: .bottom, endPoint: .top
+                        )
+                        .ignoresSafeArea()
+                    )
                 }
             }
             .sheet(isPresented: $showHeatmap) {
@@ -382,6 +430,10 @@ struct TrainerDashboardView: View {
             }
             
             await vm.load(profile: p)
+
+            // Offline Sync
+            _ = NetworkMonitor.shared // Inicializace monitoru
+            await OfflineSyncManager.shared.syncUnsyncedWorkouts(context: modelContext)
         }
         .onChange(of: profiles.count) {
             Task {
@@ -402,6 +454,20 @@ struct TrainerDashboardView: View {
                 Text(profile.name)
                     .font(.system(size: 30, weight: .bold, design: .rounded))
                     .foregroundStyle(.white)
+                
+                // 🔥 Systém Streaků
+                if vm.weeklyStreak > 0 {
+                    HStack(spacing: 4) {
+                        Image(systemName: "flame.fill").foregroundStyle(.red)
+                        Text("\(vm.weeklyStreak) \(vm.weeklyStreak == 1 ? "týden" : (vm.weeklyStreak < 5 ? "týdny" : "týdnů")) v kuse!")
+                            .font(.system(size: 11, weight: .black))
+                            .foregroundStyle(.orange)
+                    }
+                    .padding(.horizontal, 8).padding(.vertical, 4)
+                    .background(Color.orange.opacity(0.12))
+                    .clipShape(Capsule())
+                    .padding(.top, 2)
+                }
             }
 
             Spacer()
@@ -634,107 +700,6 @@ private struct MiniMetricPill: View {
         .padding(.horizontal, 7)
         .padding(.vertical, 4)
         .background(Capsule().fill(color.opacity(0.12)))
-    }
-}
-
-// MARK: ─────────────────────────────────────────────────────────────────────
-// MARK: - Weekly Progress Bar
-// MARK: ─────────────────────────────────────────────────────────────────────
-
-private struct WeeklyProgressBar: View {
-    let completed: Int
-    let planned:   Int
-
-    private let days = ["Po", "Út", "St", "Čt", "Pá", "So", "Ne"]
-    private var todayIndex: Int {
-        // weekday: 1=Sun → index 6, 2=Mon → index 0, etc.
-        let wd = Calendar.current.component(.weekday, from: .now)
-        return wd == 1 ? 6 : wd - 2
-    }
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack {
-                Text("TENTO TÝDEN")
-                    .font(.system(size: 11, weight: .black))
-                    .foregroundStyle(.white.opacity(0.3))
-                    .kerning(1.2)
-
-                Spacer()
-
-                Text("\(completed) / \(planned) tréninků")
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundStyle(.white.opacity(0.45))
-            }
-
-            HStack(spacing: 6) {
-                ForEach(0..<7, id: \.self) { i in
-                    DayDot(
-                        label:       days[i],
-                        state:       dayState(index: i),
-                        isToday:     i == todayIndex
-                    )
-                }
-            }
-        }
-        .padding(.horizontal, 4)
-    }
-
-    private func dayState(index: Int) -> DayDotState {
-        // Hotové dny jsou jen ty v minulosti (index < todayIndex) kde počítáme dokončené tréninky
-        let completedUpToToday = min(completed, todayIndex)
-        if index < completedUpToToday   { return .done }
-        if index == todayIndex          { return .today }
-        if index == todayIndex + 1      { return .upcoming }
-        return .future
-    }
-}
-
-private enum DayDotState { case done, today, upcoming, future }
-
-private struct DayDot: View {
-    let label:  String
-    let state:  DayDotState
-    let isToday:Bool
-
-    var body: some View {
-        VStack(spacing: 5) {
-            ZStack {
-                Circle()
-                    .fill(fillColor)
-                    .frame(width: 32, height: 32)
-
-                if isToday {
-                    Circle()
-                        .stroke(Color.white.opacity(0.6), lineWidth: 1.5)
-                        .frame(width: 34, height: 34)
-                }
-
-                if state == .done {
-                    Image(systemName: "checkmark")
-                        .font(.system(size: 11, weight: .bold))
-                        .foregroundStyle(.black)
-                } else if state == .today {
-                    Circle()
-                        .fill(.white)
-                        .frame(width: 7, height: 7)
-                }
-            }
-
-            Text(label)
-                .font(.system(size: 9, weight: isToday ? .bold : .medium))
-                .foregroundStyle(isToday ? .white : .white.opacity(0.3))
-        }
-        .frame(maxWidth: .infinity)
-    }
-
-    private var fillColor: Color {
-        switch state {
-        case .done:     return AppColors.success
-        case .today:    return AppColors.primaryAccent
-        case .upcoming: return Color.white.opacity(0.10)
-        case .future:   return Color.white.opacity(0.05)
-        }
     }
 }
 

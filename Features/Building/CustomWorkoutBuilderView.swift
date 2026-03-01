@@ -1,0 +1,280 @@
+// CustomWorkoutBuilderView.swift
+// Agilní Fitness Trenér — Ruční tvorba tréninků (Custom Builder)
+
+import SwiftUI
+import SwiftData
+
+struct CustomWorkoutBuilderView: View {
+    @Environment(\.modelContext) private var modelContext
+    @Environment(\.dismiss) private var dismiss
+    
+    // Načteme všechny dostupné cviky (od API i lokální)
+    @Query(sort: \Exercise.name) private var allExercises: [Exercise]
+    
+    // Stav Builderu
+    @State private var searchText = ""
+    @State private var selectedMuscleGroup: MuscleGroup? = nil
+    
+    // Seznam právě tvořených cviků
+    @State private var workoutExercises: [BuilderExercise] = []
+    
+    // Zobrazení modalu pro tvorbu vlastního cviku
+    @State private var showAddCustom = false
+    
+    struct BuilderExercise: Identifiable {
+        let id = UUID()
+        let exercise: Exercise
+        var setsCount: Int = 3
+    }
+    
+    var filteredExercises: [Exercise] {
+        var base = allExercises
+        if let g = selectedMuscleGroup {
+            // Hledáme jak podle enum hodnoty tak i hrubým stringem
+            base = base.filter { $0.primaryMuscleGroup == g || $0.muscle_group == g.rawValue }
+        }
+        if !searchText.isEmpty {
+            base = base.filter { $0.name.localizedCaseInsensitiveContains(searchText) }
+        }
+        return base
+    }
+
+    var body: some View {
+        NavigationStack {
+            ZStack {
+                AppColors.background.ignoresSafeArea()
+                
+                VStack(spacing: 0) {
+                    // Záložky: Výběr cviků VS Můj Trénink
+                    exerciseSelectionList
+                        .frame(maxHeight: workoutExercises.isEmpty ? .infinity : UIScreen.main.bounds.height * 0.5)
+                    
+                    if !workoutExercises.isEmpty {
+                        Divider().background(Color.white.opacity(0.1))
+                        selectedExercisesList
+                            .transition(.move(edge: .bottom))
+                    }
+                }
+            }
+            .navigationTitle("Vlastní trénink")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbarColorScheme(.dark, for: .navigationBar)
+            .toolbarBackground(Color.appBackground, for: .navigationBar)
+            .toolbarBackground(.visible, for: .navigationBar)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Zavřít") { dismiss() }
+                        .foregroundStyle(.white.opacity(0.6))
+                }
+            }
+            .sheet(isPresented: $showAddCustom) {
+                AddCustomExerciseView()
+                    .presentationDetents([.fraction(0.85), .large])
+                    .presentationDragIndicator(.visible)
+            }
+        }
+    }
+    
+    // MARK: - Výběr cviků (Horní polovina)
+    
+    private var exerciseSelectionList: some View {
+        VStack(spacing: 0) {
+            // Vyhledávání a Filtry
+            VStack(spacing: 12) {
+                // SearchBar
+                HStack {
+                    Image(systemName: "magnifyingglass").foregroundStyle(.white.opacity(0.5))
+                    TextField("Hledat cvik...", text: $searchText)
+                        .foregroundStyle(.white)
+                    if !searchText.isEmpty {
+                        Button { searchText = "" } label: {
+                            Image(systemName: "xmark.circle.fill").foregroundStyle(.white.opacity(0.5))
+                        }
+                    }
+                }
+                .padding(12)
+                .background(Color.white.opacity(0.1))
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+                
+                // Svalový Filtr
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 8) {
+                        filterChip(title: "Vše", isSelected: selectedMuscleGroup == nil) {
+                            withAnimation { selectedMuscleGroup = nil }
+                        }
+                        ForEach(MuscleGroup.allCases, id: \.self) { group in
+                            filterChip(title: group.displayName, isSelected: selectedMuscleGroup == group) {
+                                withAnimation { selectedMuscleGroup = group }
+                            }
+                        }
+                    }
+                }
+            }
+            .padding(16)
+            .background(Color.white.opacity(0.02))
+            
+            // Seznam cviků k přidání
+            List {
+                ForEach(filteredExercises) { ex in
+                    HStack {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(ex.name)
+                                .font(.system(size: 16, weight: .bold))
+                                .foregroundStyle(.white)
+                            Text(ex.muscle_group)
+                                .font(.caption)
+                                .foregroundStyle(.white.opacity(0.5))
+                        }
+                        Spacer()
+                        Button {
+                            withAnimation {
+                                workoutExercises.append(BuilderExercise(exercise: ex))
+                            }
+                        } label: {
+                            Image(systemName: "plus.circle.fill")
+                                .font(.system(size: 24))
+                                .foregroundStyle(.blue)
+                        }
+                    }
+                    .padding(.vertical, 4)
+                    .listRowBackground(Color.clear)
+                }
+                
+                // Přidání vlastního cviku
+                Button {
+                    showAddCustom = true
+                } label: {
+                    HStack {
+                        Image(systemName: "plus.app.fill")
+                        Text("Nenašel jsi cvik? Přidej vlastní")
+                    }
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundStyle(.blue)
+                }
+                .listRowBackground(Color.clear)
+                .padding(.top, 16)
+            }
+            .listStyle(.plain)
+        }
+    }
+    
+    // MARK: - Můj Trénink (Dolní polovina)
+    
+    private var selectedExercisesList: some View {
+        VStack(spacing: 0) {
+            HStack {
+                Text("Cviky v tréninku")
+                    .font(.system(size: 18, weight: .bold, design: .rounded))
+                    .foregroundStyle(.white)
+                Spacer()
+                Text("\(workoutExercises.count) cviků")
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundStyle(.white.opacity(0.6))
+            }
+            .padding(16)
+            .background(Color.white.opacity(0.04))
+            
+            List {
+                ForEach($workoutExercises) { $item in
+                    HStack {
+                        Text(item.exercise.name)
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundStyle(.white)
+                        Spacer()
+                        
+                        // Stepper pro počet sérií
+                        HStack(spacing: 12) {
+                            Button { if item.setsCount > 1 { item.setsCount -= 1 } } label: { Image(systemName: "minus.circle").foregroundStyle(.blue) }
+                            Text("\(item.setsCount) sérií")
+                                .font(.system(size: 14, weight: .medium))
+                                .foregroundStyle(.white)
+                                .frame(width: 55, alignment: .center)
+                            Button { item.setsCount += 1 } label: { Image(systemName: "plus.circle").foregroundStyle(.blue) }
+                        }
+                        .buttonStyle(.plain)
+                    }
+                    .padding(.vertical, 8)
+                    .listRowBackground(Color.clear)
+                }
+                .onDelete { indices in
+                    withAnimation { workoutExercises.remove(atOffsets: indices) }
+                }
+            }
+            .listStyle(.plain)
+            
+            // Uložit tlačítko
+            Button(action: saveWorkoutSession) {
+                Text("Spustit tento trénink")
+                    .font(.system(size: 18, weight: .bold))
+                    .foregroundStyle(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 16)
+                    .background(Color.green)
+                    .clipShape(RoundedRectangle(cornerRadius: 16))
+            }
+            .padding(16)
+            .padding(.bottom, 16)
+        }
+        .background(AppColors.secondaryBg)
+    }
+    
+    // MARK: - Helper Views
+    
+    private func filterChip(title: String, isSelected: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Text(title)
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(isSelected ? .white : .white.opacity(0.7))
+                .padding(.horizontal, 16)
+                .padding(.vertical, 8)
+                .background(isSelected ? Color.blue : Color.white.opacity(0.1))
+                .clipShape(Capsule())
+        }
+    }
+    
+    // MARK: - Save Logic
+    
+    private func saveWorkoutSession() {
+        guard !workoutExercises.isEmpty else { return }
+        
+        let plan = PlannedWorkoutDay(
+            id: UUID(),
+            dayName: "Vlastní Trénink",
+            muscleFocusDescription: "Custom Builder",
+            warmupCardioMinutes: 5,
+            exercises: []
+        )
+        
+        let session = WorkoutSession(plannedDay: plan)
+        
+        // Zapsání cviků do session
+        for builderEx in workoutExercises {
+            let sessionEx = SessionExerciseState(
+                name: builderEx.exercise.name,
+                slug: builderEx.exercise.slug,
+                coachTip: builderEx.exercise.instructions,
+                tempo: "2010",
+                restSeconds: 90,
+                sets: (1...builderEx.setsCount).map { i in
+                    SetState(
+                        id: UUID(),
+                        isWarmup: i == 1,
+                        targetReps: 10,
+                        weightKg: builderEx.exercise.lastUsedWeight ?? 20.0,
+                        previousWeightKg: builderEx.exercise.lastUsedWeight
+                    )
+                },
+                exercise: builderEx.exercise
+            )
+            session.exercises.append(sessionEx)
+        }
+        
+        modelContext.insert(plan)
+        modelContext.insert(session)
+        try? modelContext.save()
+        
+        // Navigace na ActiveSession probíhá odjinud (např skrze status check v Dashboardu),
+        // my se zde jen zavřeme a backend to detekuje jako "dnešní aktivní trénink".
+        dismiss()
+    }
+}

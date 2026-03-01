@@ -39,6 +39,18 @@ extension Double {
             : String(format: "%.1f kg", self)
     }
 
+    /// Formátuje objem (kg vs t) podle velikosti
+    func formatVolume() -> String {
+        if self < 1000 {
+            return self.truncatingRemainder(dividingBy: 1) == 0
+                ? String(format: "%.0f kg", self)
+                : String(format: "%.1f kg", self)
+        } else {
+            let tonnes = self / 1000.0
+            return String(format: "%.1f t", tonnes)
+        }
+    }
+
     /// Zaokrouhlí číslo na nejbližší násobek `toNearest`.
     /// Příklad: 102.3.rounded(toNearest: 2.5) → 102.5
     /// ✅ Přesunuto z WorkoutViewModel.swift do Extensions.swift — sdílená utility

@@ -45,12 +45,12 @@ struct ExerciseMediaView: View {
                     }
                     // Fallback pokud načtení GIFu selhalo
                     if loadFailed {
-                        MissingMediaView()
+                        MissingMediaView(exerciseName: exerciseName, exerciseNameEn: exerciseNameEn)
                     }
                 }
             } else {
                 // ── Obrázek nenalezen Fallback (žádný GIF) ───────────────────────────
-                MissingMediaView()
+                MissingMediaView(exerciseName: exerciseName, exerciseNameEn: exerciseNameEn)
             }
         }
         .frame(height: 260)
@@ -300,6 +300,8 @@ struct GIFPlayerView: UIViewRepresentable {
 // MARK: ═══════════════════════════════════════════════════════════════════════
 
 struct MissingMediaView: View {
+    let exerciseName: String
+    var exerciseNameEn: String? = nil
     @State private var glowPulse = false
 
     var body: some View {
@@ -359,6 +361,27 @@ struct MissingMediaView: View {
                             .foregroundStyle(.white.opacity(0.45))
                             .multilineTextAlignment(.center)
                             .lineSpacing(2)
+                    }
+                    
+                    // YouTube Premium Action Button
+                    let searchName = exerciseNameEn ?? exerciseName
+                    let urlString = "https://www.youtube.com/results?search_query=\(searchName.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? "")"
+                    if let ytURL = URL(string: urlString) {
+                        Link(destination: ytURL) {
+                            HStack(spacing: 6) {
+                                Image(systemName: "play.rectangle.fill")
+                                Text("Najít na YouTube")
+                            }
+                            .font(.system(size: 13, weight: .bold, design: .rounded))
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 10)
+                            .background(
+                                Capsule()
+                                    .fill(Color.red.opacity(0.8))
+                                    .shadow(color: Color.red.opacity(0.3), radius: 6, x: 0, y: 3)
+                            )
+                        }
                     }
                 }
                 .padding(.horizontal, 24)

@@ -21,6 +21,8 @@ struct ActiveSessionView: View {
     @State private var showSwap       = false
     @State private var showFinishDlg  = false
     @State private var showCancelDlg  = false
+    @State private var showPlateCalculator = false
+    @State private var isWarmupDone   = false
 
     init(session: WorkoutSession, plan: PlannedWorkoutDay, planLabel: String, bodyWeightKg: Double = 75.0) {
         _vm = StateObject(wrappedValue: WorkoutViewModel(
@@ -68,6 +70,21 @@ struct ActiveSessionView: View {
                     ))
                     .zIndex(20)
             }
+            
+            // ── Fáze rozcvičky
+            if !isWarmupDone {
+                WarmupPhaseView(
+                    exercises: vm.exercises,
+                    onFinishWarmup: {
+                        withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) {
+                            isWarmupDone = true
+                        }
+                    },
+                    onCancel: { showCancelDlg = true }
+                )
+                .transition(.opacity.combined(with: .scale(scale: 0.95)))
+                .zIndex(30)
+            }
         }
         .preferredColorScheme(.dark)
         .navigationBarHidden(true)
@@ -89,14 +106,35 @@ struct ActiveSessionView: View {
         } message: {
             Text("Všechny zalogované série budou uloženy.")
         }
-        .alert("Zrušit trénink?", isPresented: $showCancelDlg) {
-            Button("Ano, zrušit", role: .destructive) {
+        .confirmationDialog("Opravdu chceš trénink ukončit předčasně?", isPresented: $showCancelDlg, titleVisibility: .visible) {
+            Button("Ukončit a uložit") {
+                vm.finishWorkout(modelContext: modelContext) // Uloží dosavadní progress
+                dismiss()
+            }
+            Button("Zrušit trénink (zahodit data)", role: .destructive) {
                 vm.cancelWorkout(modelContext: modelContext)
                 dismiss()
             }
-            Button("Ne, pokračovat", role: .cancel) {}
+            Button("Zpět k cvičení", role: .cancel) {}
         } message: {
-            Text("Žádné série nebudou uloženy. Trénink bude smazán.")
+            Text("Trénink ještě není kompletní.")
+        }
+        .sheet(isPresented: $showPlateCalculator) {
+            let idx = vm.currentExerciseIndex
+            if vm.exercises.indices.contains(idx) {
+                let currentEx = vm.exercises[idx]
+                // Najdeme první nedokončenou sérii, abychom z ní vzali váhu, nebo poslední známou váhu
+                let targetWeight = currentEx.sets.first(where: { !$0.isCompleted })?.weightKg ?? currentEx.sets.last?.weightKg ?? 20.0
+                
+                PlateCalculatorView(targetWeight: targetWeight, barbellWeight: 20.0)
+                    .presentationDetents([.medium])
+                    .presentationDragIndicator(.visible)
+                    .presentationBackground(AppColors.secondaryBg)
+            }
+        }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("ShowPlateCalculator"))) { _ in
+            showPlateCalculator = true
         }
     }
 }
@@ -128,11 +166,25 @@ private struct SessionHeaderBar: View {
 
             HStack(spacing: 7) {
                 ForEach(vm.exercises.indices, id: \.self) { i in
-                    ExerciseDot(
-                        state: i < vm.currentExerciseIndex ? .done
-                             : i == vm.currentExerciseIndex ? .active
-                             : .pending
-                    )
+                    let ex = vm.exercises[i]
+                    let isSupersetWithNext = i < vm.exercises.count - 1 && ex.supersetId != nil && ex.supersetId == vm.exercises[i + 1].supersetId
+                    
+                    HStack(spacing: 7) {
+                        ExerciseDot(
+                            state: i < vm.currentExerciseIndex ? .done
+                                 : i == vm.currentExerciseIndex ? .active
+                                 : .pending,
+                            isSuperset: ex.supersetId != nil
+                        )
+                        
+                        if isSupersetWithNext {
+                            // Spojovací linka mezi cviky v supersérii (HStack)
+                            Rectangle()
+                                .fill(AppColors.primaryAccent.opacity(0.8))
+                                .frame(width: 12, height: 2)
+                                .padding(.horizontal, -4)
+                        }
+                    }
                 }
             }
 
@@ -153,17 +205,25 @@ private struct SessionHeaderBar: View {
                 }
                 .buttonStyle(.plain)
 
-                // Hotovo
-                Button(action: onFinish) {
-                    Text("Hotovo")
+                // Hotovo / Ukončit
+                let isWorkoutComplete = vm.exercises.allSatisfy { ex in ex.sets.allSatisfy { $0.isCompleted } } || vm.allExercisesDone
+                
+                Button(action: {
+                    if isWorkoutComplete {
+                        onFinish()
+                    } else {
+                        onCancel() // Uses the alert for Early Exit
+                    }
+                }) {
+                    Text(isWorkoutComplete ? "Dokončit" : "Ukončit")
                         .font(.system(size: 13, weight: .bold))
-                        .foregroundStyle(.white.opacity(0.72))
+                        .foregroundStyle(isWorkoutComplete ? Color.green : .white.opacity(0.72))
                         .padding(.horizontal, 13)
                         .padding(.vertical, 8)
                         .background(
                             Capsule()
-                                .fill(.white.opacity(0.09))
-                                .overlay(Capsule().stroke(.white.opacity(0.11), lineWidth: 1))
+                                .fill(isWorkoutComplete ? Color.green.opacity(0.15) : .white.opacity(0.09))
+                                .overlay(Capsule().stroke(isWorkoutComplete ? Color.green.opacity(0.3) : .white.opacity(0.11), lineWidth: 1))
                         )
                 }
             }
@@ -180,12 +240,20 @@ private struct SessionHeaderBar: View {
 private struct ExerciseDot: View {
     enum DotState { case done, active, pending }
     let state: DotState
+    let isSuperset: Bool // True, pokud je cvik součástí supersérie
 
     var body: some View {
         ZStack {
             Circle()
                 .fill(dotFill)
                 .frame(width: dotSize, height: dotSize)
+            
+            if isSuperset {
+                Circle()
+                    .stroke(AppColors.primaryAccent, lineWidth: 1.5)
+                    .frame(width: dotSize + 4, height: dotSize + 4)
+            }
+            
             if state == .done {
                 Image(systemName: "checkmark")
                     .font(.system(size: 4.5, weight: .black))
@@ -231,7 +299,29 @@ struct ExercisePageView: View {
 
                     TechniquePillRow(exercise: exercise, vm: vm)
 
+                    ExerciseNoteView(slug: exercise.slug)
+
                     SetLoggerBlock(exercise: $exercise, onComplete: onComplete)
+                    
+                    if exercise.exercise?.equipment == .barbell {
+                        Button {
+                            // Nastavíme showPlateCalculator (musíme to propagovat přes binding,
+                            // nebo použít notifikaci/callback, protože jsme v oddělené view hierarchii.
+                            // Protože `showPlateCalculator` je v root View, přidáme callback sem:)
+                            NotificationCenter.default.post(name: NSNotification.Name("ShowPlateCalculator"), object: nil)
+                        } label: {
+                            HStack {
+                                Image(systemName: "plus.forwardslash.minus")
+                                Text("Kalkulačka kotoučů")
+                            }
+                            .font(.system(size: 14, weight: .bold, design: .rounded))
+                            .foregroundStyle(.blue)
+                            .padding(.vertical, 8)
+                            .padding(.horizontal, 16)
+                            .background(Color.blue.opacity(0.1))
+                            .clipShape(Capsule())
+                        }
+                    }
 
                     Button(action: vm.skipExercise) {
                         Label("Přeskočit cvik", systemImage: "forward.fill")
@@ -310,10 +400,23 @@ private struct ExerciseHero: View {
                                     .animation(.spring(response: 0.3), value: completedSets)
                             }
                         }
+                        
                         Text(exercise.name)
                             .font(.system(size: 24, weight: .bold, design: .rounded))
                             .foregroundStyle(.white)
                             .lineLimit(2)
+                            
+                        if exercise.supersetId != nil {
+                            Text("SUPERSÉRIE")
+                                .font(.system(size: 9, weight: .black, design: .rounded))
+                                .foregroundStyle(AppColors.primaryAccent)
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 2)
+                                .background(AppColors.primaryAccent.opacity(0.15))
+                                .clipShape(Capsule())
+                                .overlay(Capsule().stroke(AppColors.primaryAccent.opacity(0.3), lineWidth: 1))
+                                .padding(.top, 2)
+                        }
                     }
 
                     Spacer(minLength: 12)
@@ -321,19 +424,20 @@ private struct ExerciseHero: View {
                     // Smart Swap button
                     Button(action: onSwap) {
                         VStack(spacing: 4) {
-                            Image(systemName: "arrow.triangle.2.circlepath")
+                            Image(systemName: "sparkles")
                                 .font(.system(size: 16, weight: .semibold))
-                            Text("Swap")
-                                .font(.system(size: 9, weight: .bold))
+                            Text("Vyměnit cvik")
+                                .font(.system(size: 10, weight: .bold))
                                 .kerning(0.3)
                         }
-                        .foregroundStyle(.white.opacity(0.75))
-                        .frame(width: 54, height: 50)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 8)
+                        .padding(.horizontal, 10)
                         .background(
                             RoundedRectangle(cornerRadius: 14, style: .continuous)
-                                .fill(AppColors.glassBg)
+                                .fill(LinearGradient(colors: [Color.purple.opacity(0.3), Color.blue.opacity(0.3)], startPoint: .topLeading, endPoint: .bottomTrailing))
                                 .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous)
-                                    .stroke(AppColors.border, lineWidth: 1))
+                                    .stroke(Color.white.opacity(0.2), lineWidth: 1))
                         )
                     }
                     .buttonStyle(.plain)
@@ -423,6 +527,7 @@ private struct TechniquePillRow: View {
             HStack(spacing: 8) {
                 if let t = exercise.tempo {
                     TechPill(icon: "metronome.fill", label: "Tempo",    value: t,
+                             isGraphicTempo: true,
                              color: Color(red:0.28, green:0.55, blue:1.0),
                              vm: vm)
                 }
@@ -444,8 +549,17 @@ private struct TechniquePillRow: View {
 }
 
 private struct TechPill: View {
-    let icon: String; let label: String; let value: String; let color: Color
+    let icon: String; let label: String; let value: String
+    var isGraphicTempo: Bool = false
+    let color: Color
     @ObservedObject var vm: WorkoutViewModel
+    
+    // Vizualizace tempa např "3111" -> "⬇️ 3s ⏸️ 1s ⬆️ 1s ⏸️ 1s"
+    private var formattedValue: String {
+        guard isGraphicTempo, value.count == 4 else { return value }
+        let chars = Array(value)
+        return "⬇️ \(chars[0])s  ⏸️ \(chars[1])s  ⬆️ \(chars[2])s  ⏸️ \(chars[3])s"
+    }
 
     var body: some View {
         HStack(spacing: 7) {
@@ -455,7 +569,7 @@ private struct TechPill: View {
                     .font(.system(size: 7.5, weight: .black))
                     .foregroundStyle(.white.opacity(0.30))
                     .kerning(0.5)
-                Text(value)
+                Text(formattedValue)
                     .font(.system(size: 12, weight: .semibold))
                     .foregroundStyle(.white.opacity(0.88))
             }
@@ -533,7 +647,7 @@ private struct SetLoggerBlock: View {
                         .padding(.horizontal, 12)
                     
                     ForEach(warmupSets, id: \.offset) { i, _ in
-                        ActiveSetRow(
+                        WorkoutSetRowView(
                             setNumber: 0,
                             currentSet: $exercise.sets[i],
                             isActive: i == exercise.nextIncompleteSetIndex,
@@ -551,7 +665,7 @@ private struct SetLoggerBlock: View {
                         .padding(.horizontal, 12)
                     
                     ForEach(workingSets, id: \.offset) { i, _ in
-                        ActiveSetRow(
+                        WorkoutSetRowView(
                             setNumber: calculateWorkingSetNumber(for: i),
                             currentSet: $exercise.sets[i],
                             isActive: i == exercise.nextIncompleteSetIndex,
@@ -580,338 +694,7 @@ private struct SetLoggerBlock: View {
     }
 }
 
-// MARK: ═══════════════════════════════════════════════════════════════════════
-// MARK: ActiveSetRow (SetRowView)
-// MARK: ═══════════════════════════════════════════════════════════════════════
-
-struct ActiveSetRow: View {
-
-    let setNumber:  Int
-    @Binding var currentSet: SetState
-    let isActive:   Bool
-    let onComplete: () -> Void
-
-    @FocusState private var wFocus: Bool
-    @FocusState private var rFocus: Bool
-
-    @State private var weightText = ""
-    @State private var repsText   = ""
-    @State private var showRPE    = false
-    @State private var bounce:    CGFloat = 1
-
-    var body: some View {
-        HStack(spacing: 0) {
-
-            // ① Badge
-            // Zjistíme pořadové číslo pracovní série (zahřívací se nepočítají do pracovního progresu)
-            SetBadge(number: setNumber, isCompleted: currentSet.isCompleted, isActive: isActive, isWarmup: currentSet.isWarmup)
-                .frame(width: 38)
-
-            // ② Weight
-            InlineField(
-                text:        $weightText,
-                hint:        previousWeightHint,
-                suffix:      "kg",
-                keyboard:    .decimalPad,
-                isFocused:   _wFocus,
-                isActive:    isActive,
-                isCompleted: currentSet.isCompleted
-            )
-            .frame(maxWidth: .infinity)
-            .padding(.horizontal, 4)
-            .onChange(of: weightText) { _, v in
-                currentSet.weightKg = Double(v.replacingOccurrences(of: ",", with: "."))
-            }
-
-            // ③ Reps
-            InlineField(
-                text:        $repsText,
-                hint:        "\(currentSet.targetRepsMin)–\(currentSet.targetRepsMax)",
-                suffix:      nil,
-                keyboard:    .numberPad,
-                isFocused:   _rFocus,
-                isActive:    isActive,
-                isCompleted: currentSet.isCompleted
-            )
-            .frame(width: 66)
-            .padding(.horizontal, 4)
-            .onChange(of: repsText) { _, v in currentSet.reps = Int(v) }
-
-            // ④ RPE
-            RPECell(value: $currentSet.rpe, isActive: isActive, isCompleted: currentSet.isCompleted)
-                .frame(width: 52)
-                .onTapGesture { if isActive && !currentSet.isCompleted { showRPE = true } }
-                .sheet(isPresented: $showRPE) {
-                    RPEPickerView(selected: $currentSet.rpe)
-                        .presentationDetents([.height(280)])
-                }
-
-            // ⑤ Complete
-            CompleteButton(
-                canComplete: canComplete,
-                isActive:    isActive,
-                isCompleted: currentSet.isCompleted,
-                bounce:      bounce,
-                action:      handleComplete
-            )
-            .frame(width: 48)
-        }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 9)
-        .background(enhancedRowBackground)
-        .opacity(rowOpacity)
-        .animation(.easeInOut(duration: 0.18), value: isActive)
-        .animation(.easeInOut(duration: 0.18), value: currentSet.isCompleted)
-        .onAppear {
-            if let prev = currentSet.previousWeightKg {
-                weightText   = prev.truncatingRemainder(dividingBy: 1) == 0
-                    ? String(format: "%.0f", prev) : String(format: "%.1f", prev)
-                currentSet.weightKg = prev
-            }
-        }
-    }
-
-    private var previousWeightHint: String {
-        guard let prev = currentSet.previousWeightKg else { return "—" }
-        return prev.truncatingRemainder(dividingBy: 1) == 0
-            ? String(format: "%.0f", prev) : String(format: "%.1f", prev)
-    }
-
-    private var isBodyweight: Bool { currentSet.previousWeightKg == nil && currentSet.weightKg == nil }
-    private var canComplete: Bool { currentSet.reps != nil && (isBodyweight || currentSet.weightKg != nil) }
-
-    private func handleComplete() {
-        withAnimation(.spring(response: 0.12, dampingFraction: 0.45)) { bounce = 0.80 }
-        withAnimation(.spring(response: 0.35, dampingFraction: 0.55).delay(0.1)) { bounce = 1.0 }
-        UIImpactFeedbackGenerator(style: .heavy).impactOccurred()
-        onComplete()
-    }
-
-    // ✅ OPRAVENO: Vylepšený kontrast pro fitness studio (nahrazuje původní rowBG)
-    // Aktuální série: výraznější rámeček v akcentní barvě, lépe čitelné pod přímým světlem
-    private var rowBG: some View {
-        RoundedRectangle(cornerRadius: 14, style: .continuous)
-            .fill(isActive
-                   ? Color(red: 0.14, green: 0.14, blue: 0.20)   // světlejší než AppColors.tertiaryBg
-                   : Color.clear)
-            .overlay(
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .stroke(
-                        isActive
-                            ? AppColors.primaryAccent.opacity(0.6)  // výraznější akcent
-                            : Color.clear,
-                        lineWidth: isActive ? 1.5 : 0
-                    )
-            )
-            .shadow(
-                color: isActive ? AppColors.primaryAccent.opacity(0.15) : .clear,
-                radius: 8, x: 0, y: 0
-            )
-    }
-
-    private var rowOpacity: Double {
-        // Dokončená série: enhancedRowBackground zobrazuje zelené pozadí — nefadovat
-        // Neaktivní nedokončená: 45% průhlednost pro focus na aktivní sérii
-        if currentSet.isCompleted { return 0.85 }
-        return isActive ? 1.0 : 0.45
-    }
-}
-
-// MARK: - Sub-views for SetRow
-
-private struct SetBadge: View {
-    let number: Int; let isCompleted: Bool; let isActive: Bool; let isWarmup: Bool
-
-    var body: some View {
-        ZStack {
-            RoundedRectangle(cornerRadius: 9, style: .continuous)
-                .fill(bgColor)
-                .frame(width: 30, height: 30)
-            if isCompleted {
-                Image(systemName: "checkmark")
-                    .font(.system(size: 11, weight: .black))
-                    .foregroundStyle(.black)
-            } else {
-                Text(isWarmup ? "W" : "\(number)")
-                    .font(.system(size: 13, weight: .bold, design: .rounded))
-                    .foregroundStyle(isActive ? .white : .white.opacity(0.32))
-            }
-        }
-        .animation(.spring(response: 0.22), value: isCompleted)
-    }
-
-    private var bgColor: Color {
-        if isCompleted { return Color(red:0.13, green:0.80, blue:0.43) }
-        if isActive && isWarmup { return Color.orange.opacity(0.4) }
-        if isActive    { return .white.opacity(0.14) }
-        if isWarmup    { return Color.orange.opacity(0.15) }
-        return .white.opacity(0.05)
-    }
-}
-
-private struct InlineField: View {
-    @Binding var text: String
-    let hint: String; let suffix: String?
-    let keyboard: UIKeyboardType
-    @FocusState var isFocused: Bool
-    let isActive: Bool; let isCompleted: Bool
-
-    var body: some View {
-        ZStack {
-            RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .fill(fieldBg)
-                .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    .stroke(isFocused ? Color.blue.opacity(0.65) : Color.clear, lineWidth: 1.5))
-
-            if text.isEmpty && !isFocused {
-                Text(hint)
-                    .font(.system(size: 14, weight: .semibold, design: .rounded))
-                    .foregroundStyle(.white.opacity(0.20))
-            }
-
-            HStack(spacing: 2) {
-                TextField("", text: $text)
-                    .keyboardType(keyboard)
-                    .focused($isFocused)
-                    .font(.system(size: 16, weight: .bold, design: .rounded))
-                    .foregroundStyle(.white)
-                    .multilineTextAlignment(.center)
-                    .disabled(!isActive || isCompleted)
-                if let s = suffix, !text.isEmpty {
-                    Text(s).font(.system(size: 9, weight: .semibold)).foregroundStyle(.white.opacity(0.28))
-                }
-            }
-        }
-        .frame(height: 52)
-    }
-
-    private var fieldBg: Color {
-        if isFocused { return .white.opacity(0.10) }
-        return isActive ? .white.opacity(0.07) : .clear
-    }
-}
-
-private struct RPECell: View {
-    @Binding var value: Int?
-    let isActive: Bool; let isCompleted: Bool
-
-    var body: some View {
-        ZStack {
-            RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .fill(isActive && !isCompleted ? Color.white.opacity(0.07) : Color.clear)
-
-            if let v = value {
-                VStack(spacing: 1) {
-                    Text("\(v)")
-                        .font(.system(size: 17, weight: .black, design: .rounded))
-                        .foregroundStyle(rpeColor(v))
-                    Text("RPE")
-                        .font(.system(size: 7, weight: .black))
-                        .foregroundStyle(.white.opacity(0.26))
-                        .kerning(0.4)
-                }
-            } else {
-                Image(systemName: "dial.low")
-                    .font(.system(size: 14))
-                    .foregroundStyle(.white.opacity(isActive ? 0.30 : 0.13))
-            }
-        }
-        .frame(height: 52)
-        .contentShape(Rectangle())
-    }
-
-    private func rpeColor(_ v: Int) -> Color {
-        Color.rpeColor(for: v)
-    }
-}
-
-private struct CompleteButton: View {
-    let canComplete: Bool; let isActive: Bool; let isCompleted: Bool
-    let bounce: CGFloat; let action: () -> Void
-
-    var body: some View {
-        Button(action: action) {
-            ZStack {
-                RoundedRectangle(cornerRadius: 13, style: .continuous)
-                    .fill(btnFill)
-                    .frame(width: 42, height: 42)
-                    .shadow(
-                        color: isActive && canComplete
-                            ? Color(red:0.13, green:0.80, blue:0.43).opacity(0.38) : .clear,
-                        radius: 8, y: 4
-                    )
-                Image(systemName: isCompleted ? "checkmark.circle.fill" : "checkmark")
-                    .font(.system(size: isCompleted ? 21 : 15, weight: .bold))
-                    .foregroundStyle(btnIcon)
-            }
-        }
-        .buttonStyle(.plain)
-        .disabled(!isActive && !isCompleted)
-        .scaleEffect(bounce)
-        .animation(.spring(response: 0.22), value: isCompleted)
-    }
-
-    private var btnFill: Color {
-        if isCompleted             { return .clear }
-        if isActive && canComplete { return AppColors.success.opacity(0.88) }
-        return .white.opacity(0.07)
-    }
-    private var btnIcon: Color {
-        if isCompleted             { return AppColors.success }
-        if isActive && canComplete { return .white }
-        return .white.opacity(0.18)
-    }
-}
-
-// MARK: - RPE Picker Sheet
-
-private struct RPEPickerView: View {
-    @Binding var selected: Int?
-    @Environment(\.dismiss) private var dismiss
-
-    private let labels = [
-        1:"Velmi lehce", 2:"Lehce", 3:"Mírně", 4:"Trochu snaha", 5:"Střední",
-        6:"Náročné",     7:"Těžké", 8:"Velmi těžké", 9:"Maximální", 10:"Absolutní max"
-    ]
-
-    var body: some View {
-        VStack(spacing: 14) {
-            Capsule().fill(.white.opacity(0.2)).frame(width: 36, height: 4).padding(.top, 10)
-            Text("Jak těžká série?")
-                .font(.system(size: 16, weight: .bold)).foregroundStyle(.white)
-
-            LazyVGrid(
-                columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 5),
-                spacing: 8
-            ) {
-                ForEach(1...10, id: \.self) { i in
-                    Button {
-                        selected = i
-                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                        dismiss()
-                    } label: {
-                        VStack(spacing: 2) {
-                            Text("\(i)").font(.system(size: 21, weight: .black, design: .rounded))
-                            Text(labels[i] ?? "").font(.system(size: 7.5)).multilineTextAlignment(.center).lineLimit(2)
-                        }
-                        .foregroundStyle(selected == i ? .black : .white)
-                        .frame(maxWidth: .infinity).padding(.vertical, 9)
-                        .background(RoundedRectangle(cornerRadius: 11, style: .continuous)
-                            .fill(selected == i ? rpeColor(i) : Color.white.opacity(0.09)))
-                    }
-                    .buttonStyle(.plain)
-                }
-            }
-            .padding(.horizontal, 16).padding(.bottom, 20)
-        }
-        .background(AppColors.secondaryBg.ignoresSafeArea())
-        .preferredColorScheme(.dark)
-    }
-
-    private func rpeColor(_ v: Int) -> Color {
-        Color.rpeColor(for: v)
-    }
-}
+// Removed ActiveSetRow, SetBadge, InlineField, RPECell, CompleteButton and RPEPickerView as they were extracted to WorkoutSetRowView.swift
 
 // MARK: - Volume Summary
 
@@ -928,7 +711,7 @@ private struct VolumeSummary: View {
 
     var body: some View {
         HStack {
-            SummaryPill(icon: "scalemass.fill",   value: "\(Int(volume)) kg", label: "objem",  tint: .blue)
+            SummaryPill(icon: "scalemass.fill",   value: volume.formatVolume(), label: "objem",  tint: .blue)
             Spacer()
             SummaryPill(icon: "checkmark.circle", value: "\(done.count)×",    label: "série",  tint: Color(red:0.13, green:0.80, blue:0.43))
             if let r = avgRPE {
@@ -1024,55 +807,20 @@ struct RestTimerDock: View {
     }
 
     private var expandedContent: some View {
-        VStack(spacing: 22) {
-            ZStack {
-                Circle().stroke(.white.opacity(0.06), lineWidth: 11).frame(width: 190, height: 190)
-                Circle()
-                    .trim(from: 0, to: vm.restProgress)
-                    .stroke(
-                        AngularGradient(
-                            colors: [Color(red:0.20, green:0.52, blue:1.0).opacity(0.5), Color.cyan],
-                            center: .center
-                        ),
-                        style: StrokeStyle(lineWidth: 11, lineCap: .round)
-                    )
-                    .frame(width: 190, height: 190)
-                    .rotationEffect(.degrees(-90))
-                    .animation(.linear(duration: 1), value: vm.restProgress)
-
-                Circle().fill(Color.cyan.opacity(0.08)).frame(width: 90, height: 90).blur(radius: 18)
-
-                VStack(spacing: 2) {
-                    Text(vm.restTimeFormatted)
-                        .font(.system(size: 58, weight: .black, design: .monospaced))
-                        .foregroundStyle(.white)
-                        .contentTransition(.numericText(countsDown: true))
-                        .animation(.spring(response: 0.25), value: vm.restSecondsRemaining)
-                    Text("PAUZA")
-                        .font(.system(size: 10, weight: .black))
-                        .foregroundStyle(.white.opacity(0.30))
-                        .kerning(2.5)
-                }
-            }
-            .padding(.top, 8)
-
-            HStack(spacing: 14) {
-                DockAdjustBtn(label: "−15s") { vm.adjustRest(by: -15) }
-                Button {
-                    UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-                    vm.skipRest()
-                } label: {
-                    Text("Přeskočit pauzu")
-                        .font(.system(size: 16, weight: .bold))
-                        .foregroundStyle(.black)
-                        .frame(maxWidth: .infinity, minHeight: 52)
-                        .background(Capsule().fill(.white)
-                            .shadow(color: .white.opacity(0.18), radius: 14, y: 5))
-                }
-                .buttonStyle(.plain)
-                DockAdjustBtn(label: "+15s") { vm.adjustRest(by: +15) }
-            }
-            .padding(.horizontal, 22).padding(.bottom, 36)
+        VStack(spacing: 24) {
+            CircularRestTimerView(
+                progress: vm.restProgress,
+                timeFormatted: vm.restTimeFormatted,
+                secondsRemaining: vm.restSecondsRemaining,
+                onAdjust: { delta in vm.adjustRest(by: delta) },
+                onSkip: { vm.skipRest() }
+            )
+            
+            // Živý tepový odpočinek (Apple Watch integrace)
+            HRZonedRestTimer(targetBPM: 110.0, onTargetReached: {
+                // Může notifikovat nebo přeskočit pauzu, ale počkáme na uživatele
+            })
+            .padding(.horizontal, 24)
         }
     }
 }

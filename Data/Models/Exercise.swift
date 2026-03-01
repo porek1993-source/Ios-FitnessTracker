@@ -17,6 +17,9 @@ final class Exercise {
     var isUnilateral: Bool = false
     var instructions: String = ""
     var videoURL: String?
+    
+    // Nový flag pro uživatelsky vytvořené cviky
+    var isCustom: Bool = false
 
     @Relationship(deleteRule: .cascade)
     var weightHistory: [WeightEntry] = []
@@ -92,6 +95,19 @@ enum Equipment: String, Codable, CaseIterable {
         case .resistanceBand, .band: return "🎗️"
         case .kettlebell:     return "🔔"
         case .pullupBar, .trx: return "🧗"
+        }
+    }
+
+    var localizedName: String {
+        switch self {
+        case .barbell:        return "Velká činka"
+        case .dumbbell:       return "Jednoručky"
+        case .cable:          return "Kladka"
+        case .machine:        return "Stroj"
+        case .bodyweight:     return "Vlastní váha"
+        case .resistanceBand, .band: return "Odporová guma"
+        case .kettlebell:     return "Kettlebell"
+        case .pullupBar, .trx: return "Hrazda / TRX"
         }
     }
 }

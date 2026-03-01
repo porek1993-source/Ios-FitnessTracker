@@ -12,6 +12,8 @@ final class LiveActivityManager: ObservableObject {
     func startRestActivity(
         session: WorkoutSession,
         currentExercise: SessionExerciseState,
+        currentExerciseIndex: Int,
+        completedExercisesCount: Int,
         completedSetIndex: Int,
         restSeconds: Int,
         planLabel: String
@@ -27,21 +29,22 @@ final class LiveActivityManager: ObservableObject {
             workoutSessionId:      session.id,
             exerciseSlug:          currentExercise.slug,
             planLabel:             planLabel,
-            totalExercises:        6,
-            currentExerciseIndex:  0
+            totalExercises:        6, // Možná nahradit realným počtem ze session
+            currentExerciseIndex:  currentExerciseIndex
         )
 
+        let nextSet = currentExercise.sets[safe: completedSets] ?? currentExercise.sets.last ?? currentExercise.sets[0]
+        
         let state = RestTimerAttributes.ContentState(
             restEndsAt:          Date.now.addingTimeInterval(Double(restSeconds)),
             totalRestSeconds:    restSeconds,
             currentExerciseName: currentExercise.name,
-            nextSetInfo:         "Série \(nextSetNumber) · \(currentExercise.sets[0].targetRepsMin)–\(currentExercise.sets[0].targetRepsMax) opakování",
-            suggestedWeightKg:   currentExercise.sets[safe: completedSets]?.weightKg
-                                 ?? currentExercise.sets[0].previousWeightKg,
+            nextSetInfo:         "Série \(nextSetNumber) · \(nextSet.targetRepsMin)–\(nextSet.targetRepsMax) opakování",
+            suggestedWeightKg:   nextSet.weightKg ?? nextSet.previousWeightKg,
             sessionProgress:     SessionProgress(
                 completedSets:      completedSets,
                 totalSets:          totalSets,
-                completedExercises: 0
+                completedExercises: completedExercisesCount
             )
         )
 

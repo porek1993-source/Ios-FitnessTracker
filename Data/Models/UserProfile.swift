@@ -32,6 +32,9 @@ final class UserProfile {
 
     @Relationship(deleteRule: .cascade)
     var healthMetricsHistory: [HealthMetricsSnapshot]
+    
+    @Relationship(deleteRule: .cascade)
+    var machineNotes: [ExerciseNote]
 
     init(
         name: String,
@@ -64,6 +67,22 @@ final class UserProfile {
         self.updatedAt = .now
         self.workoutPlans = []
         self.healthMetricsHistory = []
+        self.machineNotes = []
+    }
+}
+
+@Model
+final class ExerciseNote {
+    @Attribute(.unique) var id: UUID
+    var exerciseSlug: String
+    var note: String
+    var updatedAt: Date
+    
+    init(exerciseSlug: String, note: String) {
+        self.id = UUID()
+        self.exerciseSlug = exerciseSlug
+        self.note = note
+        self.updatedAt = .now
     }
 }
 
