@@ -4,6 +4,7 @@
 import Foundation
 import UserNotifications
 
+@MainActor
 final class RestTimerManager: NSObject, UNUserNotificationCenterDelegate {
     
     static let shared = RestTimerManager()

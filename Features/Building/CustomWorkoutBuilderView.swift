@@ -260,7 +260,7 @@ struct CustomWorkoutBuilderView: View {
             plannedEx.plannedDay = plan
             
             // Přidání do session (pro aktivní trénink)
-            let sessionEx = SessionExercise(
+            _ = SessionExercise(
                 order: index,
                 exercise: builderEx.exercise,
                 session: session

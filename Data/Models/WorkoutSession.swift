@@ -9,7 +9,12 @@ final class WorkoutSession {
     var startedAt: Date
     var finishedAt: Date?
     var durationMinutes: Int
-    var status: SessionStatus
+    var statusRaw: String = SessionStatus.inProgress.rawValue
+    
+    var status: SessionStatus {
+        get { SessionStatus(rawValue: statusRaw) ?? .inProgress }
+        set { statusRaw = newValue.rawValue }
+    }
 
     var readinessScore: Double?
     var aiAdaptationNote: String?

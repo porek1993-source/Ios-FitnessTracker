@@ -63,7 +63,7 @@ struct CircularRestTimerView: View {
             .onAppear {
                 startBreathingAnimation()
             }
-            .onChange(of: secondsRemaining) { _ in
+            .onChange(of: secondsRemaining) { oldValue, newValue in
                 // Keep animation alive or sync it if needed, but repeatForever is usually enough
             }
             

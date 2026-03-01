@@ -184,7 +184,6 @@ final class DashboardViewModel: ObservableObject {
 
         // 1. Plánované dny
         for i in 0..<7 {
-            let scheduleDayIndex = i == 6 ? 1 : i + 2 // swift weekday: 1=Sun, 2=Mon... My schedule uses 1=Mon?? Let's check DayOfWeek enum. Wait, `Date.weekday` returns 1=Mon .. 7=Sun in this app?
             // "Date.weekday extension vrací naši konvenci: 1=Pondělí … 7=Neděle"
             let dayToFind = i + 1 
             let isPlanned = plan.scheduledDays.contains(where: { $0.dayOfWeek == dayToFind && !$0.isRestDay })

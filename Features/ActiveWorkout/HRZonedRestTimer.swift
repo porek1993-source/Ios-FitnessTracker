@@ -2,6 +2,7 @@ import SwiftUI
 import HealthKit
 
 // MARK: - HealthKit HR Manager (Mocked for Demo / real implementation needs HKHealthStore)
+@MainActor
 class LiveHeartRateManager: ObservableObject {
     @Published var currentBPM: Double = 135.0 // Fake initial
     private var timer: Timer?
