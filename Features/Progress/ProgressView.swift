@@ -43,7 +43,7 @@ struct AppProgressView: View {
                 for ex in session.exercises {
                     for set in ex.completedSets {
                         if set.setType == .normal || set.setType == .failure {
-                            vol += set.weightKg * Double(set.reps ?? 0)
+                            vol += set.weightKg * Double(set.reps)
                         }
                     }
                 }
@@ -90,7 +90,7 @@ struct AppProgressView: View {
             for ex in session.exercises {
                 for set in ex.completedSets {
                     if set.setType == .normal || set.setType == .failure {
-                        fallbackVol += set.weightKg * Double(set.reps ?? 0)
+                        fallbackVol += set.weightKg * Double(set.reps)
                     }
                 }
             }
@@ -301,10 +301,15 @@ struct AppProgressView: View {
             
         // Fallback pro staré tréninky
         if sessionVolume == 0 {
-            sessionVolume = session.exercises
-                .flatMap { $0.completedSets }
-                .filter { $0.setType == .normal || $0.setType == .failure }
-                .reduce(0.0) { $0 + $1.weightKg * Double($1.reps) }
+            var fallbackVol: Double = 0
+            for ex in session.exercises {
+                for set in ex.completedSets {
+                    if set.setType == .normal || set.setType == .failure {
+                        fallbackVol += set.weightKg * Double(set.reps)
+                    }
+                }
+            }
+            sessionVolume = fallbackVol
         }
 
         return HStack(spacing: 12) {

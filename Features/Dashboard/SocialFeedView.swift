@@ -11,6 +11,7 @@ struct FriendActivity: Identifiable {
     var hasGivenKudos: Bool = false
 }
 
+@MainActor
 class BuddyManager: ObservableObject {
     @Published var feed: [FriendActivity] = [
         FriendActivity(name: "Lukáš", avatarName: "person.crop.circle.fill", actionText: "zničil záda, zvedl 12 tun!", timeAgo: "Před 2 hodinami", kudosCount: 5),

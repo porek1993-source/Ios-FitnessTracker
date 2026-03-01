@@ -10,10 +10,12 @@ class LiveHeartRateManager: ObservableObject {
     func startMocking() {
         // Simulujeme postupný pokles tepu během odpočinku
         timer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
-            guard let self = self else { return }
-            if self.currentBPM > 90 {
-                // Klesání o náhodný krok
-                self.currentBPM -= Double.random(in: 0.5...2.5)
+            Task { @MainActor in
+                guard let self = self else { return }
+                if self.currentBPM > 90 {
+                    // Klesání o náhodný krok
+                    self.currentBPM -= Double.random(in: 0.5...2.5)
+                }
             }
         }
     }

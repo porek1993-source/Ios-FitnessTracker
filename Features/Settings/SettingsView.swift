@@ -214,7 +214,7 @@ struct ProfileSettingsForm: View {
                             .labelsHidden()
                             .datePickerStyle(.compact)
                             .environment(\.colorScheme, .dark)
-                            .onChange(of: reminderTime) { newValue in
+                            .onChange(of: reminderTime) { oldValue, newValue in
                                 let comps = Calendar.current.dateComponents([.hour, .minute], from: newValue)
                                 if let h = comps.hour, let m = comps.minute {
                                     NotificationService.shared.scheduleWorkoutReminder(hour: h, minute: m)
@@ -254,7 +254,7 @@ struct ProfileSettingsForm: View {
             .padding(.top, 16)
         }
         .onAppear { loadFromProfile() }
-        .onChange(of: profile.updatedAt) { loadFromProfile() }
+        .onChange(of: profile.updatedAt) { oldValue, newValue in loadFromProfile() }
     }
 
     // MARK: — Row builders

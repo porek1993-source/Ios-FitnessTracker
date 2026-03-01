@@ -21,14 +21,13 @@ public final class HealthWorkoutWriter {
         startDate: Date,
         endDate: Date,
         activeEnergyBurnedKcal: Double? = nil,
-        metadata: [String: Any]? = nil
+        metadata: [String: Sendable]? = nil
     ) async throws {
         
         guard HKHealthStore.isHealthDataAvailable() else {
             throw HealthError.unavailable
         }
 
-        let workoutType = HKObjectType.workoutType()
         let energyType = HKObjectType.quantityType(forIdentifier: .activeEnergyBurned)!
 
         // Kontrola oprávnění (pokud uživatel neschválil write oprávnění, selže to)
