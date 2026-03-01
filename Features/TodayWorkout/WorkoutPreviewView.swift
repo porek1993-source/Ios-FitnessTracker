@@ -409,6 +409,8 @@ private struct PlannedExerciseRow: View {
         .padding(.horizontal, 16)
         .background(RoundedRectangle(cornerRadius: 16).fill(Color.white.opacity(0.04)))
         .padding(.leading, isSupersetWithNext || isSupersetWithPrev ? 28 : 0)
+            }
+        }
     }
 }
 

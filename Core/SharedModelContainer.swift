@@ -25,7 +25,6 @@ enum SharedModelContainer {
         CompletedSet.self,
         HealthMetricsSnapshot.self,
         MuscleXPRecord.self,
-        MuscleLevel.self,
         ProgressPhoto.self
     ])
 

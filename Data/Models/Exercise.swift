@@ -100,6 +100,7 @@ enum Equipment: String, Codable, CaseIterable {
     case pullupBar      = "pullupBar"
     case bench          = "bench"
     case smith          = "smith"
+    case trx            = "trx"
 
     var emoji: String {
         switch self {
@@ -113,6 +114,7 @@ enum Equipment: String, Codable, CaseIterable {
         case .pullupBar:      return "🧗"
         case .bench:          return "🪑"
         case .smith:          return "🏗️"
+        case .trx:            return "⛓️"
         }
     }
 
@@ -128,6 +130,7 @@ enum Equipment: String, Codable, CaseIterable {
         case .pullupBar:      return "Hrazda"
         case .bench:          return "Lavice"
         case .smith:          return "Multipress"
+        case .trx:            return "TRX"
         }
     }
 }
