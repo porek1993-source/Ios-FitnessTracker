@@ -118,7 +118,7 @@ struct AppProgressView: View {
                             .padding(.horizontal, 16)
                             .padding(.top, 16)
 
-                        MuscleVolumeChart(weightEntries: weightEntries)
+                        MuscleVolumeChart()
                             .frame(height: 220)
                             .padding(.top, 8)
                     }
