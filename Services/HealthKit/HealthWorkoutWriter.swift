@@ -48,7 +48,7 @@ public final class HealthWorkoutWriter {
         if let kcal = activeEnergyBurnedKcal {
             let energy = HKQuantity(unit: .kilocalorie(), doubleValue: kcal)
             let sample = HKQuantitySample(type: energyType, quantity: energy, start: startDate, end: endDate)
-            try await builder.add([sample])
+            try await builder.addSamples([sample])
         }
         
         // ✅ Metadata

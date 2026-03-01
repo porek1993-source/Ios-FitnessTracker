@@ -68,7 +68,7 @@ final class RestTimerManager: NSObject, UNUserNotificationCenterDelegate {
     }
     
     // Zajišťuje, že se notifikace ukáže, i když je aplikace v popředí (kdyby se tam uživatel zdržel, ale nezavřel timer u view)
-    func userNotificationCenter(_ center: UNUserNotificationCenter, willPresent notification: UNNotification, withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void) {
+    nonisolated func userNotificationCenter(_ center: UNUserNotificationCenter, willPresent notification: UNNotification, withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void) {
         completionHandler([.banner, .sound]) // Zobrazí banner a zahraje zvuk
     }
 }
