@@ -555,7 +555,7 @@ struct ExpandablePlanCard: View {
                     Divider().background(Color.white.opacity(0.07))
                     Text(plan.coachNote).font(.system(size: 12)).foregroundStyle(.white.opacity(0.65))
                         .padding(10).background(RoundedRectangle(cornerRadius: 10).fill(plan.accentColor.opacity(0.07)))
-                    ForEach(plan.exercises) { ex in exerciseRow(ex: ex, accent: plan.accentColor) }
+                    ForEach(plan.exercises) { ex in QuickExerciseRow(ex: ex, accent: plan.accentColor) }
                 }
                 .padding(.horizontal, 13).padding(.bottom, 13)
             }
@@ -596,25 +596,31 @@ struct CyclePhaseCard: View {
             .buttonStyle(.plain)
 
             if isSelected {
-                VStack(alignment: .leading, spacing: 10) {
-                    Divider().background(Color.white.opacity(0.07))
-                    Text(phase.description)
-                        .font(.system(size: 12)).foregroundStyle(.white.opacity(0.7))
-                        .padding(10)
-                        .background(RoundedRectangle(cornerRadius: 10).fill(phase.accentColor.opacity(0.07)))
-                    
-                    HStack(spacing: 8) {
-                        IntensityBadgeView(intensity: phase.workoutPlan.intensity)
-                        Label("\(phase.workoutPlan.estimatedMinutes) min", systemImage: "clock")
-                            .font(.system(size: 11, weight: .medium)).foregroundStyle(.white.opacity(0.55))
-                    }
-                    
-                    ForEach(phase.workoutPlan.exercises) { ex in
-                        QuickExerciseRow(ex: ex, accent: phase.accentColor)
-                    }
-                }
-                .padding(.horizontal, 13).padding(.bottom, 13)
+                phaseExpandedContent
             }
+        }
+    }
+
+    private var phaseExpandedContent: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Divider().background(Color.white.opacity(0.07))
+            Text(phase.description)
+                .font(.system(size: 12)).foregroundStyle(.white.opacity(0.7))
+                .padding(10)
+                .background(RoundedRectangle(cornerRadius: 10).fill(phase.accentColor.opacity(0.07)))
+            
+            HStack(spacing: 8) {
+                IntensityBadgeView(intensity: phase.workoutPlan.intensity)
+                Label("\(phase.workoutPlan.estimatedMinutes) min", systemImage: "clock")
+                    .font(.system(size: 11, weight: .medium)).foregroundStyle(.white.opacity(0.55))
+            }
+            
+            ForEach(phase.workoutPlan.exercises) { ex in
+                QuickExerciseRow(ex: ex, accent: phase.accentColor)
+            }
+        }
+        .padding(.horizontal, 13).padding(.bottom, 13)
+    }
         }
         .background(
             RoundedRectangle(cornerRadius: 14)

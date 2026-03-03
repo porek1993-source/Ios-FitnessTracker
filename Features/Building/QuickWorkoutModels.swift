@@ -162,6 +162,61 @@ enum CyclePhase: String, CaseIterable, Identifiable {
             return "Estrogen trvale klesá → klesá hustota kostí a svalová hmota. Silový trénink je nejdůležitější věc co teď pro tělo můžeš udělat."
         }
     }
+
+    var workoutPlan: QuickWorkoutPlan {
+        switch self {
+        case .menstrual:
+            return QuickWorkoutPlan(
+                label: "Menstruační Reset", icon: "🌊", accentColor: accentColor,
+                exercises: [
+                    .init(name: "Bránicové dýchání", nameEN: "Diaphragmatic Breathing", slug: "diaphragmatic-breathing", sets: 3, repsMin: 10, repsMax: 10, isBodyweight: true, coachTip: "Uvolni břicho."),
+                    .init(name: "Cat-Cow", nameEN: "Cat Cow", slug: "cat-cow", sets: 3, repsMin: 10, repsMax: 12, isBodyweight: true, coachTip: "Pomalý pohyb."),
+                    .init(name: "Child's Pose", nameEN: "Childs Pose", slug: "childs-pose", sets: 1, repsMin: 1, repsMax: 1, isBodyweight: true, coachTip: "Drž 60s.", durationSeconds: 60)
+                ],
+                warmupItems: ["2 min hluboký dech"], coachNote: "Dnes jen zlehka.", estimatedMinutes: 15, intensity: .low
+            )
+        case .follicular:
+            return QuickWorkoutPlan(
+                label: "Folikulární Síla", icon: "🌱", accentColor: accentColor,
+                exercises: [
+                    .init(name: "Dřepy", nameEN: "Squat", slug: "squat", sets: 3, repsMin: 8, repsMax: 12, isBodyweight: false, coachTip: "Hloubka."),
+                    .init(name: "Kliky", nameEN: "Push Up", slug: "push-up", sets: 3, repsMin: 10, repsMax: 15, isBodyweight: true, coachTip: "Pevný střed."),
+                    .init(name: "Přitahy v předklonu", nameEN: "Bent Over Row", slug: "bent-over-row", sets: 3, repsMin: 10, repsMax: 12, isBodyweight: false, coachTip: "Lopatky k sobě.")
+                ],
+                warmupItems: ["5 min chůze"], coachNote: "Energie roste, přidej váhu.", estimatedMinutes: 25, intensity: .medium
+            )
+        case .ovulation:
+            return QuickWorkoutPlan(
+                label: "Ovulační Peak", icon: "⚡️", accentColor: accentColor,
+                exercises: [
+                    .init(name: "Mrtvý tah", nameEN: "Deadlift", slug: "deadlift", sets: 3, repsMin: 5, repsMax: 8, isBodyweight: false, coachTip: "Maximální síla."),
+                    .init(name: "Angličáky", nameEN: "Burpees", slug: "burpees", sets: 3, repsMin: 10, repsMax: 12, isBodyweight: true, coachTip: "Výbušnost."),
+                    .init(name: "Plank", nameEN: "Plank", slug: "plank", sets: 3, repsMin: 1, repsMax: 1, isBodyweight: true, coachTip: "Drž 45s.", durationSeconds: 45)
+                ],
+                warmupItems: ["Dynamický strečink"], coachNote: "Dnes jsi nejsilnější.", estimatedMinutes: 30, intensity: .high
+            )
+        case .luteal:
+            return QuickWorkoutPlan(
+                label: "Luteální Stabilita", icon: "🍂", accentColor: accentColor,
+                exercises: [
+                    .init(name: "Výpady", nameEN: "Lunge", slug: "lunge", sets: 3, repsMin: 10, repsMax: 12, isBodyweight: true, coachTip: "Rovnováha."),
+                    .init(name: "Stahování kladky", nameEN: "Lat Pulldown", slug: "lat-pulldown", sets: 3, repsMin: 12, repsMax: 15, isBodyweight: false, coachTip: "Kontrolovaně."),
+                    .init(name: "Bird-Dog", nameEN: "Bird Dog", slug: "bird-dog", sets: 3, repsMin: 10, repsMax: 12, isBodyweight: true, coachTip: "Stabilní boky.")
+                ],
+                warmupItems: ["Foam rolling"], coachNote: "Slyš své tělo.", estimatedMinutes: 25, intensity: .medium
+            )
+        case .menopause:
+            return QuickWorkoutPlan(
+                label: "Longevity & Síla", icon: "🌸", accentColor: accentColor,
+                exercises: [
+                    .init(name: "Zatížené dřepy", nameEN: "Goblet Squat", slug: "goblet-squat", sets: 3, repsMin: 10, repsMax: 12, isBodyweight: false, coachTip: "Hustota kostí."),
+                    .init(name: "Tlaky nad hlavu", nameEN: "Overhead Press", slug: "overhead-press", sets: 3, repsMin: 10, repsMax: 12, isBodyweight: false, coachTip: "Silná ramena."),
+                    .init(name: "Farmer's Carry", nameEN: "Farmers Carry", slug: "farmers-carry", sets: 3, repsMin: 1, repsMax: 1, isBodyweight: false, coachTip: "Úchop.")
+                ],
+                warmupItems: ["Mobilita kloubů"], coachNote: "Fokus na kosti.", estimatedMinutes: 30, intensity: .medium
+            )
+        }
+    }
 }
 
 struct MicroBreakExercise: Identifiable {
