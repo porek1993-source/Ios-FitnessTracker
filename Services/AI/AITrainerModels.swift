@@ -291,9 +291,9 @@ extension UserContextProfile {
     /// Zkrácený init pro fallback logiku (kde nemáme celý profil).
     init(fitnessLevel: String) {
         self.init(
-            name: "Athlete",
             fitnessLevel: fitnessLevel,
             primaryGoal: "hypertrophy",
+            name: "Athlete",
             sessionDurationMinutes: 60
         )
     }

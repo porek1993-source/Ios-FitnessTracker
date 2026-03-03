@@ -107,7 +107,7 @@ struct DebugOverlayView: View {
                             .padding(10)
                         }
                         .background(Color.black.opacity(0.85))
-                        .onChange(of: logger.logs.count) { _ in
+                        .onChange(of: logger.logs.count) {
                             if let first = logger.logs.first {
                                 withAnimation { proxy.scrollTo(first.id, anchor: .top) }
                             }
