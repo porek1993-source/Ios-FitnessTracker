@@ -316,11 +316,9 @@ struct TrainerDashboardView: View {
                                             }
                                         }
                                     }
+                                    lastOffset = newValue
                                 }
                         }
-                        
-                        lastOffset = newValue
-                    }
 
                         // ── Greeting ─────────────────────────────────
                         if let p = profile {
