@@ -298,33 +298,6 @@ struct QuickWorkoutPickerView: View {
     // MARK: ─── MODULE 7: Micro-Breaks ────────────────────────────────────
 
     private var microBreakContent: some View {
-        let accent = Color(red: 0.95, green: 0.30, blue: 0.30)
-        return VStack(spacing: 14) {
-            // Toggle
-            VStack(spacing: 0) {
-                HStack(spacing: 12) {
-                    Image(systemName: "bell.badge.fill").font(.system(size: 20)).foregroundStyle(accent).frame(width: 38)
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Připomínky každé \(microBreakInterval)h").font(.system(size: 14, weight: .bold)).foregroundStyle(.white)
-                        Text("Notifikace s cvikem na protažení").font(.system(size: 11)).foregroundStyle(.white.opacity(0.5))
-                    }
-                    Spacer()
-                    Toggle("", isOn: $microBreaksEnabled).tint(accent)
-                        .onChange(of: microBreaksEnabled) { _, on in if on { scheduleMicroBreaks() } else { cancelMicroBreaks() } }
-                }
-                .padding(13)
-
-                if microBreaksEnabled {
-                    Divider().background(Color.white.opacity(0.07))
-                    HStack {
-                        Text("Interval:").font(.system(size: 12)).foregroundStyle(.white.opacity(0.5)).padding(.leading, 13)
-                        Spacer()
-                        HStack(spacing: 6) {
-                            ForEach([1, 2, 3], id: \.self) { h in
-                                Button("\(h)h") { microBreakInterval = h; scheduleMicroBreaks() }
-                                    .font(.system(size: 12, weight: .semibold))
-                                    .foregroundStyle(microBreakInterval == h ? .white : .white.opacity(0.4))
-                                    .padding(.horizontal, 10).padding(.vertical, 5)
         MicroBreakView(
             microBreakInterval: $microBreakInterval,
             microBreaksEnabled: $microBreaksEnabled,
