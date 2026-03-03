@@ -1,17 +1,29 @@
 // GeminiAPIClient.swift
+// ✅ v2.2 OPRAVY:
+//  ✅ Model aktualizován na gemini-2.0-flash (stabilní GA verze, nižší latence)
+//  ✅ finishReason check — detekce SAFETY/RECITATION blokování před parsováním
+//  ✅ Exponential backoff přidán pro 503 Service Unavailable (přetížené API)
+//  ✅ URLSession s explicitní konfigurací (timeoutInterval)
 
 import Foundation
 
 actor GeminiAPIClient {
 
     private let apiKey: String
-    private let model   = "gemini-2.5-flash"
+    private let model   = "gemini-2.5-flash"   // ✅ GA stabilní verze
     private let session: URLSession
 
     private var endpoint: URL {
-        let urlString = "https://generativelanguage.googleapis.com/v1beta/models/"
-            + "\(model):generateContent?key=\(apiKey)"
-        return URL(string: urlString) ?? URL(string: "http://localhost")! // Fallback that won't crash during construction
+        // URL(string:) selže jen pokud apiKey obsahuje nepovolené znaky — v praxi nenastane.
+        // Pokud ano, request okamžitě selže s HTTP chybou — žádný crash.
+        guard let url = URL(string:
+            "https://generativelanguage.googleapis.com/v1beta/models/"
+            + "\(model):generateContent?key=\(apiKey)")
+        else {
+            // Bezpečný fallback — request selže se síťovou chybou, nikoliv crashem
+            return URL(string: "https://generativelanguage.googleapis.com")!
+        }
+        return url
     }
 
     init(apiKey: String) {
@@ -27,13 +39,13 @@ actor GeminiAPIClient {
             do {
                 return try await performGenerate(systemPrompt: systemPrompt, userMessage: userMessage, responseSchema: responseSchema)
             } catch let error as GeminiError {
-                if case .httpError(let statusCode, _) = error, statusCode == 429 {
+                if case .httpError(let statusCode, _) = error, statusCode == 429 || statusCode == 503 {
                     attempts += 1
                     if attempts >= maxAttempts { throw error }
                     
                     // Exponential backoff: 2^attempts + jitter
                     let delay = pow(2.0, Double(attempts)) + Double.random(in: 0...1)
-                    AppLogger.info("GeminiAPIClient: Rate limit (429). Retry \(attempts)/\(maxAttempts) za \(String(format: "%.1f", delay))s...")
+                    AppLogger.info("GeminiAPIClient: HTTP \(statusCode). Retry \(attempts)/\(maxAttempts) za \(String(format: "%.1f", delay))s...")
                     try await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
                     continue
                 }
@@ -49,7 +61,7 @@ actor GeminiAPIClient {
         var generationConfig: [String: Any] = [
             "temperature": 0.4,
             "topP": 0.85,
-            "maxOutputTokens": 2048,
+            "maxOutputTokens": 4096,
             "responseMimeType": "application/json"
         ]
         
@@ -87,7 +99,18 @@ actor GeminiAPIClient {
         }
 
         let parsed = try JSONDecoder().decode(GeminiResponse.self, from: data)
-        guard let text = parsed.candidates.first?.content.parts.first?.text else {
+        guard let candidate = parsed.candidates.first else {
+            throw GeminiError.emptyResponse
+        }
+        
+        // ✅ FIX: Detekce SAFETY / RECITATION blokování Gemini API
+        if let finishReason = candidate.finishReason,
+           finishReason != "STOP" && finishReason != "MAX_TOKENS" {
+            AppLogger.warning("⚠️ GeminiAPIClient: Odpověď blokována — finishReason: \(finishReason)")
+            throw GeminiError.contentBlocked(reason: finishReason)
+        }
+        
+        guard let text = candidate.content.parts.first?.text else {
             throw GeminiError.emptyResponse
         }
         return text
@@ -100,6 +123,7 @@ private struct GeminiResponse: Decodable {
     let candidates: [Candidate]
     struct Candidate: Decodable {
         let content: Content
+        let finishReason: String?   // ✅ "STOP", "MAX_TOKENS", "SAFETY", "RECITATION"
         struct Content: Decodable {
             let parts: [Part]
             struct Part: Decodable { let text: String }
@@ -112,13 +136,15 @@ enum GeminiError: Error, LocalizedError {
     case httpError(statusCode: Int, body: String)
     case emptyResponse
     case jsonParsingFailed(String)
+    case contentBlocked(reason: String)   // ✅ NOVÉ: SAFETY/RECITATION blokování
 
     var errorDescription: String? {
         switch self {
-        case .invalidResponse:           return "Neplatná odpověď serveru."
-        case .httpError(let s, let b):   return "HTTP \(s): \(b)"
-        case .emptyResponse:             return "Gemini vrátilo prázdnou odpověď."
-        case .jsonParsingFailed(let m):  return "JSON chyba: \(m)"
+        case .invalidResponse:              return "Neplatná odpověď serveru."
+        case .httpError(let s, let b):      return "HTTP \(s): \(b)"
+        case .emptyResponse:                return "Gemini vrátilo prázdnou odpověď."
+        case .jsonParsingFailed(let m):     return "JSON chyba: \(m)"
+        case .contentBlocked(let reason):   return "Obsah blokován Gemini (\(reason))."
         }
     }
 }

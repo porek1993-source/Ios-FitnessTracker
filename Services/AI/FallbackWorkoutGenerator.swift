@@ -164,23 +164,23 @@ final class FallbackWorkoutGenerator {
             .init(name: "Benchpress s jednoručkami", nameEN: "Dumbbell Bench Press", slug: "dumbbell-bench-press",
                   sets: sets, repsMin: 8, repsMax: 12, weightKg: upper,
                   rir: nil, rpe: 7, restSeconds: 90, tempo: "2010",
-                  coachTip: "Offline záloha — Upper den. Lopatky zamáčknuté.", supersetId: nil),
+                  coachTip: "Offline záloha — Upper den. Lopatky zamáčknuté k sobě, kontrolovaný pohyb.", supersetId: nil),
             .init(name: "Přítahy v předklonu s jednoručkami", nameEN: "Dumbbell Row", slug: "dumbbell-row",
                   sets: sets, repsMin: 8, repsMax: 12, weightKg: upper,
                   rir: nil, rpe: 7, restSeconds: 90, tempo: "2011",
-                  coachTip: "Superserie s benchpressem pro úsporu času je možná.", supersetId: nil),
+                  coachTip: "Supersérie s benchpressem pro úsporu času. Táhni lokty dozadu, ne nahoru.", supersetId: nil),
             .init(name: "Tlaky na ramenou s jednoručkami", nameEN: "Dumbbell Shoulder Press", slug: "dumbbell-shoulder-press",
                   sets: sets, repsMin: 10, repsMax: 14, weightKg: upper * 0.5,
                   rir: nil, rpe: 7, restSeconds: 75, tempo: nil,
-                  coachTip: nil, supersetId: nil),
+                  coachTip: "Lokty drž mírně před tělem, ne úplně v upažení. Zátěž by neměla klesnout pod úroveň uší.", supersetId: nil),
             .init(name: "Bicepsový zdvih s jednoručkami", nameEN: "Dumbbell Curl", slug: "dumbbell-curl",
                   sets: 3, repsMin: 10, repsMax: 14, weightKg: upper * 0.35,
                   rir: nil, rpe: 8, restSeconds: 60, tempo: nil,
-                  coachTip: nil, supersetId: nil),
+                  coachTip: "Zafixuj lokty u těla. Kývání trupem odstraňuje napětí z bicepsu.", supersetId: nil),
             .init(name: "Triceps pushdown", nameEN: "Tricep Pushdown", slug: "tricep-pushdown",
                   sets: 3, repsMin: 12, repsMax: 15, weightKg: upper * 0.3,
                   rir: nil, rpe: 8, restSeconds: 60, tempo: nil,
-                  coachTip: nil, supersetId: nil)
+                  coachTip: "Ruce by měly tvořit pravý úhel v horní pozici. Ve spodní pozici plně propni lokty pro maximální kontrakci.", supersetId: nil)
         ]
     }
 
@@ -189,7 +189,7 @@ final class FallbackWorkoutGenerator {
             .init(name: "Goblet dřep", nameEN: "Goblet Squat", slug: "goblet-squat",
                   sets: sets, repsMin: 8, repsMax: 12, weightKg: lower * 0.35,
                   rir: nil, rpe: 7, restSeconds: 120, tempo: "3010",
-                  coachTip: "Offline záloha — Lower den.", supersetId: nil),
+                  coachTip: "Offline záloha — Lower den. Snaž se udržet váhu u hrudníku a nepadat přepadem vpřed.", supersetId: nil),
             .init(name: "Rumunský mrtvý tah s jednoručkami", nameEN: "Dumbbell Romanian Deadlift", slug: "romanian-deadlift-dumbbell",
                   sets: sets, repsMin: 10, repsMax: 14, weightKg: lower * 0.5,
                   rir: nil, rpe: 7, restSeconds: 90, tempo: "3011",
@@ -201,11 +201,11 @@ final class FallbackWorkoutGenerator {
             .init(name: "Výpady s jednoručkami", nameEN: "Dumbbell Lunges", slug: "dumbbell-lunges",
                   sets: 3, repsMin: 12, repsMax: 16, weightKg: lower * 0.25,
                   rir: nil, rpe: 8, restSeconds: 60, tempo: nil,
-                  coachTip: nil, supersetId: nil),
+                  coachTip: "Udržuj stabilní střed těla. Přední koleno by nemělo výrazně přesáhnout špičku nohy.", supersetId: nil),
             .init(name: "Stojný výpon na lýtka", nameEN: "Standing Calf Raise", slug: "calf-raise",
                   sets: 3, repsMin: 15, repsMax: 20, weightKg: lower * 0.15,
                   rir: nil, rpe: 8, restSeconds: 45, tempo: nil,
-                  coachTip: nil, supersetId: nil)
+                  coachTip: "Pohyb prováděj pomalu a s plnou kontrolou. Nahoře vydrž vteřinu, dole pata níž než špička pro protažení.", supersetId: nil)
         ]
     }
 

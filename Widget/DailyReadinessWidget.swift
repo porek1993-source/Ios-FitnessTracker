@@ -111,6 +111,7 @@ struct ReadinessTimelineProvider: TimelineProvider {
 // MARK: ═══════════════════════════════════════════════════════════════════════
 
 struct DailyReadinessWidgetView: View {
+    @Environment(\.widgetFamily) var family
     let entry: ReadinessEntry
 
     private var scoreColor: Color {
@@ -122,6 +123,54 @@ struct DailyReadinessWidgetView: View {
     }
 
     var body: some View {
+        switch family {
+        case .systemMedium:
+            mediumView
+        case .accessoryRectangular:
+            rectangularView
+        case .accessoryCircular:
+            circularView
+        case .accessoryInline:
+            Text("Připravenost: \(entry.readinessScore)/100")
+        default:
+            mediumView
+        }
+    }
+    
+    // MARK: - Lock Screen (Accessory) Views
+    
+    private var rectangularView: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack {
+                Image(systemName: "bolt.heart.fill")
+                    .foregroundStyle(scoreColor)
+                Text("Připravenost \(entry.readinessScore)")
+                    .font(.headline)
+            }
+            Text(entry.todayLabel)
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+    
+    private var circularView: some View {
+        ZStack {
+            AccessoryWidgetBackground()
+            Circle()
+                .trim(from: 0, to: CGFloat(entry.readinessScore) / 100)
+                .stroke(scoreColor, style: StrokeStyle(lineWidth: 4, lineCap: .round))
+                .rotationEffect(.degrees(-90))
+            VStack {
+                Text("\(entry.readinessScore)")
+                    .font(.system(.headline, design: .rounded))
+            }
+        }
+    }
+
+    // MARK: - System Views
+
+    private var mediumView: some View {
         HStack(spacing: 16) {
             // Levá strana — Readiness Score ring
             VStack(spacing: 8) {
@@ -231,7 +280,7 @@ struct DailyReadinessWidget: Widget {
         }
         .configurationDisplayName("Denní Připravenost")
         .description("Tvé aktuální skóre připravenosti a svalová heatmapa.")
-        .supportedFamilies([.systemMedium])
+        .supportedFamilies([.systemMedium, .accessoryRectangular, .accessoryCircular, .accessoryInline])
         .contentMarginsDisabled()
     }
 }
@@ -242,5 +291,6 @@ struct DailyReadinessWidget: Widget {
 struct AgileFitnessWidgetBundle: WidgetBundle {
     var body: some Widget {
         DailyReadinessWidget()
+        RestTimerLiveActivity()
     }
 }

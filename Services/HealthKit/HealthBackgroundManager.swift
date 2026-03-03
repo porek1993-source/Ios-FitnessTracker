@@ -11,8 +11,23 @@ final class HealthBackgroundManager {
     
     // Identifikátor úlohy musí odpovídat Info.plist (Permitted background task scheduler identifiers)
     static let healthSyncTaskIdentifier = "com.agilefitness.healthSync"
-    
-    private let healthKitService = HealthKitService()
+
+    // ✅ OPRAVA: Lazy init — instance HealthKitService se vytvoří jen pokud nebyla injektována
+    // z AppEnvironment. Normálně se vždy volá configure(healthKit:) z AppEnvironment.init()
+    // ještě před jakýmkoliv použitím, takže skutečná lazy instance nikdy nevznikne.
+    private var _healthKitService: HealthKitService?
+    private var healthKitService: HealthKitService {
+        if let svc = _healthKitService { return svc }
+        AppLogger.warning("[HealthBackgroundManager] healthKitService použito bez configure() — vytváří se nová instance. Volej configure(healthKit:) z AppEnvironment.init().")
+        let svc = HealthKitService()
+        _healthKitService = svc
+        return svc
+    }
+
+    /// Nastaví sdílenou HealthKitService instanci (volej z AppEnvironment.init()).
+    func configure(healthKit: HealthKitService) {
+        self._healthKitService = healthKit
+    }
     
     /// Zamezuje spuštění více sync operací současně.
     private var isSyncing = false
@@ -23,21 +38,23 @@ final class HealthBackgroundManager {
     
     /// Stáhne aktuální HealthKit data a uloží je do SwiftData.
     /// Bezpečné pro opakované volání — chrání proti race conditions.
-    func performForegroundSync(healthKit: HealthKitService) async {
+    /// `healthKit` parametr je zachován pro zpětnou kompatibilitu s AppEnvironment;
+    /// interně se vždy používá nakonfigurovaná sdílená instance.
+    func performForegroundSync(healthKit: HealthKitService? = nil) async {
         guard !isSyncing else { return }
         isSyncing = true
         defer { isSyncing = false }
         
+        // Preferuj předanou instanci (zpětná kompatibilita), jinak nakonfigurovanou shared
+        let service = healthKit ?? self.healthKitService
+        
         do {
-            // HealthKit autorizace (pokud ještě nebyla udělena)
-            if !healthKit.isAuthorized {
-                try await healthKit.requestAuthorization()
+            if !service.isAuthorized {
+                try await service.requestAuthorization()
             }
-            
             let today = Date()
-            let summary = try await healthKit.fetchDailySummary(for: today)
-            let externalActivities = try await healthKit.fetchExternalActivities(since: today.startOfDay)
-            
+            let summary = try await service.fetchDailySummary(for: today)
+            let externalActivities = try await service.fetchExternalActivities(since: today.startOfDay)
             saveToSwiftData(summary: summary, externalActivities: externalActivities, date: today)
             AppLogger.info("[HealthSync] Foreground sync úspěšný.")
         } catch {
@@ -80,7 +97,7 @@ final class HealthBackgroundManager {
         
         do {
             try BGTaskScheduler.shared.submit(request)
-            print("[\(Self.healthSyncTaskIdentifier)] Úspěšně naplánováno na \(request.earliestBeginDate?.description ?? "neznámo").")
+            AppLogger.info("[\(Self.healthSyncTaskIdentifier)] Úspěšně naplánováno na \(request.earliestBeginDate?.description ?? "neznámo").")
         } catch {
             AppLogger.error("[HealthSync] Nelze naplánovat background task: \(error.localizedDescription)")
         }
@@ -235,9 +252,7 @@ final class HealthBackgroundManager {
         
         if hrvDeclining || rhrRising {
             profile.isDeloadRecommended = true
-            Task { @MainActor in
-                NotificationService.shared.scheduleDeloadReminder()
-            }
+            NotificationService.shared.scheduleDeloadReminder()
         } else {
             profile.isDeloadRecommended = false
         }

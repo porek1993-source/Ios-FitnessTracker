@@ -274,16 +274,16 @@ final class OnboardingAIManager: ObservableObject {
 
                     // Post-stream fallback: JSON tags may have been split across chunks
                     if !profileReady {
-                        AppLogger.shared.log("OnboardingAIManager: Stream skončil, profil zatím nenalezen. Délka textu: \(fullText.count) znaků. Zkouším post-stream fallback...", type: .info)
+                        AppLogger.info("OnboardingAIManager: Stream skončil, profil zatím nenalezen. Délka textu: \(fullText.count) znaků. Zkouším post-stream fallback...")
                         let (displayText, jsonBlock) = parseResponse(fullText)
                         if streamIndex < messages.count {
                             messages[streamIndex].text = displayText
                         }
                         if let jsonString = jsonBlock {
-                            AppLogger.shared.log("OnboardingAIManager: Post-stream fallback našel JSON blok!", type: .success)
+                            AppLogger.success("OnboardingAIManager: Post-stream fallback našel JSON blok!")
                             await handleExtractedJSON(jsonString)
                         } else {
-                            AppLogger.shared.log("OnboardingAIManager: Ani post-stream fallback nenašel JSON tagy.", type: .warning)
+                            AppLogger.warning("OnboardingAIManager: Ani post-stream fallback nenašel JSON tagy.")
                         }
                     }
                     return // Success!
@@ -294,7 +294,7 @@ final class OnboardingAIManager: ObservableObject {
                         if attempts >= maxAttempts { throw error }
                         
                         let delay = pow(2.0, Double(attempts)) + Double.random(in: 0...1)
-                        AppLogger.shared.log("OnboardingAIManager: Rate limit (429). Retry \(attempts)/\(maxAttempts) za \(String(format: "%.1f", delay))s...", type: .warning)
+                        AppLogger.warning("OnboardingAIManager: Rate limit (429). Retry \(attempts)/\(maxAttempts) za \(String(format: "%.1f", delay))s...")
                         if streamIndex < messages.count {
                             messages[streamIndex].text = "Šetřím energii (API rate limit)... zkouším znovu za chvíli. 💪"
                         }
@@ -443,7 +443,7 @@ final class OnboardingAIManager: ObservableObject {
         }
 
         guard let data = cleaned.data(using: .utf8) else {
-            AppLogger.shared.log("OnboardingAIManager: Nelze převést vyčištěný JSON string na data.", type: .error)
+            AppLogger.error("OnboardingAIManager: Nelze převést vyčištěný JSON string na data.")
             errorMessage = "Nepodařilo se přečíst profil."
             return
         }
@@ -454,10 +454,10 @@ final class OnboardingAIManager: ObservableObject {
             extractedProfile = profile
             profileReady = true
             inputDisabled = true  // Freeze chat — we're done
-            AppLogger.shared.log("OnboardingAIManager: Profil úspěšně dekódován a připraven k uložení!", type: .success)
+            AppLogger.success("OnboardingAIManager: Profil úspěšně dekódován a připraven k uložení!")
         } catch {
-            AppLogger.shared.log("OnboardingAIManager: Chyba dekódování JSONu - \(error)", type: .error)
-            AppLogger.shared.log("OnboardingAIManager: Selhaný JSON: \(cleaned)", type: .info)
+            AppLogger.error("OnboardingAIManager: Chyba dekódování JSONu - \(error)")
+            AppLogger.info("OnboardingAIManager: Selhaný JSON: \(cleaned)")
             // Ořezání chyby na uživatelsky přívětivější text
             errorMessage = "Chyba struktury profilu. iKorba zřejmě nevygeneroval přesná data."
         }

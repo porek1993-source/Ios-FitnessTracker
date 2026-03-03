@@ -43,7 +43,7 @@ public final class AudioCoachManager: NSObject, ObservableObject {
             try audioSession.setActive(true, options: .notifyOthersOnDeactivation)
             isEnabled = true
         } catch {
-            print("❌ [AudioCoachManager] Selhalo nastavení AVAudioSession: \(error)")
+            AppLogger.error("[AudioCoachManager] Selhalo nastavení AVAudioSession: \(error)")
         }
     }
 
@@ -54,7 +54,7 @@ public final class AudioCoachManager: NSObject, ObservableObject {
         do {
             try audioSession.setActive(false, options: .notifyOthersOnDeactivation)
         } catch {
-            print("❌ [AudioCoachManager] Selhala deaktivace session: \(error)")
+            AppLogger.error("[AudioCoachManager] Selhala deaktivace session: \(error)")
         }
         isEnabled = false
     }

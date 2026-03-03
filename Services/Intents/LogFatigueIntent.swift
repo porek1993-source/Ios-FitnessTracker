@@ -73,5 +73,36 @@ struct AgileFitnessShortcutsProvider: AppShortcutsProvider {
             shortTitle: "Zaznamenat únavu",
             systemImageName: "bandage"
         )
+        // ✅ Nové Siri Shortcuts dle deepanal.pdf (body 13)
+        AppShortcut(
+            intent: StartWorkoutIntent(),
+            phrases: [
+                "Začni trénink v \(.applicationName)",
+                "Spusť cvičení v \(.applicationName)",
+                "Start workout in \(.applicationName)"
+            ],
+            shortTitle: "Začít trénink",
+            systemImageName: "play.fill"
+        )
+        AppShortcut(
+            intent: WeeklyProgressIntent(),
+            phrases: [
+                "Kolik jsem tento týden cvičil v \(.applicationName)?",
+                "Týdenní progres v \(.applicationName)",
+                "Weekly progress in \(.applicationName)"
+            ],
+            shortTitle: "Týdenní progres",
+            systemImageName: "chart.bar.fill"
+        )
+        AppShortcut(
+            intent: ToggleDeloadIntent(),
+            phrases: [
+                "Přepni deload v \(.applicationName)",
+                "Toggle deload in \(.applicationName)",
+                "Zapni odpočinek v \(.applicationName)"
+            ],
+            shortTitle: "Přepnout deload",
+            systemImageName: "leaf.fill"
+        )
     }
 }

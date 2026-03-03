@@ -206,6 +206,15 @@ final class AudioCoachService: NSObject, ObservableObject {
                     if event.isPhaseStart && event.phase != self.currentPhase {
                         self.currentPhase = event.phase
                         self.speak(.tempoPhase(event.phase))
+                        // ✅ CHHapticEngine synchronizovan s fazí tréninku (deepanal.pdf)
+                        switch event.phase {
+                        case .eccentric:
+                            HapticPatternEngine.shared.playEccentricPhase(durationSeconds: 3.0)
+                        case .concentric:
+                            HapticPatternEngine.shared.playConcentricPhase(durationSeconds: 1.5)
+                        default:
+                            break // Pause - žádná haptic
+                        }
                     } else if !event.isPhaseStart && event.beatIndex > 1 {
                         self.speak(.tempoBeat(event.beatIndex))
                     }

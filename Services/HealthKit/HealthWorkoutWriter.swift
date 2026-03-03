@@ -1,5 +1,10 @@
 // HealthWorkoutWriter.swift
 // Agilní Fitness Trenér — Zápis silového tréninku do Apple Health
+//
+// ⚠️ ZASTARALÉ: Tato třída je deprecated. Používej `HealthKitWorkoutWriter` (instance-based,
+// zohledňuje váhu uživatele, má lepší kalorie odhad a moderní HKWorkoutBuilder API).
+// Ponechána pouze pro zpětnou kompatibilitu — smažeme v příštím refactoringu.
+@available(*, deprecated, renamed: "HealthKitWorkoutWriter", message: "Použij HealthKitWorkoutWriter — viz Services/HealthKit/HealthKitWorkoutWriter.swift")
 
 import Foundation
 import HealthKit
@@ -28,7 +33,7 @@ public final class HealthWorkoutWriter {
             throw HealthError.unavailable
         }
 
-        let energyType = HKObjectType.quantityType(forIdentifier: .activeEnergyBurned)!
+        let energyType = HKQuantityType(.activeEnergyBurned)  // ✅ iOS 17+ API bez force-unwrap
 
         // Kontrola oprávnění (pokud uživatel neschválil write oprávnění, selže to)
         // Oprávnění by se mělo žádat v HealthBackgroundManager při onboardingu
@@ -62,7 +67,7 @@ public final class HealthWorkoutWriter {
             throw HealthError.unavailable
         }
         
-        print("✅ [HealthWorkoutWriter] Úspěšně uložen HKWorkoutBuilder (.traditionalStrengthTraining), Cas: \(Int(workout.duration / 60)) min, Kcal: \(activeEnergyBurnedKcal ?? 0)")
+        AppLogger.success("[HealthWorkoutWriter] Úspěšně uložen HKWorkoutBuilder (.traditionalStrengthTraining), Cas: \(Int(workout.duration / 60)) min, Kcal: \(activeEnergyBurnedKcal ?? 0)")
     }
 
     /// Pomocná metoda pro jednoduchý odhad spálených kalorií na základě času a průměrné intenzity

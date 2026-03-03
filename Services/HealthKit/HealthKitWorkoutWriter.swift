@@ -124,6 +124,45 @@ final class HealthKitWorkoutWriter {
         return max(calories, 50)  // minimum 50 kcal
     }
 
+    // MARK: - Static Helpers (kompatibilita s HealthWorkoutWriter API)
+
+    /// Jednoduchý odhad spálených kalorií podle délky tréninku.
+    /// Použij `estimateCalories(session:durationSeconds:bodyWeightKg:)` pro přesnější výsledek.
+    static func estimateBurnedCalories(durationSeconds: TimeInterval) -> Double {
+        let minutes = durationSeconds / 60.0
+        return max(0, minutes * 5.0)
+    }
+
+    /// Convenience wrapper — vytvoří dočasnou instanci a zapíše trénink.
+    /// Používej pokud nemáš přístup k `WorkoutSession` objektu (legacy API).
+    static func saveStrengthWorkout(
+        startDate: Date,
+        endDate: Date,
+        activeEnergyBurnedKcal: Double? = nil,
+        metadata: [String: Any]? = nil
+    ) async throws {
+        guard HKHealthStore.isHealthDataAvailable() else { return }
+        let store = HKHealthStore()
+        let config = HKWorkoutConfiguration()
+        config.activityType = .traditionalStrengthTraining
+        config.locationType = .indoor
+        let builder = HKWorkoutBuilder(healthStore: store, configuration: config, device: .local())
+        try await builder.beginCollection(at: startDate)
+        // ✅ Bezpečné: HKQuantityType(.activeEnergyBurned) je dostupný od iOS 17 bez force-unwrap
+        if let kcal = activeEnergyBurnedKcal {
+            let energyType = HKQuantityType(.activeEnergyBurned)
+            let energy = HKQuantity(unit: .kilocalorie(), doubleValue: kcal)
+            let sample = HKQuantitySample(type: energyType, quantity: energy, start: startDate, end: endDate)
+            try await builder.addSamples([sample])
+        }
+        if let metadata = metadata {
+            try await builder.addMetadata(metadata)
+        }
+        try await builder.endCollection(at: endDate)
+        try await builder.finishWorkout()
+        AppLogger.success("[HealthKitWorkoutWriter] Trénink zapsán do Apple Health (\(Int((endDate.timeIntervalSince(startDate)) / 60)) min, \(Int(activeEnergyBurnedKcal ?? 0)) kcal)")
+    }
+
     // MARK: - Auth Check
 
     private func canWrite(_ type: HKSampleType) -> Bool {

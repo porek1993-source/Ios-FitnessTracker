@@ -25,6 +25,13 @@ struct UserContextProfile: Codable {
     let fitnessLevel: String
     let primaryGoal: String
     let sessionDurationMinutes: Int
+
+    init(fitnessLevel: String, primaryGoal: String = "Všeobecná kondice", name: String = "Uživatel", sessionDurationMinutes: Int = 60) {
+        self.name = name
+        self.fitnessLevel = fitnessLevel
+        self.primaryGoal = primaryGoal
+        self.sessionDurationMinutes = sessionDurationMinutes
+    }
 }
 
 struct PlannedDayContext: Codable {

@@ -369,7 +369,8 @@ final class ExtensionsTests: XCTestCase {
         let startOfNextDay = calendar.startOfDay(for: testDate.addingTimeInterval(86_400))
 
         // endOfDay musí být shodné se začátkem zítřka (DST-bezpečné)
-        XCTAssertEqual(endOfDay, testDate.startOfDay.addingTimeInterval(0) == endOfDay ? endOfDay : startOfNextDay,
+        // endOfDay musí být shodné se začátkem zítřka (DST-bezpečné)
+        XCTAssertEqual(endOfDay, startOfNextDay,
                        "endOfDay musí odpovídat začátku zítřka dle Calendar.")
     }
 

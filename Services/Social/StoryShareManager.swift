@@ -38,13 +38,13 @@ public final class StoryShareManager {
     ) {
         // Kontrola URL scheme
         guard let url = URL(string: "instagram-stories://share"), UIApplication.shared.canOpenURL(url) else {
-            print("❌ Instagram není nainstalovaný nebo chybí 'instagram-stories' parametr v Info.plist (LSApplicationQueriesSchemes)")
+            AppLogger.warning("[StoryShareManager] Instagram není nainstalovaný nebo chybí 'instagram-stories' parametr v Info.plist (LSApplicationQueriesSchemes)")
             return
         }
 
         // Zkusíme vytvořit data obrázku
         guard let imageData = image.pngData() else {
-            print("❌ Z obrázku nešlo vytěžit PNG")
+            AppLogger.error("[StoryShareManager] Z obrázku nešlo vytěžit PNG")
             return
         }
 

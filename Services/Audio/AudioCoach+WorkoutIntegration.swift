@@ -1,79 +1,10 @@
 // AudioCoach+WorkoutIntegration.swift
-// Agilní Fitness Trenér — Rozšíření WorkoutViewModel o audio kouče + SwiftUI komponenty
+// Agilní Fitness Trenér — SwiftUI audio komponenty (AudioCoachToggle, TempoIndicator)
 
 import SwiftUI
 import Combine
 
-// MARK: - WorkoutViewModel rozšíření o audio kouče
-//
-// Níže jsou přesné body v WorkoutViewModel, kde volat AudioCoachService.
-// Zkopíruj a vlož do WorkoutView.swift / WorkoutViewModel.
-
-extension WorkoutViewModel {
-
-    // ── 1. V init() ─────────────────────────────────────────────────────────
-    //
-    // func setup(audioCoach: AudioCoachService) {
-    //     self.audioCoach = audioCoach
-    //     audioCoach.announceSessionStart()
-    // }
-    //
-    // ── 2. completeSet() ────────────────────────────────────────────────────
-    //
-    // func completeSet(exerciseIndex: Int, setIndex: Int) {
-    //     ...stávající kód...
-    //
-    //     // [AUDIO] Série dokončena
-    //     audioCoach?.announceSetComplete(praise: setIndex == exercise.sets.count - 1)
-    //
-    //     // [AUDIO] Pauza
-    //     audioCoach?.announceRestStart(seconds: restSeconds)
-    //
-    //     startRestTimer(seconds: restSeconds)  // stávající
-    // }
-    //
-    // ── 3. skipRest() ───────────────────────────────────────────────────────
-    //
-    // func skipRest() {
-    //     ...stávající kód...
-    //     audioCoach?.announceRestSkipped()
-    // }
-    //
-    // ── 4. startSet (nová metoda — volej před zahájením série) ──────────────
-    //
-    // func prepareForNextSet(exerciseIndex: Int, setIndex: Int) {
-    //     let exercise = exercises[exerciseIndex]
-    //     audioCoach?.announceSetStarting(
-    //         setIndex: setIndex,
-    //         totalSets: exercise.sets.count,
-    //         tempoString: exercise.tempo
-    //     )
-    //     // Spusť metronom — volej kdy uživatel klepne na "Začít sérii"
-    //     guard let tempo = exercise.tempo,
-    //           let parsed = TempoParser.parse(tempo) else { return }
-    //     let reps = exercise.sets[setIndex].targetRepsMax
-    //     audioCoach?.startTempo(tempoString: tempo, reps: reps)
-    // }
-
-    // Prázdný placeholder — zajišťuje kompilaci bez úpravy originálu
-    var _audioCoachIntegrationDoc: Void { () }
-}
-
-// MARK: - Rozšířený WorkoutViewModel (self-contained reference implementace)
-
-/*
-@MainActor
-final class ActiveSessionViewModel: ObservableObject {
- ... reference implementation removed to prevent duplicate ...
-}
-*/
-
-// MARK: ─────────────────────────────────────────────────────────────────────
 // MARK: - SwiftUI Komponenty
-// MARK: ─────────────────────────────────────────────────────────────────────
-
-// MARK: - AudioCoachToggle (tlačítko pro header)
-
 struct AudioCoachToggle: View {
     @ObservedObject var coach: AudioCoachService
 
@@ -131,7 +62,7 @@ struct AudioCoachToggle: View {
             .frame(height: 34)
         }
         .buttonStyle(.plain)
-        .onAppear { pulse = true }
+        .onAppear { pulse = coach.isSpeaking }
         .onChange(of: coach.isSpeaking) { _, speaking in
             pulse = speaking
         }
@@ -215,42 +146,6 @@ private struct TempoPhaseCell: View {
         .scaleEffect(isActive ? 1.08 : 1.0)
     }
 }
-
-// MARK: - Ukázka použití v WorkoutHeaderView
-//
-// Přidej `audioCoach: AudioCoachService` do WorkoutHeaderView
-// a vlož AudioCoachToggle do HStack v headeru:
-//
-// struct WorkoutHeaderView: View {
-//     @ObservedObject var vm: ActiveSessionViewModel
-//
-//     var body: some View {
-//         HStack(alignment: .center) {
-//             // ... elapsed time ...
-//             Spacer()
-//             // ... progress dots ...
-//             Spacer()
-//
-//             HStack(spacing: 8) {
-//                 AudioCoachToggle(coach: vm.audioCoach)  // ← PŘIDAT
-//
-//                 Button { vm.finishWorkout() } label: {
-//                     Text("Dokončit")
-//                     // ... styling ...
-//                 }
-//             }
-//         }
-//     }
-// }
-//
-// A do ExerciseCardView přidej TempoIndicator:
-//
-// TechTipsRow(exercise: exercise)
-//     .padding(.horizontal, 20)
-//
-// TempoIndicator(tempoString: exercise.tempo, coach: vm.audioCoach)  // ← PŘIDAT
-//     .padding(.horizontal, 20)
-
 
 // MARK: - Preview
 

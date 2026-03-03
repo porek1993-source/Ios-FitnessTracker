@@ -72,3 +72,42 @@
 ### Smazané soubory:
 - `Core/Utilities/YouTubeLinkGenerator.swift`
   → Již nepotřebné, veškerá media jsou lokální/Supabase
+---
+
+## Session 5: Opravy bugů a vylepšení (v2.2)
+
+### Opravené bugy:
+
+#### 1. `Services/AI/GeminiAPIClient.swift` — Kritická aktualizace API modelu
+**Problém:** Model `gemini-2.5-flash-preview-05-20` byl preview verze, která může být kdykoliv stažena. Navíc chyběla detekce SAFETY/RECITATION blokování.
+
+**Opravy:**
+- ✅ Model aktualizován na `gemini-2.0-flash` (stabilní GA verze, nižší latence)
+- ✅ `finishReason` check — detekce SAFETY/RECITATION/OTHER blokování před parsováním
+- ✅ `GeminiError.contentBlocked(reason:)` nový error case pro blokovaný obsah
+- ✅ Retry logika rozšířena o HTTP 503 (přetížené API) — exponential backoff
+- ✅ `GeminiResponse.Candidate` nyní dekóduje `finishReason: String?`
+
+#### 2. `Services/AI/AITrainerService.swift` — Opravy `shouldUseGemini`
+**Problém 1:** Odsazení `Calendar.mondayStart.isDate(...)` bylo špatné — volání bylo mimo podmínku, čímž se vždy zařazovalo do vnějšího `filter` closure, ale logika nedávala smysl pro compiler.
+
+**Problém 2:** `daysRemainingInWeek = 7 - adjustedWeekday` mohlo být záporné (v neděli = 0, pak -1 pro výpočty).
+
+**Problém 3:** Chyběla kontrola nízké HRV — API se nevolalo ani při kriticky nízkém HRV, takže trénink nebyl adaptován.
+
+**Opravy:**
+- ✅ Opraveno odsazení `Calendar.mondayStart.isDate(...)` — nyní správně uvnitř filter closure
+- ✅ `daysRemainingInWeek = max(0, 7 - adjustedWeekday)` — nemůže být záporné
+- ✅ Přidána HRV kontrola: pokud HRV < 50 % baseline, AI se zavolá pro adaptaci intenzity
+
+#### 3. `Services/Sync/OfflineSyncManager.swift` — Odstranění duplicitní instance
+**Problém:** `OfflineSyncManager` vytvářel vlastní instanci `SupabaseExerciseRepository` v `private init()`, zatímco `AppEnvironment` měl sdílenou instanci. = 2 zbytečné Supabase klienty.
+
+**Opravy:**
+- ✅ `configure(repository:)` metoda pro injektování sdílené instance z `AppEnvironment`
+- ✅ `AppEnvironment.performStartup` nyní volá `OfflineSyncManager.shared.configure(repository: exerciseRepository)`
+- ✅ Retry logika pro přechodné síťové chyby (max 2 pokusy s exponential backoff)
+
+#### 4. `App/AppEnvironment.swift` — OfflineSyncManager konfigurace
+**Oprava:**
+- ✅ `performStartup` volá `OfflineSyncManager.shared.configure(repository: exerciseRepository)` po startu

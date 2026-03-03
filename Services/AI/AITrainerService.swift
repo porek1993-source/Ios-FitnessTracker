@@ -11,6 +11,11 @@
 //  ✅ Fallback flow: graceful degradation → FallbackWorkoutGenerator
 //  ✅ JSON parser: stripuje Markdown fences i BOM před dekódováním
 //  ✅ persistAIMetadata: crashsafe guard + async na background
+//
+// OPRAVY v2.2:
+//  ✅ shouldUseGemini: opraveno odsazení Calendar.mondayStart (byl bug — nezahrnoval podmínku)
+//  ✅ shouldUseGemini: přidána kontrola nízké HRV (pod 50% baseline) → AI adaptuje intenzitu
+//  ✅ shouldUseGemini: daysRemainingInWeek max(0, ...) — nemůže být záporné
 
 import Foundation
 import SwiftData
@@ -227,6 +232,14 @@ final class AITrainerService: ObservableObject {
         AppLogger.info("🗑️ [AITrainer] Cache dnešního tréninku vymazána (manuální).")
     }
 
+    // ✅ Generický prompt pro Sprint Retro a jiné volné dotazy
+    func sendRawPrompt(_ prompt: String) async throws -> String {
+        return try await apiClient.generate(
+            systemPrompt: "Jsi fitness trenér iKorba. Odpovídej česky, stručně a motivačně.",
+            userMessage: prompt
+        )
+    }
+
     /// Generuje tréninky pro všechny dny v plánu, které nemají zatím cviky.
     /// Šetří prompty tím, že využívá cache a v budoucnu může být sjednoceno do batch promptu.
     func generateFullWeek(profile: UserProfile, plan: WorkoutPlan) async {
@@ -286,27 +299,31 @@ private extension AITrainerService {
         if let snapshot = healthSnapshot, let sleep = snapshot.sleepDurationHours, sleep > 0 && sleep < 5.0 {
             return true
         }
+        
+        // ✅ FIX: Nízká readiness (HRV pod 50% průměru) — AI přizpůsobí intenzitu
+        if let snapshot = healthSnapshot,
+           let hrv = snapshot.heartRateVariabilityMs, hrv > 0,
+           let baseline = snapshot.hrvBaselineAvg, baseline > 0,
+           (hrv / baseline) < 0.50 {
+            return true
+        }
 
         // 3. Zkontrolujeme kalendář (vynechané dny)
         if let activePlan = profile.workoutPlans.first(where: \.isActive) {
-            // Kolik % plánu má hotovo? Pokud má v plánu 4 dny a do konce týdne zbývají 2 dny a on odcvičil jen 1.
             let daysInWeekComplete = activePlan.sessions.filter { history in
-                // Je to ze současného týdne?
-                // ✅ FIX: Calendar.mondayStart pro konzistentní pondělní začátek týdne
-            Calendar.mondayStart.isDate(history.startedAt, equalTo: date, toGranularity: .weekOfYear)
+                // ✅ FIX: opravena odsazení (byl posunutý doleva)
+                Calendar.mondayStart.isDate(history.startedAt, equalTo: date, toGranularity: .weekOfYear)
             }.count
             
             let plannedDaysPerWeek = activePlan.scheduledDays.count
             
             // Kolik dnů zbývá do konce týdne (Neděle jako konec)
-            // ✅ FIX: Používáme date.weekday extension (1=Po...7=Ne) místo raw Calendar.component
-            // pro konzistenci s ostatními místy v kódu.
             let adjustedWeekday = date.weekday  // 1=Po ... 7=Ne
-            let daysRemainingInWeek = 7 - adjustedWeekday
+            let daysRemainingInWeek = max(0, 7 - adjustedWeekday)
             
             let workoutsRemaining = plannedDaysPerWeek - daysInWeekComplete
             
-            // Pokud mu zbývá víc tréninků, než kolik je dnů v týdnu (nebo stejně a je konec týdne),
+            // Pokud mu zbývá víc tréninků, než kolik je dnů v týdnu,
             // chceme Gemini, aby ty partie sloučilo do Fullbody nebo jinak strukturálně vyřešilo zpoždění.
             if workoutsRemaining > daysRemainingInWeek && workoutsRemaining > 0 {
                 return true

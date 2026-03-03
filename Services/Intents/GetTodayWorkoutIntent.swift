@@ -38,7 +38,7 @@ struct GetTodayWorkoutIntent: AppIntent {
         }
 
         // Sestavíme textové shrnutí
-        let exerciseNames = todayDay.plannedExercises.prefix(4).compactMap { $0.exercise?.name }.joined(separator: ", ")
+        let exerciseNames = todayDay.sortedExercises.prefix(4).compactMap { $0.exercise?.name }.joined(separator: ", ")
         let summary: String
 
         if todayDay.plannedExercises.isEmpty {

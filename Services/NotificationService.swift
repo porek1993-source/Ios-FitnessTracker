@@ -79,6 +79,8 @@ final class NotificationService {
         let id = "missed_workout_\(Int(afterDate.timeIntervalSince1970))"
         let request = UNNotificationRequest(identifier: id, content: content, trigger: trigger)
 
+        // ✅ FIX #10: Prevence duplicitních notifikací pro stejný identifikátor
+        center.removePendingNotificationRequests(withIdentifiers: [id])
         center.add(request)
     }
 
@@ -137,6 +139,9 @@ extension WeeklyReportService {
             content.sound = .default
 
             var components = DateComponents()
+            // ✅ FIX #2: UNCalendarNotificationTrigger VŽDY používá kalendář, kde 1 = Neděle, 2 = Pondělí.
+            // Pokud chceme, aby po "pondělí-neděle" týdnu přišel report v neděli v 18:00,
+            // musíme použít weekday = 1, nehledě na lokální nastavení.
             components.weekday = 1  // Neděle
             components.hour = 18
             components.minute = 0

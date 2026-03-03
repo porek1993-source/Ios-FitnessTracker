@@ -193,7 +193,8 @@ final class HealthKitService: ObservableObject {
         unit: HKUnit,
         for date: Date
     ) async throws -> Double? {
-        guard let type = HKQuantityType.quantityType(forIdentifier: identifier) else { return nil }
+        // ✅ iOS 17+: HKQuantityType(identifier) — bezpečný přímý inicializátor bez force-unwrap
+        let type = HKQuantityType(identifier)
         let predicate = HKQuery.predicateForSamples(
             withStart: date.startOfDay,
             end: date.endOfDay
@@ -220,7 +221,8 @@ final class HealthKitService: ObservableObject {
         unit: HKUnit,
         for date: Date
     ) async throws -> Double? {
-        guard let type = HKQuantityType.quantityType(forIdentifier: identifier) else { return nil }
+        // ✅ iOS 17+: HKQuantityType(identifier) — bezpečný přímý inicializátor bez force-unwrap
+        let type = HKQuantityType(identifier)
         // Hledáme od 18:00 předchozího dne do konce dnešního dne
         let start = date.startOfDay.addingTimeInterval(-6 * 3600)
         let end   = min(date.endOfDay, .now)
@@ -245,7 +247,8 @@ final class HealthKitService: ObservableObject {
         unit: HKUnit,
         for date: Date
     ) async throws -> Double? {
-        guard let type = HKQuantityType.quantityType(forIdentifier: identifier) else { return nil }
+        // ✅ iOS 17+: HKQuantityType(identifier) — bezpečný přímý inicializátor bez force-unwrap
+        let type = HKQuantityType(identifier)
         let predicate = HKQuery.predicateForSamples(
             withStart: date.startOfDay,
             end: date.endOfDay

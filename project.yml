@@ -132,6 +132,7 @@ targets:
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         LSRequiresIPhoneOS: true
         MinimumOSVersion: "17.0"
+        NSSupportsLiveActivities: true
 
         # UI konfigurace
         UILaunchScreen:
@@ -243,6 +244,7 @@ targets:
 
     sources:
       - path: Widget
+      - path: LiveActivity
       # Sdílené soubory — Widget potřebuje modely a utility
       - path: Core/SharedModelContainer.swift
       - path: Core/Utilities/AppLogger.swift

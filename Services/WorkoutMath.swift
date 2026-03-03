@@ -53,8 +53,8 @@ struct WarmupCalculator {
     /// Pravidla: 1. série 20kg (osa), 2. série 50%, 3. série 75%.
     /// Pokud je cílová váha ≤ 20 kg (bodyweight/velmi lehký cvik), warmup série se přeskočí.
     static func generateWarmups(targetWeight: Double, targetRepsMin: Int) -> [SetState] {
-        // ✅ Guard: není smysl dělat warmup pokud je pracovní váha nižší nebo rovna ose
-        guard targetWeight > 20 else { return [] }
+        // ✅ Guard: není smysl dělat warmup pokud je pracovní váha ≤ 25 kg (nižší nebo rovna ose + malé kotoučky)
+        guard targetWeight > 25 else { return [] }
 
         let firstWeight = max(5.0, min(20.0, targetWeight))   // ✅ Min 5 kg (zabraňuje záporným hodnotám)
 

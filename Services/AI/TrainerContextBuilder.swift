@@ -55,8 +55,21 @@ final class TrainerContextBuilder {
             since: date.addingTimeInterval(-36 * 3600)
         )
 
-        let health = try await hkSummary
-        let acts   = try await activities
+        let health: HKDailySummary
+        do {
+            health = try await hkSummary
+        } catch {
+            AppLogger.warning("⚠️ [TrainerContextBuilder] HealthKit fetchDailySummary selhalo (není autorizace?): \(error) — používám prázdný souhrn.")
+            health = HKDailySummary()
+        }
+
+        let acts: [HKWorkoutSummary]
+        do {
+            acts = try await activities
+        } catch {
+            AppLogger.warning("⚠️ [TrainerContextBuilder] HealthKit fetchExternalActivities selhalo: \(error) — prázdný seznam.")
+            acts = []
+        }
         let snap   = try resolveHealthSnapshot(date: date)
 
         guard let activePlan = profile.workoutPlans.first(where: \.isActive) else {
@@ -115,7 +128,7 @@ final class TrainerContextBuilder {
     private func buildPlannedDay(day: PlannedWorkoutDay, plan: WorkoutPlan) -> PlannedDayContext {
         // Pokud jsou exercise relationships nil (SwiftData lazy loading race condition),
         // pokusíme se je opravit z DB před sestavením kontextu
-        let exercises = day.plannedExercises.sorted { $0.order < $1.order }
+        let exercises = day.sortedExercises
         let hasNilExercises = exercises.contains { $0.exercise == nil }
         if hasNilExercises {
             repairNilExercises(for: day)
@@ -124,8 +137,7 @@ final class TrainerContextBuilder {
         return PlannedDayContext(
             label: day.label,
             splitType: plan.splitType.rawValue,
-            plannedExercises: day.plannedExercises
-                .sorted { $0.order < $1.order }
+            plannedExercises: day.sortedExercises
                 .compactMap { planned -> PlannedExerciseContext? in
                     guard let exercise = planned.exercise, !exercise.slug.isEmpty else {
                         return nil  // Vynech cviky bez exercise reference (AI dostane čistý seznam)
@@ -177,7 +189,7 @@ final class TrainerContextBuilder {
                 ex.exercise = found
             }
         }
-        try? modelContext.save()
+        try? modelContext.save()  // Non-critical: linkování Exercise referencí — data jsou v slugs
     }
 
     private func buildHealthContext(
