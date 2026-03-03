@@ -14,7 +14,7 @@ final class ExerciseSearchViewModel: ObservableObject {
     @Published var isLoading = false
     @Published var selectedExercises: [MuscleWikiExercise] = []
 
-    private var searchTask: Task<Void, Never>?
+    var searchTask: Task<Void, Never>?
 
     // Místo počítání on-the-fly používáme uložené výsledky
     @Published var results: [MuscleWikiExercise] = []

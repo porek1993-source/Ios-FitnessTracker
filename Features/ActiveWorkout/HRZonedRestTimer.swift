@@ -50,24 +50,28 @@ final class LiveHeartRateManager: ObservableObject {
             anchor: anchor,
             limit: HKObjectQueryNoLimit
         ) { [weak self] _, samplesOrNil, _, newAnchor, error in
-            guard let self else { return }
-            if let error {
-                AppLogger.error("[HRZonedRestTimer] Chyba počátečního dotazu: \(error.localizedDescription)")
-                return
+            Task { @MainActor in
+                guard let self else { return }
+                if let error {
+                    AppLogger.error("[HRZonedRestTimer] Chyba počátečního dotazu: \(error.localizedDescription)")
+                    return
+                }
+                self.anchor = newAnchor
+                self.process(samples: samplesOrNil)
             }
-            self.anchor = newAnchor
-            self.process(samples: samplesOrNil)
         }
 
         // Live update handler — volaný při každém novém HR samplu z Apple Watch
         anchoredQuery.updateHandler = { [weak self] _, samplesOrNil, _, newAnchor, error in
-            guard let self else { return }
-            if let error {
-                AppLogger.error("[HRZonedRestTimer] Update handler chyba: \(error.localizedDescription)")
-                return
+            Task { @MainActor in
+                guard let self else { return }
+                if let error {
+                    AppLogger.error("[HRZonedRestTimer] Update handler chyba: \(error.localizedDescription)")
+                    return
+                }
+                self.anchor = newAnchor
+                self.process(samples: samplesOrNil)
             }
-            self.anchor = newAnchor
-            self.process(samples: samplesOrNil)
         }
 
         store.execute(anchoredQuery)

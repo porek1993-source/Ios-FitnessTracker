@@ -12,7 +12,6 @@ struct MainTabView: View {
         appearance.configureWithTransparentBackground() // Translucent base
         
         let blurEffect = UIBlurEffect(style: .systemUltraThinMaterialDark)
-        let effectView = UIVisualEffectView(effect: blurEffect)
         
         // Barva pro nevybrané položky
         appearance.stackedLayoutAppearance.normal.iconColor = UIColor.white.withAlphaComponent(0.4)
