@@ -4,11 +4,10 @@
 // ⚠️ ZASTARALÉ: Tato třída je deprecated. Používej `HealthKitWorkoutWriter` (instance-based,
 // zohledňuje váhu uživatele, má lepší kalorie odhad a moderní HKWorkoutBuilder API).
 // Ponechána pouze pro zpětnou kompatibilitu — smažeme v příštím refactoringu.
-@available(*, deprecated, renamed: "HealthKitWorkoutWriter", message: "Použij HealthKitWorkoutWriter — viz Services/HealthKit/HealthKitWorkoutWriter.swift")
-
 import Foundation
 import HealthKit
 
+@available(*, deprecated, renamed: "HealthKitWorkoutWriter", message: "Použij HealthKitWorkoutWriter — viz Services/HealthKit/HealthKitWorkoutWriter.swift")
 @MainActor
 public final class HealthWorkoutWriter {
     public static let shared = HealthWorkoutWriter()

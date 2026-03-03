@@ -267,6 +267,10 @@ struct TrainerDashboardView: View {
     // Pro spuštění custom tréninku
     @State private var customSessionToStart: WorkoutSession? = nil // Proměnná pro zobrazení Custom Workout Builderu
     @State private var appearedOnce = false
+    
+    // UI state pro skrývání navigace
+    @State private var tabBarVisible = true
+    @State private var lastOffset: CGFloat = 0
 
     var profile: UserProfile? { profiles.first }
 
@@ -280,6 +284,31 @@ struct TrainerDashboardView: View {
                     VStack(spacing: 0) {
                         // ── Top safe area spacer ──────────────────────
                         Color.clear.frame(height: 60)
+                            .onScrollGeometryChange(for: CGFloat.self) { geo in
+                                geo.contentOffset.y
+                            } action: { oldValue, newValue in
+                                // Automatické zobrazení při návratu nahoru
+                                if newValue < 50 {
+                                    withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+                                        tabBarVisible = true
+                                    }
+                                } else if newValue > oldValue + 10 {
+                                    // Scrollování dolů -> schovat
+                                    if tabBarVisible {
+                                        withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+                                            tabBarVisible = false
+                                        }
+                                    }
+                                } else if newValue < oldValue - 10 {
+                                    // Scrollování nahoru -> ukázat
+                                    if !tabBarVisible {
+                                        withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+                                            tabBarVisible = true
+                                        }
+                                    }
+                                }
+                                lastOffset = newValue
+                            }
 
                         // ── Greeting ─────────────────────────────────
                         if let p = profile {
@@ -346,6 +375,7 @@ struct TrainerDashboardView: View {
             .ignoresSafeArea()
             .preferredColorScheme(.dark)
             .navigationBarHidden(true)
+            .toolbarVisibility(tabBarVisible ? .visible : .hidden, for: .tabBar)
             // ── Sticky CTA buttons ─────────────────────────────────
             .safeAreaInset(edge: .bottom) {
                 if vm.hasPlanToday {
@@ -1075,6 +1105,7 @@ private struct TodayPlanCard: View {
                 .padding(.bottom, 22)
 
                 // CTA odstraněno z karty → přesunuto do sticky overlay v DashboardView
+            }
         }
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("Dnešní trénink: \(vm.todayPlanLabel), zaměřeno na \(vm.todayPlanSplit). Odhadem \(vm.estimatedMinutes) minut a \(vm.exerciseCount) cviků.")

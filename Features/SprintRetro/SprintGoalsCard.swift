@@ -15,6 +15,7 @@ struct SprintGoalsCard: View {
     }
     
     @Environment(\.modelContext) private var modelContext
+    @State private var showingPlanning = false
     
     var body: some View {
         if sprintGoals.isEmpty { EmptyView() } else {
@@ -34,9 +35,19 @@ struct SprintGoalsCard: View {
                     Spacer()
                     
                     let doneCount = sprintGoals.filter(\.isCompleted).count
-                    Text("\(doneCount)/\(sprintGoals.count)")
-                        .font(.system(size: 12, weight: .bold, design: .rounded))
-                        .foregroundStyle(doneCount == sprintGoals.count ? .green : .orange)
+                    HStack(spacing: 12) {
+                        Text("\(doneCount)/\(sprintGoals.count)")
+                            .font(.system(size: 12, weight: .bold, design: .rounded))
+                            .foregroundStyle(doneCount == sprintGoals.count ? .green : .orange)
+                        
+                        Button {
+                            showingPlanning = true
+                        } label: {
+                            Image(systemName: "pencil.circle.fill")
+                                .font(.system(size: 20))
+                                .foregroundStyle(.blue.opacity(0.6))
+                        }
+                    }
                 }
                 
                 // Cíle
@@ -74,6 +85,9 @@ struct SprintGoalsCard: View {
             }
             .padding(18)
             .glassCardStyle(cornerRadius: 20)
+            .sheet(isPresented: $showingPlanning) {
+                SprintPlanningView(sprintNumber: sprintNumber)
+            }
         }
     }
 }

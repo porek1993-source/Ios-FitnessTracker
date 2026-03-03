@@ -60,8 +60,8 @@ struct WelcomeView: View {
 
                 // Title & Description
                 VStack(spacing: 16) {
-                    Text("Agilní Fitness\nTrenér")
-                        .font(.system(size: 42, weight: .black, design: .rounded))
+                    Text("iKorba")
+                        .font(.system(size: 56, weight: .black, design: .rounded))
                         .multilineTextAlignment(.center)
                         .foregroundStyle(.white)
                         .lineSpacing(-4)
