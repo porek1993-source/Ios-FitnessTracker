@@ -30,12 +30,12 @@ struct SessionProgress: Codable, Hashable {
 
 struct SessionExerciseState: Identifiable {
     let id: UUID
-    let name: String
-    let nameEN: String
-    let slug: String
-    let coachTip: String?
-    let tempo: String?
-    let restSeconds: Int
+    var name: String
+    var nameEN: String
+    var slug: String
+    var coachTip: String?
+    var tempo: String?
+    var restSeconds: Int
     var sets: [SetState]
     var isWarmupOnly: Bool
     var exercise: Exercise?
