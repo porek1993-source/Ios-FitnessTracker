@@ -857,32 +857,16 @@ struct QuickWorkoutPickerView: View {
     private var muscleContent: some View {
         LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
             ForEach(MuscleTarget.all) { target in
-                let isSelected = selectedMuscle?.id == target.id
-                Button(action: {
-                    withAnimation(.spring(response: 0.28)) { selectedMuscle = isSelected ? nil : target }
-                    HapticManager.shared.playMediumClick()
-                }) {
-                    VStack(alignment: .leading, spacing: 7) {
-                        HStack {
-                            Text(target.icon).font(.system(size: 24))
-                            Spacer()
-                            if isSelected {
-                                Image(systemName: "checkmark.circle.fill")
-                                    .font(.system(size: 15)).foregroundStyle(.blue)
-                            }
+                MuscleTargetCell(
+                    target: target,
+                    isSelected: selectedMuscle?.id == target.id,
+                    onTap: {
+                        withAnimation(.spring(response: 0.28)) {
+                            selectedMuscle = (selectedMuscle?.id == target.id) ? nil : target
                         }
-                        Text(target.title).font(.system(size: 13, weight: .bold, design: .rounded)).foregroundStyle(.white)
-                        Text(target.subtitle).font(.system(size: 10)).foregroundStyle(.white.opacity(0.5)).lineLimit(1)
+                        HapticManager.shared.playMediumClick()
                     }
-                    .padding(13).frame(maxWidth: .infinity, alignment: .leading)
-                    .background(RoundedRectangle(cornerRadius: 13)
-                        .fill(isSelected ? Color.blue.opacity(0.13) : Color.white.opacity(0.045))
-                        .overlay(RoundedRectangle(cornerRadius: 13)
-                            .stroke(isSelected ? Color.blue.opacity(0.45) : Color.white.opacity(0.08),
-                                    lineWidth: isSelected ? 1.5 : 1)))
-                    .shadow(color: isSelected ? Color.blue.opacity(0.18) : .clear, radius: 6)
-                }
-                .buttonStyle(.plain).animation(.spring(response: 0.28), value: isSelected)
+                )
             }
         }
     }
@@ -1447,5 +1431,50 @@ struct QuickWorkoutPickerView: View {
     private func cancelMicroBreaks() {
         UNUserNotificationCenter.current().removePendingNotificationRequests(
             withIdentifiers: MicroBreakExercise.deskBreaks.map { "mb_\($0.id)" })
+    }
+}
+
+// MARK: - Subviews
+
+struct MuscleTargetCell: View {
+    let target: MuscleTarget
+    let isSelected: Bool
+    let onTap: () -> Void
+
+    var body: some View {
+        Button(action: onTap) {
+            VStack(alignment: .leading, spacing: 7) {
+                HStack {
+                    Text(target.icon).font(.system(size: 24))
+                    Spacer()
+                    if isSelected {
+                        Image(systemName: "checkmark.circle.fill")
+                            .font(.system(size: 15))
+                            .foregroundStyle(.blue)
+                    }
+                }
+                Text(target.title)
+                    .font(.system(size: 13, weight: .bold, design: .rounded))
+                    .foregroundStyle(.white)
+                Text(target.subtitle)
+                    .font(.system(size: 10))
+                    .foregroundStyle(.white.opacity(0.5))
+                    .lineLimit(1)
+            }
+            .padding(13)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(
+                RoundedRectangle(cornerRadius: 13)
+                    .fill(isSelected ? Color.blue.opacity(0.13) : Color.white.opacity(0.045))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 13)
+                            .stroke(isSelected ? Color.blue.opacity(0.45) : Color.white.opacity(0.08),
+                                    lineWidth: isSelected ? 1.5 : 1)
+                    )
+            )
+            .shadow(color: isSelected ? Color.blue.opacity(0.18) : .clear, radius: 6)
+        }
+        .buttonStyle(.plain)
+        .animation(.spring(response: 0.28), value: isSelected)
     }
 }
