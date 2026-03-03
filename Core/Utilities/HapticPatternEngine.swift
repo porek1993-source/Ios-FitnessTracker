@@ -265,6 +265,23 @@ final class HapticPatternEngine {
         playPattern(events: events, curves: [curve], engine: engine)
     }
     
+    
+    /// ✨ Úspěch — radostný haptický efekt (používáno u cílu/user stories).
+    func playSuccess() {
+        guard isAvailable, let engine else { return }
+        let events = [
+            CHHapticEvent(eventType: .hapticTransient, parameters: [
+                CHHapticEventParameter(parameterID: .hapticIntensity, value: 0.8),
+                CHHapticEventParameter(parameterID: .hapticSharpness, value: 0.5)
+            ], relativeTime: 0),
+            CHHapticEvent(eventType: .hapticTransient, parameters: [
+                CHHapticEventParameter(parameterID: .hapticIntensity, value: 1.0),
+                CHHapticEventParameter(parameterID: .hapticSharpness, value: 0.8)
+            ], relativeTime: 0.12)
+        ]
+        playPattern(events: events, engine: engine)
+    }
+    
     // MARK: - Internal
     
     private func playPattern(

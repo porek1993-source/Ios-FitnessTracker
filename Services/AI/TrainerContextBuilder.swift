@@ -118,9 +118,9 @@ final class TrainerContextBuilder {
 
     private func buildUserProfile(profile: UserProfile) -> UserContextProfile {
         UserContextProfile(
-            name: profile.name,
             fitnessLevel: profile.fitnessLevel.rawValue,
             primaryGoal: profile.primaryGoal.rawValue,
+            name: profile.name,
             sessionDurationMinutes: profile.sessionDurationMinutes
         )
     }
