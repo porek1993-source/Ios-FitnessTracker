@@ -9,7 +9,6 @@ struct SettingsView: View {
     @Query private var profiles: [UserProfile]
     @EnvironmentObject private var healthKitService: HealthKitService
 
-    @State private var showDeleteConfirm = false
     @State private var showSaved = false
     @State private var showDataDeleted = false
 
@@ -110,6 +109,7 @@ struct SettingsView: View {
 struct ProfileSettingsForm: View {
     @Bindable var profile: UserProfile
     let onSave: () -> Void
+    @State private var showDeleteConfirm = false
 
     @State private var draftName: String = ""
     @State private var draftGoal: FitnessGoal = .hypertrophy

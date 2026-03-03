@@ -43,7 +43,7 @@ final class SprintRetroViewModel: ObservableObject {
         var vol: Double = 0
         for session in completed {
             for exercise in session.exercises {
-                for set in exercise.sets {
+                for set in exercise.completedSets {
                     vol += (set.weight * Double(set.reps))
                 }
             }
