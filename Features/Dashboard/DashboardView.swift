@@ -899,7 +899,7 @@ private struct BodyMapPreviewCard: View {
         }
         .buttonStyle(.plain)
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("Svalová mapa: \(hasFatigue ? \"\(fatigueCount) zaznamenaných omezení\" : \"Žádné omezení. Označ oblast, která tě omezuje\")")
+        .accessibilityLabel("Svalová mapa: \(hasFatigue ? "\(fatigueCount) zaznamenaných omezení" : "Žádné omezení. Označ oblast, která tě omezuje")")
         .accessibilityHint("Otevře interaktivní mapu svalů pro nastavení únavy a bolesti.")
     }
 }
