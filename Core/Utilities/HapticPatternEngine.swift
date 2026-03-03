@@ -6,6 +6,7 @@ import CoreHaptics
 import Foundation
 
 /// Prémiový haptický engine — synchronizace zvuku a haptiky pro workout UX.
+@MainActor
 final class HapticPatternEngine {
     static let shared = HapticPatternEngine()
     

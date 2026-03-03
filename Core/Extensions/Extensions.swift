@@ -15,7 +15,7 @@ extension Calendar {
     /// Gregoriánský kalendář s pevně nastaveným pondělním začátkem týdne.
     /// Locale-independent — chová se stejně na US i EU zařízeních.
     /// ✅ `nonisolated(unsafe) static let` = inicializován jednou, thread-safe pro čtení (Calendar je value type).
-    nonisolated(unsafe) static let mondayStart: Calendar = {
+    static let mondayStart: Calendar = {
         var cal = Calendar(identifier: .gregorian)
         cal.firstWeekday = 2   // 1=Sun, 2=Mon
         cal.locale = Locale.current
