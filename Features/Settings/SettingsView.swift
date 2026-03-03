@@ -9,6 +9,7 @@ struct SettingsView: View {
     @Query private var profiles: [UserProfile]
     @EnvironmentObject private var healthKitService: HealthKitService
 
+    @State private var showDeleteConfirm = false
     @State private var showSaved = false
     @State private var showDataDeleted = false
 
@@ -31,6 +32,8 @@ struct SettingsView: View {
                             try? await Task.sleep(nanoseconds: 1_500_000_000)
                             withAnimation { showSaved = false }
                         }
+                    }, onDeleteRequest: {
+                        showDeleteConfirm = true
                     })
                 } else {
                     Text("Profil nenalezen.").foregroundStyle(.white.opacity(0.5))
@@ -109,7 +112,7 @@ struct SettingsView: View {
 struct ProfileSettingsForm: View {
     @Bindable var profile: UserProfile
     let onSave: () -> Void
-    @State private var showDeleteConfirm = false
+    let onDeleteRequest: () -> Void
 
     @State private var draftName: String = ""
     @State private var draftGoal: FitnessGoal = .hypertrophy
@@ -312,7 +315,7 @@ struct ProfileSettingsForm: View {
                 // ✅ COMPLIANCE (guideline 5.1.1): Funkce smazání dat
                 settingsSection(title: "Nebezpečná zóna", icon: "exclamationmark.triangle.fill") {
                     Button(role: .destructive) {
-                        showDeleteConfirm = true
+                        onDeleteRequest()
                     } label: {
                         HStack(spacing: 10) {
                             Image(systemName: "trash.fill")
