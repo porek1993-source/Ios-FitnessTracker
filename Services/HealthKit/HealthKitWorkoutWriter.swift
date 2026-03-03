@@ -156,7 +156,9 @@ final class HealthKitWorkoutWriter {
             try await builder.addSamples([sample])
         }
         if let metadata = metadata {
-            try await builder.addMetadata(metadata)
+            // ✅ FIX: Zamezení data race při bridge do Objective-C
+            let sendableMetadata: [String: Any] = metadata
+            try await builder.addMetadata(sendableMetadata)
         }
         try await builder.endCollection(at: endDate)
         try await builder.finishWorkout()
