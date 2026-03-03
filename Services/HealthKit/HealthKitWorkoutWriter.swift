@@ -88,11 +88,12 @@ final class HealthKitWorkoutWriter {
             
             try await builder.endCollection(at: end)
             
-            let metadata: [String: Any] = [
-                HKMetadataKeyWorkoutBrandName: "Agilní Fitness Trenér",
-                HKMetadataKeyIndoorWorkout: true
-            ]
-            try await builder.addMetadata(metadata)
+            // ✅ Robustní Swift 6 FIX: Převod na [String: any Sendable]
+            let sendableMetadata: [String: any Sendable] = metadata.compactMapValues { value in
+                if let s = value as? (any Sendable) { return s }
+                return String(describing: value)
+            }
+            try await builder.addMetadata(sendableMetadata as [String: Any])
             
             let workout = try await builder.finishWorkout()
             
@@ -156,8 +157,15 @@ final class HealthKitWorkoutWriter {
             try await builder.addSamples([sample])
         }
         if let metadata = metadata {
-            // ✅ FIX: Přímé předání metadat pro zamezení Swift 6 bridge varování
-            try await builder.addMetadata(metadata)
+            // ✅ Robustní Swift 6 FIX: Převod na [String: any Sendable] pro bezpečné odeslání do async callu
+            let sendableMetadata: [String: any Sendable] = metadata.compactMapValues { value in
+                if let sendableValue = value as? (any Sendable) {
+                    return sendableValue
+                } else {
+                    return String(describing: value)
+                }
+            }
+            try await builder.addMetadata(sendableMetadata as [String: Any])
         }
         try await builder.endCollection(at: endDate)
         try await builder.finishWorkout()
