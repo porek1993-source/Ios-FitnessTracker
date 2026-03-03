@@ -751,39 +751,7 @@ final class WorkoutViewModel: ObservableObject {
 
 // MARK: - State Models
 
-struct SessionExerciseState: Identifiable {
-    let id: UUID
-    var name: String       // Česky (pro UI)
-    var nameEN: String     // ✅ Anglicky — pro MuscleWiki lookup (videoUrl matching)
-    var slug: String
-    var coachTip: String?  // var — může být doplněno asynchronně
-    let tempo: String?
-    let restSeconds: Int
-    var sets: [SetState]
-    var isWarmupOnly: Bool
-    var exercise: Exercise?
-    var videoUrl: String?
-    var supersetId: String? // Pro vizuální spojení supersérií
-
-    init(id: UUID = UUID(), name: String, nameEN: String = "", slug: String, coachTip: String? = nil, tempo: String? = nil, restSeconds: Int = 60, sets: [SetState] = [], isWarmupOnly: Bool = false, exercise: Exercise? = nil, videoUrl: String? = nil, supersetId: String? = nil) {
-        self.id = id
-        self.name = name
-        self.nameEN = nameEN.isEmpty ? (exercise?.nameEN ?? name) : nameEN
-        self.slug = slug
-        self.coachTip = coachTip
-        self.tempo = tempo
-        self.restSeconds = restSeconds
-        self.sets = sets
-        self.isWarmupOnly = isWarmupOnly
-        self.exercise = exercise
-        self.videoUrl = videoUrl ?? exercise?.videoURL
-        self.supersetId = supersetId
-    }
-
-    var nextIncompleteSetIndex: Int? {
-        sets.indices.first { !sets[$0].isCompleted }
-    }
-
+extension SessionExerciseState {
     init(from planned: PlannedExercise) {
         self.id          = UUID()
         let exerciseName = planned.exercise?.name ?? planned.fallbackName ?? planned.exercise?.nameEN ?? "Cvik"
@@ -859,39 +827,3 @@ struct SessionExerciseState: Identifiable {
 
 
 
-struct SetState: Identifiable {
-    let id: UUID
-    var type: SetType
-    var targetRepsMin: Int
-    var targetRepsMax: Int
-    var weightKg: Double
-    var reps: Int?
-    var rpe: Int?
-    var isCompleted: Bool
-    var previousWeightKg: Double?
-    var historicalWeightKg: Double?
-    var historicalReps: Int?
-    
-    // Pro zpětnou kompatibilitu
-    var targetReps: Int { targetRepsMin }
-    var isWarmup: Bool { type == .warmup }
-    
-    init(id: UUID = UUID(), type: SetType = .normal, targetRepsMin: Int, targetRepsMax: Int? = nil, weightKg: Double, reps: Int? = nil, rpe: Int? = nil, previousWeightKg: Double? = nil, historicalWeightKg: Double? = nil, historicalReps: Int? = nil, isCompleted: Bool = false) {
-        self.id = id
-        self.type = type
-        self.targetRepsMin = targetRepsMin
-        self.targetRepsMax = targetRepsMax ?? targetRepsMin
-        self.weightKg = weightKg
-        self.reps = reps
-        self.rpe = rpe
-        self.previousWeightKg = previousWeightKg
-        self.historicalWeightKg = historicalWeightKg
-        self.historicalReps = historicalReps
-        self.isCompleted = isCompleted
-    }
-    
-    // Legacy init
-    init(type: SetType, targetReps: Int, weightKg: Double) {
-        self.init(type: type, targetRepsMin: targetReps, targetRepsMax: targetReps, weightKg: weightKg)
-    }
-}
