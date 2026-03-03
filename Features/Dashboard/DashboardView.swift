@@ -385,9 +385,7 @@ struct TrainerDashboardView: View {
             .ignoresSafeArea()
             .preferredColorScheme(.dark)
             .navigationBarHidden(true)
-            .ifIOS18 { view in
-                view.toolbarVisibility(tabBarVisible ? .visible : .hidden, for: .tabBar)
-            }
+            .modifier(ToolbarVisibilityModifier(isVisible: tabBarVisible))
             // ── Sticky CTA buttons ─────────────────────────────────
             .safeAreaInset(edge: .bottom) {
                 if vm.hasPlanToday {
@@ -1367,6 +1365,17 @@ struct TodayWorkoutLaunchWrapper: View {
 }
 
 // MARK: - Compatibility Extensions
+
+struct ToolbarVisibilityModifier: ViewModifier {
+    let isVisible: Bool
+    func body(content: Content) -> some View {
+        if #available(iOS 18.0, *) {
+            content.toolbarVisibility(isVisible ? .visible : .hidden, for: .tabBar)
+        } else {
+            content
+        }
+    }
+}
 
 extension View {
     @ViewBuilder
