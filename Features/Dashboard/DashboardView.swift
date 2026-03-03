@@ -66,7 +66,7 @@ final class DashboardViewModel: ObservableObject {
         // fetchDailySummary() může blokovat indefinitně pokud je store nedostupný.
         let summary: HKDailySummary? = await withTaskGroup(of: HKDailySummary?.self) { group in
             group.addTask { [weak self] in
-                guard let hk = self?.healthKit else { return nil }
+                guard let hk = await self?.healthKit else { return nil }
                 return try? await hk.fetchDailySummary(for: .now)
             }
             group.addTask {
@@ -284,31 +284,43 @@ struct TrainerDashboardView: View {
                     VStack(spacing: 0) {
                         // ── Top safe area spacer ──────────────────────
                         Color.clear.frame(height: 60)
-                            .onScrollGeometryChange(for: CGFloat.self) { geo in
-                                geo.contentOffset.y
-                            } action: { oldValue, newValue in
-                                // Automatické zobrazení při návratu nahoru
-                                if newValue < 50 {
-                                    withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
-                                        tabBarVisible = true
-                                    }
-                                } else if newValue > oldValue + 10 {
-                                    // Scrollování dolů -> schovat
-                                    if tabBarVisible {
-                                        withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
-                                            tabBarVisible = false
-                                        }
-                                    }
-                                } else if newValue < oldValue - 10 {
-                                    // Scrollování nahoru -> ukázat
-                                    if !tabBarVisible {
+                            .onAppear {
+                                if #available(iOS 18.0, *) {
+                                    // Funkcionalita je řešena přes onScrollGeometryChange níže
+                                }
+                            }
+                        
+                        // ✅ FIX: iOS 18+ API must be guarded by #available
+                        if #available(iOS 18.0, *) {
+                            Color.clear.frame(height: 0)
+                                .onScrollGeometryChange(for: CGFloat.self) { geo in
+                                    geo.contentOffset.y
+                                } action: { oldValue, newValue in
+                                    // Automatické zobrazení při návratu nahoru
+                                    if newValue < 50 {
                                         withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
                                             tabBarVisible = true
                                         }
+                                    } else if newValue > oldValue + 10 {
+                                        // Scrollování dolů -> schovat
+                                        if tabBarVisible {
+                                            withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+                                                tabBarVisible = false
+                                            }
+                                        }
+                                    } else if newValue < oldValue - 10 {
+                                        // Scrollování nahoru -> ukázat
+                                        if !tabBarVisible {
+                                            withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+                                                tabBarVisible = true
+                                            }
+                                        }
                                     }
                                 }
-                                lastOffset = newValue
-                            }
+                        }
+                        
+                        lastOffset = newValue
+                    }
 
                         // ── Greeting ─────────────────────────────────
                         if let p = profile {
@@ -375,7 +387,9 @@ struct TrainerDashboardView: View {
             .ignoresSafeArea()
             .preferredColorScheme(.dark)
             .navigationBarHidden(true)
-            .toolbarVisibility(tabBarVisible ? .visible : .hidden, for: .tabBar)
+            .ifIOS18 { view in
+                view.toolbarVisibility(tabBarVisible ? .visible : .hidden, for: .tabBar)
+            }
             // ── Sticky CTA buttons ─────────────────────────────────
             .safeAreaInset(edge: .bottom) {
                 if vm.hasPlanToday {
@@ -1351,5 +1365,18 @@ struct TodayWorkoutLaunchWrapper: View {
         self.plannedDay = found
         self.session = newSession
         withAnimation(.easeInOut(duration: 0.3)) { isReady = true }
+    }
+}
+
+// MARK: - Compatibility Extensions
+
+extension View {
+    @ViewBuilder
+    func ifIOS18<Content: View>(@ViewBuilder content: @escaping (Self) -> Content) -> some View {
+        if #available(iOS 18.0, *) {
+            content(self)
+        } else {
+            self
+        }
     }
 }
