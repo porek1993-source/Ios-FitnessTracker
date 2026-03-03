@@ -73,7 +73,11 @@ struct AddCustomExerciseView: View {
         newExercise.isCustom = true 
         
         modelContext.insert(newExercise)
-        try? modelContext.save()
+        do {
+            try modelContext.save()
+        } catch {
+            AppLogger.error("AddCustomExerciseView: Nepodařilo se uložit vlastní cvik '\(newExercise.name)': \(error)")
+        }
         
         dismiss()
     }

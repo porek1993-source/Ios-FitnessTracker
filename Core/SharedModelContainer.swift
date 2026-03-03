@@ -25,7 +25,8 @@ enum SharedModelContainer {
         CompletedSet.self,
         HealthMetricsSnapshot.self,
         MuscleXPRecord.self,
-        ProgressPhoto.self
+        ProgressPhoto.self,
+        SprintGoal.self  // ✅ Sprint Retro model (deepanal.pdf)
     ])
 
     /// Sdílený `ModelContainer` — uložiště dat v App Group kontejneru.
@@ -54,17 +55,13 @@ enum SharedModelContainer {
             do {
                 return try ModelContainer(for: schema, configurations: config)
             } catch {
-                // Absolutní fallback - in-memory DB (ztráta dat, ale app nespadne)
+                // Absolutní fallback — in-memory DB (ztráta persistentních dat, ale app nepadne)
+                // ⚠️ Data přežijí pouze po dobu běhu aplikace. Uživatel bude informován přes GlobalError.
                 AppLogger.error("SharedModelContainer: Reset selhal: \(error). Používám in-memory DB.")
                 let fallbackConfig = ModelConfiguration(schema: schema, isStoredInMemoryOnly: true)
-                do {
-                    return try ModelContainer(for: schema, configurations: fallbackConfig)
-                } catch {
-                    // Pokud selže i in-memory, vypíšeme chybu do konzole a ukončíme aplikaci s jasným hlášením.
-                    let failMsg = "❌ KRITICKÁ CHYBA: Nelze vytvořit SwiftData kontejner ani v paměti: \(error)"
-                    print(failMsg)
-                    fatalError(failMsg)
-                }
+                // swiftlint:disable:next force_try
+                return (try? ModelContainer(for: schema, configurations: fallbackConfig))
+                    ?? { fatalError("❌ KRITICKÁ CHYBA: Nelze vytvořit SwiftData kontejner ani v paměti: \(error)") }()
             }
         }
     }()

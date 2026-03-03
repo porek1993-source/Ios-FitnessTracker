@@ -133,7 +133,12 @@ struct RootView: View {
         // KRITICKÉ: Musíme vygenerovat plán, jinak bude aplikace prázdná
         WorkoutPlanGenerator.generate(for: mockProfile, in: modelContext)
         
-        try? modelContext.save()
+        do {
+            try modelContext.save()
+            AppLogger.success("injectMockProfile: Mock profil úspěšně vložen.")
+        } catch {
+            AppLogger.error("injectMockProfile: Nepodařilo se uložit mock profil: \(error)")
+        }
     }
 }
 

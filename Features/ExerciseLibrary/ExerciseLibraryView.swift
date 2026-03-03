@@ -174,11 +174,13 @@ struct ExerciseLibraryView: View {
             ForEach(vm.groupedExercises, id: \.group) { section in
                 sectionHeader(section.group)
 
-                ForEach(section.exercises) { exercise in
+                ForEach(Array(section.exercises.enumerated()), id: \.element.id) { index, exercise in
                     NavigationLink(destination: MuscleWikiDetailView(exercise: exercise)) {
                         exerciseRow(exercise)
                     }
                     .buttonStyle(.plain)
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+                    .animation(.spring(response: 0.4, dampingFraction: 0.8).delay(Double(index) * 0.05), value: vm.filteredExercises.count)
                 }
             }
         }

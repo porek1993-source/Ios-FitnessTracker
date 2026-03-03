@@ -46,7 +46,7 @@ struct OnboardingChatView: View {
         .task { await manager.startConversation() }
         .onChange(of: manager.profileReady) { _, ready in
             if ready { 
-                AppLogger.shared.log("OnboardingChatView: manager.profileReady detekováno jako TRUE -> triggerTransition()", type: .success)
+                AppLogger.success("OnboardingChatView: manager.profileReady detekováno jako TRUE -> triggerTransition()")
                 triggerTransition() 
             }
         }
@@ -306,25 +306,25 @@ struct OnboardingChatView: View {
     }
 
     private func triggerTransition() {
-        AppLogger.shared.log("OnboardingChatView: Spouštím `triggerTransition`", type: .info)
+        AppLogger.info("OnboardingChatView: Spouštím `triggerTransition`")
         // Persist profile — explicit save so @Query in RootView picks it up
         if let profile = manager.extractedProfile {
-            AppLogger.shared.log("OnboardingChatView: Ukládám profil do modelContext pro \(profile.name)", type: .info)
+            AppLogger.info("OnboardingChatView: Ukládám profil do modelContext pro \(profile.name)")
             modelContext.insert(profile)
 
             // ── OPRAVA: Generuj tréninkový plán ihned po uložení profilu ──
             let plan = WorkoutPlanGenerator.generate(for: profile, in: modelContext)
-            AppLogger.shared.log("OnboardingChatView: Plán '\(plan.title)' vytvořen s \(plan.scheduledDays.count) dny.", type: .success)
+            AppLogger.success("OnboardingChatView: Plán '\(plan.title)' vytvořen s \(plan.scheduledDays.count) dny.")
             // ──────────────────────────────────────────────────────────────
 
             do {
                 try modelContext.save()
-                AppLogger.shared.log("OnboardingChatView: Profil + plán úspěšně uloženy do SwiftData", type: .success)
+                AppLogger.success("OnboardingChatView: Profil + plán úspěšně uloženy do SwiftData")
             } catch {
-                AppLogger.shared.log("OnboardingChatView: Chyba při ukládání do SwiftData - \(error)", type: .error)
+                AppLogger.error("OnboardingChatView: Chyba při ukládání do SwiftData - \(error)")
             }
         } else {
-            AppLogger.shared.log("OnboardingChatView: Žádný `extractedProfile` při volání triggerTransition!", type: .error)
+            AppLogger.error("OnboardingChatView: Žádný `extractedProfile` při volání triggerTransition!")
         }
 
         // Show success animation
@@ -335,13 +335,14 @@ struct OnboardingChatView: View {
 
         // After a short delay, RootView's @Query will see the profile
         // and automatically switch to MainTabView
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) {
-            AppLogger.shared.log("OnboardingChatView: Timeout 2.5s vypršel, druhý pokus o save()", type: .info)
+        Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 2_500_000_000)  // 2.5s
+            AppLogger.info("OnboardingChatView: Timeout 2.5s vypršel, druhý pokus o save()")
             // Force SwiftData to persist (belt and suspenders)
             do {
                try modelContext.save()
             } catch {
-               AppLogger.shared.log("OnboardingChatView: Druhý save() selhal - \(error)", type: .error)
+               AppLogger.error("OnboardingChatView: Druhý save() selhal - \(error)")
             }
         }
     }

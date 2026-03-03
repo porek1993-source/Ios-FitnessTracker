@@ -1,27 +1,22 @@
 // ActiveSessionViewModel.swift
 // Agilní Fitness Trenér — Bezpečný concurrency vzor pro aktivní trénink
 //
+// ⚠️  STAV: NEPOUŽÍVANÝ (dead code)
+//     ActiveSessionView i WorkoutView používají WorkoutViewModel.
+//     Tato třída zůstává jako referenční architektura a může být odstraněna
+//     v budoucí verzi nebo nahradit WorkoutViewModel po migraci.
+//
+//     Pokud chceš tuto třídu aktivovat, nahraď v ActiveSessionView:
+//       @StateObject private var vm: WorkoutViewModel
+//     za:
+//       @StateObject private var vm: ActiveSessionViewModel
+//     a upravte inicializaci.
+//
 // ✅ @MainActor na třídě: VŠECHNY @Published updates probíhají na hlavním vlákně
 // ✅ [weak self] pattern v Task closures: prevence retain cycles a memory leaků
 // ✅ Task cancellation: správné zrušení tasks při deinit / view disappear
 // ✅ Async AI volání bez blokování UI threadu
 // ✅ Timer invalidation v deinit (prevence timer memory leaků)
-//
-// ─── ARCHITEKTONICKÉ POZNÁMKY PRO TUTO TŘÍDU ────────────────────────────────
-//
-// PROBLÉM: WorkoutViewModel je @MainActor, ale volá async operace (AI, HealthKit).
-// Naivní implementace způsobuje:
-//   1. UI freeze pokud async kód běží na main thread synchronně
-//   2. Data races pokud async kód aktualizuje @Published z background threadu
-//   3. Memory leaky pokud Task closure silně drží `self`
-//
-// ŘEŠENÍ (implementováno níže):
-//   • @MainActor na třídě: SwiftUI @Published properties jsou automaticky
-//     čteny/zapisovány z main threadu. Async funkce se suspendují, ale
-//     nepouštějí jiná vlákna — jsou non-blocking.
-//   • Task { [weak self] in ... }: zabraňuje retain cycle. Self je nil
-//     pokud byl ViewModel dealokován (např. uživatel opustil trénink).
-//   • Detached tasks pro heavy CPU práci (progress výpočty, HealthKit zápis).
 
 import SwiftUI
 import SwiftData
@@ -184,7 +179,7 @@ final class ActiveSessionViewModel: ObservableObject {
                             FetchDescriptor<Exercise>(predicate: #Predicate { $0.slug == exSlug })
                         ).first, localEx.videoURL != match.videoUrl {
                             localEx.videoURL = match.videoUrl
-                            try? bgContext.save()
+                            try? bgContext.save()  // Non-critical: cache video URL do SwiftData
                         }
                     }
                 } else {
@@ -253,9 +248,11 @@ final class ActiveSessionViewModel: ObservableObject {
                     UINotificationFeedbackGenerator().notificationOccurred(.success)
                 }
                 
-                // ✅ FIX: Odesílání push notifikací za PR (bylo chybějící oproti WorkoutViewModel)
+                // ✅ PR Celebrating Haptic (deepanal.pdf)
                 if !prEvents.isEmpty {
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                    HapticPatternEngine.shared.playPersonalRecordCelebration()
+                    Task { @MainActor in
+                        try? await Task.sleep(nanoseconds: 1_000_000_000)  // 1.0s
                         for pr in prEvents {
                             NotificationService.shared.sendPersonalRecordNotification(
                                 exerciseName: pr.exerciseName,
@@ -401,7 +398,8 @@ final class ActiveSessionViewModel: ObservableObject {
                 ex.sets.contains(where: \.isCompleted)
             }.count
             
-            Task {
+            Task { [weak self] in
+                guard let self else { return }
                 await LiveActivityManager.shared.startRestActivity(
                     session: session,
                     currentExercise: exercises[exerciseIndex],
@@ -414,7 +412,7 @@ final class ActiveSessionViewModel: ObservableObject {
             }
         }
 
-        HapticManager.shared.playMediumClick()
+        HapticPatternEngine.shared.playSetComplete()
     }
 
     func skipRest() {
@@ -479,6 +477,7 @@ final class ActiveSessionViewModel: ObservableObject {
     
     func startTempoForCurrentExercise() {
         guard audioEnabled else { return }
+        guard exercises.indices.contains(currentExerciseIndex) else { return }
         let ex = exercises[currentExerciseIndex]
         let reps = ex.sets.first?.targetRepsMax ?? 10
         audioCoach?.startTempo(tempoString: ex.tempo, reps: reps)

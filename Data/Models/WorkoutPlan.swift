@@ -15,6 +15,10 @@ final class WorkoutPlan {
     var generatedAt: Date
     var lastAdaptedAt: Date?
 
+    // ✅ Sprint Tracking (deepanal.pdf bod 8-9)
+    var sprintNumber: Int
+    var sprintStartDate: Date
+
     @Relationship(inverse: \UserProfile.workoutPlans)
     var owner: UserProfile?
 
@@ -33,6 +37,8 @@ final class WorkoutPlan {
         self.generatedAt = .now
         self.scheduledDays = []
         self.sessions = []
+        self.sprintNumber = 1
+        self.sprintStartDate = .now
     }
 }
 
@@ -96,5 +102,14 @@ final class PlannedExercise {
         self.targetRIR = targetRIR
         self.restSeconds = restSeconds
         self.supersetId = supersetId
+    }
+}
+
+// MARK: - PlannedWorkoutDay Extension
+
+extension PlannedWorkoutDay {
+    /// Cviky seřazené podle `order` — sdílená utility, eliminuje opakující se `.sorted { $0.order < $1.order }` na 5+ místech.
+    var sortedExercises: [PlannedExercise] {
+        plannedExercises.sorted { $0.order < $1.order }
     }
 }

@@ -94,7 +94,11 @@ struct ExerciseNoteView: View {
             let fresh = ExerciseNote(exerciseSlug: slug, note: newText)
             modelContext.insert(fresh)
             loadedNote = fresh
-            try? modelContext.save()
+            do {
+                try modelContext.save()
+            } catch {
+                AppLogger.error("ExerciseNoteView: Nepodařilo se uložit poznámku ke cviku '\(slug)': \(error)")
+            }
         }
     }
 }

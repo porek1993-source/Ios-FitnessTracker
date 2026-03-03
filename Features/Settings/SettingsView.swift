@@ -11,6 +11,7 @@ struct SettingsView: View {
 
     @State private var showDeleteConfirm = false
     @State private var showSaved = false
+    @State private var showDataDeleted = false
 
     private var profile: UserProfile? { profiles.first }
 
@@ -22,11 +23,13 @@ struct SettingsView: View {
                     ProfileSettingsForm(profile: profile, onSave: {
                         do {
                             try modelContext.save()
+                            HapticManager.shared.playSuccess()
                         } catch {
                             AppLogger.error("SettingsView: Chyba při ukládání profilu: \(error)")
                         }
                         withAnimation { showSaved = true }
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                        Task { @MainActor in
+                            try? await Task.sleep(nanoseconds: 1_500_000_000)
                             withAnimation { showSaved = false }
                         }
                     })
@@ -44,7 +47,21 @@ struct SettingsView: View {
                     savedBanner
                         .transition(.move(edge: .top).combined(with: .opacity))
                         .padding(.top, 8)
+                } else if showDataDeleted {
+                    deletedBanner
+                        .transition(.move(edge: .top).combined(with: .opacity))
+                        .padding(.top, 8)
                 }
+            }
+            .confirmationDialog(
+                "Smazat všechna data?",
+                isPresented: $showDeleteConfirm,
+                titleVisibility: .visible
+            ) {
+                Button("Smazat vše", role: .destructive) { deleteAllData() }
+                Button("Zrušit", role: .cancel) {}
+            } message: {
+                Text("Tato akce je nevratná. Smažou se tvůj profil, tréninkový plán, celá historie a zdravotní data uložená v aplikaci.")
             }
         }
     }
@@ -57,6 +74,34 @@ struct SettingsView: View {
         .padding(.horizontal, 20).padding(.vertical, 10)
         .background(Color.green.opacity(0.2))
         .clipShape(Capsule())
+    }
+
+    private var deletedBanner: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "trash.circle.fill").foregroundStyle(.red)
+            Text("Všechna data smazána.").font(.system(size: 14, weight: .semibold)).foregroundStyle(.white)
+        }
+        .padding(.horizontal, 20).padding(.vertical, 10)
+        .background(Color.red.opacity(0.2))
+        .clipShape(Capsule())
+    }
+
+    // ✅ COMPLIANCE: Apple vyžaduje možnost smazání dat (guideline 5.1.1)
+    private func deleteAllData() {
+        do {
+            // Smažeme všechny profily (cascade delete)  
+            let allProfiles = try modelContext.fetch(FetchDescriptor<UserProfile>())
+            for p in allProfiles { modelContext.delete(p) }
+            try modelContext.save()
+            HapticManager.shared.playSuccess()
+            withAnimation { showDataDeleted = true }
+            Task { @MainActor in
+                try? await Task.sleep(nanoseconds: 2_000_000_000)
+                withAnimation { showDataDeleted = false }
+            }
+        } catch {
+            AppLogger.error("SettingsView: Chyba při mazání dat: \(error)")
+        }
     }
 }
 
@@ -155,6 +200,7 @@ struct ProfileSettingsForm: View {
                             Slider(value: Binding(get: { Double(draftDays) }, set: { draftDays = Int($0) }),
                                    in: 2...6, step: 1)
                             .tint(.blue)
+                            .accessibilityLabel("Počet tréninkových dnů v týdnu: \(draftDays)")
                         }
 
                         VStack(alignment: .leading, spacing: 6) {
@@ -166,6 +212,7 @@ struct ProfileSettingsForm: View {
                             Slider(value: Binding(get: { Double(draftDuration) }, set: { draftDuration = Int($0) }),
                                    in: 30...120, step: 15)
                             .tint(.blue)
+                            .accessibilityLabel("Délka tréninku: \(draftDuration) minut")
                         }
 
                         VStack(alignment: .leading, spacing: 6) {
@@ -233,9 +280,60 @@ struct ProfileSettingsForm: View {
                     AppleHealthSection(healthKitService: healthKitService)
                 }
 
+                // MARK: — Sprint Retrospektiva
+                // ✅ deepanal.pdf bod 8: Klíčový diferenciátor agilního koučinku
+                settingsSection(title: "Agilní Sprint", icon: "arrow.triangle.2.circlepath") {
+                    NavigationLink(destination: SprintRetroView()) {
+                        HStack(spacing: 12) {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("Sprint Retrospektiva")
+                                    .font(.system(size: 15, weight: .semibold))
+                                    .foregroundStyle(.white)
+                                Text("Analyzuj minulý sprint a nastav cíle pro příští")
+                                    .font(.system(size: 12))
+                                    .foregroundStyle(.white.opacity(0.45))
+                            }
+                            Spacer()
+                            Image(systemName: "chevron.right")
+                                .font(.system(size: 12))
+                                .foregroundStyle(.white.opacity(0.3))
+                        }
+                    }
+                    .buttonStyle(.plain)
+                }
+
                 // MARK: — Export Dat
                 settingsSection(title: "Export Dat", icon: "doc.text.fill") {
                     ExportButtonView()
+                }
+
+
+                // MARK: — Nebezpečná zóna
+                // ✅ COMPLIANCE (guideline 5.1.1): Funkce smazání dat
+                settingsSection(title: "Nebezpečná zóna", icon: "exclamationmark.triangle.fill") {
+                    Button(role: .destructive) {
+                        showDeleteConfirm = true
+                    } label: {
+                        HStack(spacing: 10) {
+                            Image(systemName: "trash.fill")
+                                .foregroundStyle(.red)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("Smazat všechna data")
+                                    .font(.system(size: 15, weight: .semibold))
+                                    .foregroundStyle(.red)
+                                Text("Profil, plány, historie — vše bude odstraněno.")
+                                    .font(.system(size: 12))
+                                    .foregroundStyle(.white.opacity(0.4))
+                            }
+                            Spacer()
+                            Image(systemName: "chevron.right")
+                                .font(.system(size: 12))
+                                .foregroundStyle(.white.opacity(0.2))
+                        }
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityElement(children: .ignore)
+                    .accessibilityLabel("Smazat všechna data. Tato akce je nevratná.")
                 }
 
                 // MARK: — Uložit
@@ -246,8 +344,9 @@ struct ProfileSettingsForm: View {
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 16)
                         .background(Color.blue)
-                        .clipShape(RoundedRectangle(cornerRadius: 16))
+                        .clipShape(Capsule())
                 }
+                .accessibilityLabel("Uložit všechna osobní nastavení a přeplánovat trénink")
                 .padding(.horizontal, 16)
                 .padding(.bottom, 40)
             }

@@ -307,7 +307,11 @@ struct CustomWorkoutBuilderView: View {
             )
         }
         
-        try? modelContext.save()
+        do {
+            try modelContext.save()
+        } catch {
+            AppLogger.error("CustomWorkoutBuilderView: Nepodařilo se uložit vlastní trénink: \(error)")
+        }
         
         // 👋 Oznámit Dashboardu, že má spustit tento konkrétní trénink
         NotificationCenter.default.post(name: NSNotification.Name("StartCustomWorkout"), object: session)

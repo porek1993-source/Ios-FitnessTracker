@@ -139,7 +139,7 @@ final class WorkoutViewModel: ObservableObject {
             self.exercises = states
         } else {
             // Fallback na PlannedExercises z databáze
-            let sortedPlanned = plan.plannedExercises.sorted { $0.order < $1.order }
+            let sortedPlanned = plan.sortedExercises
             var states: [SessionExerciseState] = []
 
             for (index, planned) in sortedPlanned.enumerated() {
@@ -209,7 +209,7 @@ final class WorkoutViewModel: ObservableObject {
     private func enrichWithVideoURLs() async {
         guard exercises.contains(where: { $0.videoUrl == nil }) else { return }
         do {
-            let repo = SupabaseExerciseRepository()
+            let repo = AppEnvironment().exerciseRepository // ✅ FIX: Sdílená instance místo nové
             let wikiAll = try await repo.fetchMuscleWikiAll()
             let bgContext = ModelContext(SharedModelContainer.container)
 
@@ -258,7 +258,7 @@ final class WorkoutViewModel: ObservableObject {
                             FetchDescriptor<Exercise>(predicate: #Predicate { $0.slug == exSlug })
                         ).first, localEx.videoURL != match.videoUrl {
                             localEx.videoURL = match.videoUrl
-                            try? bgContext.save()
+                            try? bgContext.save()  // Non-critical: cache video URL do SwiftData
                         }
                     }
                 } else {
@@ -277,29 +277,14 @@ final class WorkoutViewModel: ObservableObject {
         }
     }
 
-    // MARK: - RPE-aware progression (přesunuto do ProgressionEngine)
-    // Tato metoda je zachována pro zpětnou kompatibilitu, ale logika je v ProgressionEngine.
-    private func rpeAwareProgression(exercise: Exercise, targetWeight: Double?) -> Double? {
-        guard let targetWeight else { return nil }
-        // Pokud průměrné RPE bylo ≥10 (failure), mírně sniž váhu
-        let recentEntries = exercise.weightHistory
-            .sorted { $0.loggedAt > $1.loggedAt }
-            .prefix(3)
-        let avgRpe = recentEntries.compactMap(\.rpe).reduce(0, +) / Double(max(recentEntries.compactMap(\.rpe).count, 1))
-        if avgRpe >= 10 {
-            return WeightRounder.roundToNearestPlates(weight: targetWeight * 0.95)
-        }
-        return targetWeight
-    }
-
     // MARK: - Timer
 
     private func startElapsedTimer() {
         elapsedTimerTask?.cancel()
-        elapsedTimerTask = Task {
+        elapsedTimerTask = Task { [weak self] in
             while !Task.isCancelled {
                 try? await Task.sleep(nanoseconds: 1_000_000_000)
-                guard !Task.isCancelled else { break }
+                guard let self, !Task.isCancelled else { break }
                 elapsedSeconds += 1
             }
         }
@@ -319,6 +304,9 @@ final class WorkoutViewModel: ObservableObject {
         withAnimation(.spring(response: 0.3)) {
             exercises[exerciseIndex].sets[setIndex].isCompleted = true
         }
+        
+        // ✅ CHHapticEngine double-tap (deepanal.pdf)
+        HapticPatternEngine.shared.playSetComplete()
         
         stopTempo()
 
@@ -367,6 +355,7 @@ final class WorkoutViewModel: ObservableObject {
     
     func startTempoForCurrentExercise() {
         guard audioEnabled else { return }
+        guard exercises.indices.contains(currentExerciseIndex) else { return }
         let ex = exercises[currentExerciseIndex]
         let reps = ex.sets.first?.targetReps ?? 10
         audioCoach?.startTempo(tempoString: ex.tempo, reps: reps)
@@ -590,19 +579,17 @@ final class WorkoutViewModel: ObservableObject {
         Task { await LiveActivityManager.shared.endCurrentActivity() }
 
         // ── Zápis do Apple Health ──
+        // ✅ Konsolidováno: HealthKitWorkoutWriter (moderní API) místo zastaralého HealthWorkoutWriter.shared
         Task { [weak self] in
             guard let self else { return }
-            // Vypočítáme odhad kalorií přes sdílenou utilitu
-            let estimatedKcal = HealthWorkoutWriter.estimateBurnedCalories(durationSeconds: TimeInterval(elapsedSeconds))
-            
+            let estimatedKcal = HealthKitWorkoutWriter.estimateBurnedCalories(durationSeconds: TimeInterval(elapsedSeconds))
             do {
-                try await HealthWorkoutWriter.shared.saveStrengthWorkout(
+                try await HealthKitWorkoutWriter.saveStrengthWorkout(
                     startDate: session.startedAt,
                     endDate: session.finishedAt ?? Date(),
                     activeEnergyBurnedKcal: estimatedKcal,
                     metadata: ["Plan": planLabel]
                 )
-                AppLogger.info("[HealthKit] Trénink úspěšně zapsán do Apple Health. \(Int(estimatedKcal)) kcal")
             } catch {
                 AppLogger.error("[HealthKit] Zápis tréninku selhal: \(error)")
             }
@@ -626,6 +613,7 @@ final class WorkoutViewModel: ObservableObject {
     // MARK: - Cancel — smaže session bez uložení
 
     func cancelWorkout(modelContext: ModelContext) {
+        advanceTask?.cancel()
         restTimerTask?.cancel()
         elapsedTimerTask?.cancel()
         audioCoach?.stopAll()

@@ -319,7 +319,8 @@ struct PlanFallbackCard: View {
             withAnimation(.spring(response: 0.50, dampingFraction: 0.75).delay(0.08)) {
                 appeared = true
             }
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+            Task { @MainActor in
+                try? await Task.sleep(nanoseconds: 300_000_000)
                 glowPulse = true
             }
         }

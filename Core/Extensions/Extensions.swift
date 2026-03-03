@@ -8,18 +8,19 @@ import Foundation
 // Na US zařízeních (locale = en_US) začíná týden v NEDĚLI (firstWeekday=1).
 // Česká aplikace počítá s pondělním začátkem týdne (firstWeekday=2).
 //
-// Použití Calendar.mondayStart namísto Calendar.current v jakékoliv logice,
-// která pracuje s týdny (weekOfYear, dateInterval(.weekOfYear), apod.)
-// zajišťuje konzistentní chování napříč všemi locales.
+// ✅ VÝKON: mondayStart je `nonisolated(unsafe) static let` — vytvoří se JEDNOU a pak se sdílí.
+// Předchozí `static var` vypočítávala novou instanci Calendar při každém volání.
+// Calendar je value type, takže každé `Calendar.mondayStart.component(...)` = alokace nové kopie.
 extension Calendar {
     /// Gregoriánský kalendář s pevně nastaveným pondělním začátkem týdne.
     /// Locale-independent — chová se stejně na US i EU zařízeních.
-    static var mondayStart: Calendar {
+    /// ✅ `nonisolated(unsafe) static let` = inicializován jednou, thread-safe pro čtení (Calendar je value type).
+    nonisolated(unsafe) static let mondayStart: Calendar = {
         var cal = Calendar(identifier: .gregorian)
         cal.firstWeekday = 2   // 1=Sun, 2=Mon
         cal.locale = Locale.current
         return cal
-    }
+    }()
 }
 
 extension Date {

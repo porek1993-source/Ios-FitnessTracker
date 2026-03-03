@@ -93,11 +93,6 @@ struct OneRepMaxChartView: View {
             }
         }
         .padding(20)
-        .background(
-            RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .fill(Color.appCardBackground)
-                .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous)
-                    .stroke(Color.white.opacity(0.05), lineWidth: 1))
-        )
+        .glassCardStyle(cornerRadius: 20)
     }
 }

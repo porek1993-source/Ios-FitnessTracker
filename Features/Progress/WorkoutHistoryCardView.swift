@@ -53,12 +53,7 @@ struct WorkoutHistoryCardView: View {
             }
         }
         .padding(16)
-        .background(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .fill(Color.appCardBackground)
-                .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .stroke(Color.white.opacity(0.05), lineWidth: 1))
-        )
+        .glassCardStyle(cornerRadius: 16)
     }
     
     private func formattedDate(_ date: Date) -> String {

@@ -48,18 +48,20 @@ final class Exercise {
 
     // MARK: - Progressive Overload Memory
 
+    /// Váha z nejnovější WeightEntry (posledního záznamu).
+    /// ✅ VÝKON: `max(by:)` = O(n) lineární průchod místo O(n log n) sort.
     var lastUsedWeight: Double? {
-        weightHistory
-            .sorted { $0.loggedAt > $1.loggedAt }
-            .first?.weightKg
+        weightHistory.max(by: { $0.loggedAt < $1.loggedAt })?.weightKg
     }
 
-    /// Epley formula: w * (1 + reps/30)
+    /// Epley formula: w * (1 + reps/30) → odhadované 1RM
+    /// ✅ VÝKON: Kombinuje compactMap + max v jednom průchodu pomocí reduce.
     var personalRecord1RM: Double? {
-        weightHistory.compactMap { entry -> Double? in
-            guard entry.reps > 0 else { return nil }
-            return entry.weightKg * (1 + Double(entry.reps) / 30.0)
-        }.max()
+        weightHistory.reduce(nil as Double?) { best, entry -> Double? in
+            guard entry.reps > 0 else { return best }
+            let oneRM = entry.weightKg * (1 + Double(entry.reps) / 30.0)
+            return Swift.max(best ?? 0, oneRM) > 0 ? Swift.max(best ?? 0, oneRM) : nil
+        }
     }
 
     init(

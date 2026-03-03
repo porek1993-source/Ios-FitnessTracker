@@ -12,6 +12,7 @@ struct WorkoutPreviewView: View {
     @Environment(\.modelContext) private var modelContext
 
     @EnvironmentObject private var healthKit: HealthKitService
+    @EnvironmentObject private var appEnv: AppEnvironment
     @Query private var profiles: [UserProfile]
 
     @State private var isGenerating = false
@@ -76,7 +77,7 @@ struct WorkoutPreviewView: View {
                 }
             }
         }
-        try? modelContext.save()
+        try? modelContext.save()  // Non-critical: oprava referencí cviků — ztráta nevadí (data jsou v plánu)
     }
 
     var body: some View {
@@ -264,7 +265,10 @@ struct WorkoutPreviewView: View {
 
         isGenerating = true
         Task {
-            let aiService = AITrainerService(modelContext: modelContext, healthKitService: healthKit)
+            guard let aiService = appEnv.aiTrainerService else {
+                await MainActor.run { self.isGenerating = false }
+                return
+            }
             let response = await aiService.generateTodayWorkout(
                 for: .now,
                 profile: profile,

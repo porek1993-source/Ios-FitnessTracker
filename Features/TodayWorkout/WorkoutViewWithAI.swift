@@ -14,6 +14,7 @@ struct WorkoutViewWithAI: View {
 
     @Environment(\.modelContext) private var modelContext
     @EnvironmentObject private var healthKit: HealthKitService
+    @EnvironmentObject private var appEnv: AppEnvironment
     @Environment(\.dismiss) private var dismiss
 
     @State private var trainerResponse: TrainerResponse?
@@ -75,7 +76,11 @@ struct WorkoutViewWithAI: View {
         isLoading = true
         loadError = nil
 
-        let aiService = AITrainerService(modelContext: modelContext, healthKitService: healthKit)
+        guard let aiService = appEnv.aiTrainerService else {
+            loadError = "AI Trenér není inicializován. Zkus restartovat aplikaci."
+            isLoading = false
+            return
+        }
 
         let response = await aiService.generateTodayWorkout(
             for: .now,
@@ -90,7 +95,11 @@ struct WorkoutViewWithAI: View {
         // Uložíme sessionLabel do plánu pro budoucí kontext (Gemini continuity)
         if let activePlan = profile.workoutPlans.first(where: \.isActive) {
             activePlan.geminiSessionContext = response.sessionLabel
-            try? modelContext.save()
+            do {
+                try modelContext.save()
+            } catch {
+                AppLogger.error("WorkoutViewWithAI: Nepodařilo se uložit geminiSessionContext: \(error)")
+            }
         }
 
         withAnimation(.spring(response: 0.5)) {

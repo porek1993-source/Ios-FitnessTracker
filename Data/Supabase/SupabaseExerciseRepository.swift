@@ -212,7 +212,75 @@ actor SupabaseExerciseRepository {
         }
     }
 
-    // MARK: - Helpers
+    // MARK: - Workout Session Sync
+
+    /// Synchronizuje dokončený trénink do Supabase tabulky `public.workout_sessions`.
+    /// Používá UPSERT (INSERT OR UPDATE) podle `id` — bezpečné pro opakované volání.
+    /// - Returns: `true` při úspěchu, `false` při chybě (nechceme přerušit sync loop)
+    @discardableResult
+    func syncWorkoutSession(_ session: WorkoutSession) async throws -> Bool {
+        guard !AppConstants.supabaseURL.isEmpty, !AppConstants.supabaseAnonKey.isEmpty else {
+            AppLogger.warning("[OfflineSync] Supabase není nakonfigurován — sync přeskočen.")
+            return false
+        }
+
+        struct WorkoutSessionDTO: Encodable {
+            let id: String
+            let startedAt: String
+            let finishedAt: String?
+            let durationMinutes: Int
+            let status: String
+            let plannedDayName: String?
+            let readinessScore: Double?
+            let aiAdaptationNote: String?
+            let userFeedbackEnergy: Int?
+            let userFeedbackDifficulty: Int?
+            let userNotes: String?
+        }
+
+        let iso = ISO8601DateFormatter()
+        iso.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+
+        let dto = WorkoutSessionDTO(
+            id:                    session.id.uuidString,
+            startedAt:             iso.string(from: session.startedAt),
+            finishedAt:            session.finishedAt.map { iso.string(from: $0) },
+            durationMinutes:       session.durationMinutes,
+            status:                session.statusRaw,
+            plannedDayName:        session.plannedDay?.label,
+            readinessScore:        session.readinessScore,
+            aiAdaptationNote:      session.aiAdaptationNote,
+            userFeedbackEnergy:    session.userFeedbackEnergy,
+            userFeedbackDifficulty: session.userFeedbackDifficulty,
+            userNotes:             session.userNotes
+        )
+
+        var components = URLComponents(string: baseURL + "/rest/v1/workout_sessions")
+        components?.queryItems = [URLQueryItem(name: "on_conflict", value: "id")]
+        guard let url = components?.url else { throw SupabaseError.invalidURL }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.timeoutInterval = 15
+        // UPSERT: Prefer: resolution=merge-duplicates
+        var headers = defaultHeaders
+        headers["Prefer"] = "resolution=merge-duplicates,return=minimal"
+        for (key, value) in headers { request.setValue(value, forHTTPHeaderField: key) }
+
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .iso8601
+        encoder.keyEncodingStrategy  = .convertToSnakeCase
+        request.httpBody = try encoder.encode(dto)
+
+        let (_, response) = try await URLSession.shared.data(for: request)
+        guard let http = response as? HTTPURLResponse else {
+            throw SupabaseError.httpError(statusCode: 0)
+        }
+        guard (200...299).contains(http.statusCode) else {
+            throw SupabaseError.httpError(statusCode: http.statusCode)
+        }
+        return true
+    }
 
     private func buildURL(path: String, query: [(String, String)]) throws -> URL {
         var components = URLComponents(string: baseURL + path)

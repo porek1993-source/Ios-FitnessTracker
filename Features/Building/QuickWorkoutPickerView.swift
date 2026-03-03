@@ -1359,7 +1359,12 @@ struct QuickWorkoutPickerView: View {
     }
 
     private func finishGeneration(session: WorkoutSession) {
-        try? modelContext.save()
+        do {
+            try modelContext.save()
+        } catch {
+            AppLogger.error("QuickWorkoutPickerView: Nepodařilo se uložit vygenerovaný trénink: \(error)")
+            // Pokračujeme i přes chybu — session je v paměti a trénink lze odcvičit
+        }
         NotificationCenter.default.post(name: NSNotification.Name("StartCustomWorkout"), object: session)
         isGenerating = false
         dismiss()

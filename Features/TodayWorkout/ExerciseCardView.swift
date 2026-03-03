@@ -84,6 +84,8 @@ struct ExerciseCardView: View {
                                             .foregroundStyle(.white.opacity(0.8))
                                             .fixedSize(horizontal: false, vertical: true)
                                     }
+                                    .accessibilityElement(children: .ignore)
+                                    .accessibilityLabel("Krok \(index + 1): \(cleanStep)")
                                 }
                             }
                         }
@@ -98,19 +100,22 @@ struct ExerciseCardView: View {
                     }
                     VStack(spacing: 10) {
                         SetHeaderRow()
-                        ForEach(exercise.sets.indices, id: \.self) { i in
-                            SetRowView(
-                                setNumber: i + 1,
-                                setData:   $vm.exercises[exerciseIndex].sets[i],
-                                isActive:  i == exercise.nextIncompleteSetIndex,
-                                onComplete: {
-                                    HapticManager.shared.playMediumClick()
-                                    vm.completeSet(
-                                        exerciseIndex: exerciseIndex,
-                                        setIndex: i
-                                    )
-                                }
-                            )
+                        // ✅ Bounds guard: exerciseIndex musí být platný i po animacích swap/advance
+                        if vm.exercises.indices.contains(exerciseIndex) {
+                            ForEach(exercise.sets.indices, id: \.self) { i in
+                                SetRowView(
+                                    setNumber: i + 1,
+                                    setData:   $vm.exercises[exerciseIndex].sets[i],
+                                    isActive:  i == exercise.nextIncompleteSetIndex,
+                                    onComplete: {
+                                        HapticManager.shared.playMediumClick()
+                                        vm.completeSet(
+                                            exerciseIndex: exerciseIndex,
+                                            setIndex: i
+                                        )
+                                    }
+                                )
+                            }
                         }
                     }
                     .padding(.horizontal, 20)
@@ -171,6 +176,8 @@ struct TechBadge: View {
         .padding(.vertical, 8)
         .background(RoundedRectangle(cornerRadius: 10).fill(color.opacity(0.1)))
         .frame(maxWidth: .infinity)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("\(label): \(value)")
     }
 }
 

@@ -53,6 +53,10 @@ final class AppEnvironment: ObservableObject {
         self.healthBackgroundManager = HealthBackgroundManager.shared
         self.exerciseRepository      = SupabaseExerciseRepository()
 
+        // ✅ Injektujeme sdílenou HealthKitService do HealthBackgroundManager
+        // Odstraňuje třetí duplicitní instanci (background task nyní používá stejnou jako foreground)
+        self.healthBackgroundManager.configure(healthKit: self.healthKitService)
+
         AppLogger.info("🚀 [AppEnvironment] Inicializován.")
         
         // BGTaskScheduler.register musí být voláno synchronně při inicializaci applikace
@@ -101,8 +105,7 @@ final class AppEnvironment: ObservableObject {
         WeeklyReportService.scheduleWeeklyNotificationIfNeeded()
 
         // 4. Notifikační oprávnění (non-blocking, fire-and-forget)
-        Task.detached(priority: .utility) { [weak self] in
-            guard self != nil else { return }
+        Task.detached(priority: .utility) {
             _ = await NotificationService.shared.requestPermission()
             await NotificationService.shared.scheduleWorkoutReminder(hour: 8, minute: 30)
         }
@@ -119,6 +122,9 @@ final class AppEnvironment: ObservableObject {
 
         // 6. Synchronizace videí cviků (non-blocking)
         syncExerciseVideos(modelContext: modelContext)
+
+        // 7. Injektujeme sdílenou repository do OfflineSyncManager (odstraňuje duplicitní instanci)
+        OfflineSyncManager.shared.configure(repository: exerciseRepository)
 
         // Startup dokončen — UI může přejít do aktivního stavu
         isStartupComplete = true
@@ -224,14 +230,15 @@ final class AppEnvironment: ObservableObject {
 // MARK: AppToastError — datový model pro globální toasty
 // MARK: ═══════════════════════════════════════════════════════════════════════
 
-struct AppToastError: Identifiable, Equatable {
+// ✅ Sendable: bezpečné pro přenos přes actor boundaries (MainActor → background Task a zpět)
+struct AppToastError: Identifiable, Equatable, Sendable {
 
     let id       = UUID()
     let message: String
     let icon:    String
     var severity: Severity = .warning
 
-    enum Severity {
+    enum Severity: Sendable {
         case info     /// Neutral informace (modrá)
         case warning  /// Varování (oranžová)
         case error    /// Chyba (červená)

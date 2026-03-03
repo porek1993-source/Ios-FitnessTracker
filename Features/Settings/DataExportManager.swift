@@ -47,7 +47,7 @@ final class DataExportManager {
             try csvString.write(to: tempURL, atomically: true, encoding: .utf8)
             return tempURL
         } catch {
-            print("❌ [DataExportManager] Chyba při zápisu CSV: \(error)")
+            AppLogger.error("[DataExportManager] Chyba při zápisu CSV: \(error)")
             return nil
         }
     }
@@ -102,7 +102,8 @@ struct ExportButtonView: View {
     private func prepareExport() {
         isExporting = true
         // Simulujeme lehký delay pro feedback
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+        Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 500_000_000)
             self.exportURL = DataExportManager.shared.generateCSV(context: modelContext)
             self.isExporting = false
         }

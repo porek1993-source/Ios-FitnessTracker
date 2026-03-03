@@ -55,11 +55,14 @@ struct WorkoutSummaryView: View {
         }
     }
     private var totalSets: Int {
-        // Spočítej ze session (přesné pro non-AI workout)
+        // Primárně ze session (přesné pro non-AI workout kde se session.exercises plní)
         let sessionSets = session.exercises.reduce(0) { $0 + $1.completedSets.count }
         if sessionSets > 0 { return sessionSets }
-        // Pro AI workout: z xpGains odvoď min. počet sérií (každý gain = min 3 série)
-        return xpGains.isEmpty ? 0 : max(xpGains.count * 3, xpGains.count)
+        // Pro AI workout: xpGains = 1 záznam na svalovou skupinu, průměr 3 série na skupinu
+        // ✅ OPRAVA: `xpGains.count * 3` bylo realistické ale mohlo zobrazit 0 při prázdných gainech.
+        //    Fallback: duration / 3 min na sérii (typické pro silový trénink)
+        if !xpGains.isEmpty { return xpGains.count * 3 }
+        return max(0, session.durationMinutes / 3)
     }
     
     // Fallback kalorií
@@ -73,15 +76,23 @@ struct WorkoutSummaryView: View {
     }
     
     // Objemový rekord
+    // ✅ VÝKON: Jeden průchod reduce místo map + max — zastaví se hned jak najde vyšší hodnotu.
     private var isVolumeRecord: Bool {
-        guard let plan = session.plan else { return false }
-        let pastSessions = plan.sessions.filter { $0.id != session.id && $0.finishedAt != nil }
-        let prevMax = pastSessions.map { s in
-            s.exercises.reduce(0.0) { acc, ex in
-                acc + ex.completedSets.lazy.filter { $0.setType == .normal || $0.setType == .failure }.reduce(0.0) { $0 + $1.weightKg * Double($1.reps) }
+        guard let plan = session.plan, totalVolume > 0 else { return false }
+        var foundPast = false
+        for s in plan.sessions {
+            guard s.id != session.id, s.finishedAt != nil else { continue }
+            foundPast = true
+            let sessionVol = s.exercises.reduce(0.0) { acc, ex in
+                acc + ex.completedSets.reduce(0.0) { setAcc, set in
+                    (set.setType == .normal || set.setType == .failure)
+                        ? setAcc + set.weightKg * Double(set.reps)
+                        : setAcc
+                }
             }
-        }.max() ?? 0
-        return totalVolume > prevMax && totalVolume > 0 && !pastSessions.isEmpty
+            if sessionVol >= totalVolume { return false }   // early exit — není rekord
+        }
+        return foundPast
     }
 
     var body: some View {
@@ -309,40 +320,37 @@ struct WorkoutSummaryView: View {
     }
 
     private func startAnimation() {
-        // Phase 1: iKorba message typewriter
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+        Task { @MainActor in
+            // Phase 1: iKorba message typewriter (0.3s)
+            try? await Task.sleep(nanoseconds: 300_000_000)
             withAnimation(.easeOut(duration: 0.5)) { phase = .ikorba }
             typewriteMessage()
-        }
 
-        // Phase 2: Stats
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.8) {
+            // Phase 2: Stats (1.8s od začátku)
+            try? await Task.sleep(nanoseconds: 1_500_000_000)
             withAnimation(.spring(response: 0.5)) {
                 showStats = true
                 korbaTyping = false
             }
-        }
 
-        // Phase 3: Figure + XP bars
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2.4) {
+            // Phase 3: Figure + XP bars (2.4s od začátku)
+            try? await Task.sleep(nanoseconds: 600_000_000)
             withAnimation(.spring(response: 0.6)) { showXPBars = true }
             animateMuscles()
-        }
 
-        // Phase 4: PRs staggered
-        DispatchQueue.main.asyncAfter(deadline: .now() + 3.2) {
+            // Phase 4: PRs staggered (3.2s od začátku)
+            try? await Task.sleep(nanoseconds: 800_000_000)
             for (i, pr) in prEvents.enumerated() {
-                DispatchQueue.main.asyncAfter(deadline: .now() + Double(i) * 0.15) {
-                    withAnimation(.spring(response: 0.4)) {
-                        _ = visiblePRs.insert(pr.id)
-                    }
+                let delay = UInt64(Double(i) * 0.15 * 1_000_000_000)
+                try? await Task.sleep(nanoseconds: delay)
+                withAnimation(.spring(response: 0.4)) {
+                    _ = visiblePRs.insert(pr.id)
                 }
             }
             if !prEvents.isEmpty { confettiActive = true }
-        }
 
-        // Phase 5: CTA
-        DispatchQueue.main.asyncAfter(deadline: .now() + 4.0) {
+            // Phase 5: CTA (4.0s od začátku)
+            try? await Task.sleep(nanoseconds: 800_000_000)
             withAnimation(.spring(response: 0.5)) { showCTA = true }
         }
     }
@@ -350,16 +358,19 @@ struct WorkoutSummaryView: View {
     private func typewriteMessage() {
         let chars = Array(coachMessage)
         displayedMessage = ""
-        for (i, char) in chars.enumerated() {
-            DispatchQueue.main.asyncAfter(deadline: .now() + Double(i) * 0.022) {
+        // ✅ Task-based typewriter — cancelovatelný, bez DispatchQueue callback hell
+        Task { @MainActor in
+            for char in chars {
+                try? await Task.sleep(nanoseconds: 22_000_000)  // 0.022s per character
                 displayedMessage.append(char)
             }
         }
     }
 
     private func animateMuscles() {
-        for (i, gain) in topGains.enumerated() {
-            DispatchQueue.main.asyncAfter(deadline: .now() + Double(i) * 0.12) {
+        Task { @MainActor in
+            for gain in topGains {
+                try? await Task.sleep(nanoseconds: 120_000_000)  // 0.12s stagger
                 withAnimation(.spring(response: 0.8, dampingFraction: 0.7)) {
                     muscleAnimProgress[gain.muscleGroup] = 1.0
                 }
@@ -588,7 +599,8 @@ private struct XPBarRow: View {
         }
         .onAppear {
             guard animated else { return }
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            Task { @MainActor in
+                try? await Task.sleep(nanoseconds: 100_000_000)  // 0.1s — nutné pro SwiftUI onAppear
                 withAnimation(.spring(response: 0.9, dampingFraction: 0.75)) {
                     fill = currentProgress
                 }
@@ -997,7 +1009,8 @@ private struct ConfettiView: View {
             }
             .onAppear {
                 generateParticles(in: geo.size)
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                Task { @MainActor in
+                    try? await Task.sleep(nanoseconds: 100_000_000)  // 0.1s — nutné pro SwiftUI onAppear
                     isAnimating = true
                 }
             }

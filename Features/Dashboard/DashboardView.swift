@@ -62,9 +62,24 @@ final class DashboardViewModel: ObservableObject {
         isLoadingReadiness = true
         defer { isLoadingReadiness = false }
 
-        guard let healthKit = healthKit,
-              let summary = try? await healthKit.fetchDailySummary(for: .now) else {
-            // Fallback — no HealthKit data
+        // ✅ BEZPEČNOST: 8s timeout chrání UI před zamrznutím pokud HealthKit nereaguje.
+        // fetchDailySummary() může blokovat indefinitně pokud je store nedostupný.
+        let summary: HKDailySummary? = await withTaskGroup(of: HKDailySummary?.self) { group in
+            group.addTask { [weak self] in
+                guard let hk = self?.healthKit else { return nil }
+                return try? await hk.fetchDailySummary(for: .now)
+            }
+            group.addTask {
+                try? await Task.sleep(nanoseconds: 8_000_000_000)
+                return nil   // Timeout
+            }
+            let result = await group.next() ?? nil
+            group.cancelAll()
+            return result
+        }
+
+        guard let summary else {
+            // Fallback — no HealthKit data nebo timeout
             readinessScore   = 65
             readinessLevel   = "orange"
             readinessMessage = "Připoj Apple Health pro přesnější analýzu."
@@ -164,7 +179,7 @@ final class DashboardViewModel: ObservableObject {
             exerciseCount             = day.plannedExercises.count
             estimatedMinutes          = profile.sessionDurationMinutes
             todayPlanSplit            = activePlan.splitType.displayName
-            todayPlannedExercises     = day.plannedExercises.sorted { $0.order < $1.order }
+            todayPlannedExercises     = day.sortedExercises
         } else {
             hasPlanToday  = false
             todayPlanLabel = "Den odpočinku"
@@ -309,6 +324,13 @@ struct TrainerDashboardView: View {
                             .padding(.horizontal, 0) // Samo má padding
                             .padding(.top, 16)
 
+                        // ── Sprint Goals ───────────────────────────────
+                        if let activePlan = profile?.workoutPlans.first(where: \.isActive) {
+                            SprintGoalsCard(sprintNumber: activePlan.sprintNumber)
+                                .padding(.horizontal, 18)
+                                .padding(.top, 16)
+                        }
+
                         // ── Today's Plan ──────────────────────────────
                         TodayPlanCard(
                             vm:          vm,
@@ -317,6 +339,7 @@ struct TrainerDashboardView: View {
                         .padding(.horizontal, 18)
                         .padding(.top, 16)
                         .padding(.bottom, 120) // Extra padding so content doesn't hide behind sticky CTA
+
                     }
                 }
             }
@@ -333,7 +356,7 @@ struct TrainerDashboardView: View {
                             showWorkout = true
                         }) {
                             ZStack {
-                                RoundedRectangle(cornerRadius: 18)
+                                Capsule()
                                     .fill(
                                         LinearGradient(
                                             colors: [
@@ -358,6 +381,8 @@ struct TrainerDashboardView: View {
                             .frame(height: 56)
                         }
                         .buttonStyle(.plain)
+                        .accessibilityLabel("Začít dnešní trénink")
+                        .accessibilityHint("Klepnutím spustíte dnešní trénink z aktuálního plánu")
 
                         // Sekundární — Náhled plánu
                         Button(action: {
@@ -374,17 +399,16 @@ struct TrainerDashboardView: View {
                             .frame(height: 36)
                         }
                         .buttonStyle(.plain)
+                        .accessibilityLabel("Zobrazit náhled plánu")
+                        .accessibilityHint("Zobrazí seznam cviků dnešního tréninku pro rychlou kontrolu")
                     }
                     .padding(.horizontal, 18)
                     .padding(.top, 12)
                     .padding(.bottom, 8)
-                    .background(
-                        LinearGradient(
-                            colors: [AppColors.background, AppColors.background.opacity(0.95)],
-                            startPoint: .bottom, endPoint: .top
-                        )
-                        .ignoresSafeArea()
-                    )
+                    .background(.ultraThinMaterial)
+                    .overlay(alignment: .top) {
+                        Divider().background(Color.white.opacity(0.08))
+                    }
                 } else {
                     VStack(spacing: 10) {
                         // Rychlý trénink — podle partie nebo zdravotního problému
@@ -405,8 +429,8 @@ struct TrainerDashboardView: View {
                             .background(
                                 LinearGradient(colors: [.orange.opacity(0.2), .red.opacity(0.15)], startPoint: .leading, endPoint: .trailing)
                             )
-                            .clipShape(RoundedRectangle(cornerRadius: 16))
-                            .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.orange.opacity(0.35), lineWidth: 1))
+                            .clipShape(Capsule())
+                            .overlay(Capsule().stroke(Color.orange.opacity(0.35), lineWidth: 1))
                         }
                         .padding(.horizontal, 22)
 
@@ -421,21 +445,18 @@ struct TrainerDashboardView: View {
                                 .frame(maxWidth: .infinity)
                                 .padding(.vertical, 14)
                                 .background(Color.white.opacity(0.1))
-                                .clipShape(RoundedRectangle(cornerRadius: 16))
-                                .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.white.opacity(0.15), lineWidth: 1))
+                                .clipShape(Capsule())
+                                .overlay(Capsule().stroke(Color.white.opacity(0.15), lineWidth: 1))
                         }
                         .padding(.horizontal, 22)
                         .padding(.top, 4)
                         
                     }
                     .padding(.bottom, 24)
-                    .background(
-                        LinearGradient(
-                            colors: [.clear, AppColors.background.opacity(0.9), AppColors.background.opacity(0.95)],
-                            startPoint: .bottom, endPoint: .top
-                        )
-                        .ignoresSafeArea()
-                    )
+                    .background(.ultraThinMaterial)
+                    .overlay(alignment: .top) {
+                        Divider().background(Color.white.opacity(0.08))
+                    }
                 }
             }
             .sheet(isPresented: $showHeatmap) {
@@ -466,17 +487,18 @@ struct TrainerDashboardView: View {
         .task {
             guard !appearedOnce, let p = profile else { return }
             appearedOnce = true
-            
+
             // Injektuj sdílený HealthKitService do VM
             vm.inject(healthKit: healthKit)
-            
-            // Spusť HealthKit autorizaci + foreground sync
-            Task {
+
+            // ✅ VÝKON: Spusť HealthKit auth + vm.load PARALELNĚ (dříve auth blokovala load)
+            // HealthKit requestAuthorization() může trvat sekundy (čeká na user dialog)
+            async let authAndSync: Void = {
                 try? await healthKit.requestAuthorization()
                 await HealthBackgroundManager.shared.performForegroundSync(healthKit: healthKit)
-            }
-            
-            await vm.load(profile: p)
+            }()
+            async let dashboardLoad: Void = vm.load(profile: p)
+            _ = await (authAndSync, dashboardLoad)
 
             // Offline Sync
             _ = NetworkMonitor.shared // Inicializace monitoru
@@ -526,14 +548,17 @@ struct TrainerDashboardView: View {
             Spacer()
 
             // Quick settings avatar
-            Circle()
-                .fill(AppColors.accentGradient)
-                .frame(width: 44, height: 44)
-                .overlay(
-                    Text(String(profile.name.prefix(1)).uppercased())
-                        .font(.system(size: 18, weight: .black, design: .rounded))
-                        .foregroundStyle(.white)
-                )
+            NavigationLink(destination: SettingsView()) {
+                Circle()
+                    .fill(AppColors.accentGradient)
+                    .frame(width: 44, height: 44)
+                    .overlay(
+                        Text(String(profile.name.prefix(1)).uppercased())
+                            .font(.system(size: 18, weight: .black, design: .rounded))
+                            .foregroundStyle(.white)
+                    )
+            }
+            .buttonStyle(.plain)
         }
     }
 }
@@ -605,8 +630,9 @@ struct ReadinessCardView: View {
                 cardContent
             }
         }
-        .frame(maxWidth: .infinity)
         .frame(height: 156)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Připravenost: \(Int(vm.readinessScore)) procent. \(levelLabel). \(vm.readinessMessage)")
     }
 
     // MARK: Loading
@@ -713,6 +739,7 @@ private struct ReadinessRingLarge: View {
                 )
                 .rotationEffect(.degrees(-90))
                 .animation(.spring(response: 1.0, dampingFraction: 0.75), value: score)
+                .shadow(color: color.opacity(0.55), radius: 10, x: 0, y: 0)
 
             // Inner glow
             Circle()
@@ -841,6 +868,9 @@ private struct BodyMapPreviewCard: View {
             }
         }
         .buttonStyle(.plain)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Svalová mapa: \(hasFatigue ? \"\(fatigueCount) zaznamenaných omezení\" : \"Žádné omezení. Označ oblast, která tě omezuje\")")
+        .accessibilityHint("Otevře interaktivní mapu svalů pro nastavení únavy a bolesti.")
     }
 }
 
@@ -1045,8 +1075,9 @@ private struct TodayPlanCard: View {
                 .padding(.bottom, 22)
 
                 // CTA odstraněno z karty → přesunuto do sticky overlay v DashboardView
-            }
         }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Dnešní trénink: \(vm.todayPlanLabel), zaměřeno na \(vm.todayPlanSplit). Odhadem \(vm.estimatedMinutes) minut a \(vm.exerciseCount) cviků.")
     }
 
     private var restDayCard: some View {
@@ -1075,9 +1106,9 @@ private struct TodayPlanCard: View {
         .background(
             RoundedRectangle(cornerRadius: 20)
                 .fill(AppColors.secondaryBg)
-                .overlay(RoundedRectangle(cornerRadius: 20)
-                    .stroke(AppColors.border, lineWidth: 1))
         )
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Dnes je den odpočinku. Záda potřebují čas na růst. Zítra makáme!")
     }
 
     private var estimatedCalories: String {
@@ -1285,7 +1316,7 @@ struct TodayWorkoutLaunchWrapper: View {
             modelContext.insert(sessionEx)
         }
         
-        try? modelContext.save()
+        try? modelContext.save()  // Session init — SwiftData automaticky rollbackuje při chybě
         self.plannedDay = found
         self.session = newSession
         withAnimation(.easeInOut(duration: 0.3)) { isReady = true }

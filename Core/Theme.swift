@@ -53,14 +53,14 @@ enum AppColors {
 // MARK: ═══════════════════════════════════════════════════════════════════════
 
 enum AppTypography {
-    static let largeTitle  = Font.system(size: 28, weight: .bold, design: .rounded)
-    static let title       = Font.system(size: 20, weight: .bold, design: .rounded)
-    static let headline    = Font.system(size: 17, weight: .semibold)
-    static let body        = Font.system(size: 15, weight: .regular)
-    static let callout     = Font.system(size: 14, weight: .medium)
-    static let footnote    = Font.system(size: 13, weight: .regular)
-    static let caption     = Font.system(size: 11, weight: .medium)
-    static let overline    = Font.system(size: 9, weight: .black)
+    static let largeTitle  = Font.system(.largeTitle, design: .rounded).weight(.bold)
+    static let title       = Font.system(.title2, design: .rounded).weight(.bold)
+    static let headline    = Font.system(.headline, design: .default).weight(.semibold)
+    static let body        = Font.system(.body, design: .default)
+    static let callout     = Font.system(.callout, design: .default).weight(.medium)
+    static let footnote    = Font.system(.footnote, design: .default)
+    static let caption     = Font.system(.caption, design: .default).weight(.medium)
+    static let overline    = Font.system(.caption2, design: .default).weight(.black)
 
     // Monospaced číselníky (skóre, časomíry)
     static let scoreDisplay = Font.system(size: 58, weight: .black, design: .monospaced)

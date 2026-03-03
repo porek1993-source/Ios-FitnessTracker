@@ -256,10 +256,10 @@ enum WorkoutPlanGenerator {
             
             if exercise == nil {
                 AppLogger.warning("⚠️ [WorkoutPlanGenerator] Slug '\(slug)' nenalezen v DB — přidej cvik do ExerciseDatabase.json")
-            } else if !exercise!.equipment.isEmpty {
-                let hasEquipment = exercise!.equipment.contains { availableEquipment.contains($0) }
+            } else if let ex = exercise, !ex.equipment.isEmpty {
+                let hasEquipment = ex.equipment.contains { availableEquipment.contains($0) }
                 if !hasEquipment {
-                    AppLogger.info("ℹ️ [WorkoutPlanGenerator] Přeskakuji '\(exercise!.name)' — chybí: \(exercise!.equipment.map(\.rawValue))")
+                    AppLogger.info("ℹ️ [WorkoutPlanGenerator] Přeskakuji '\(ex.name)' — chybí: \(ex.equipment.map(\.rawValue))")
                     return nil
                 }
             }

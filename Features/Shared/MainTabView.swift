@@ -7,20 +7,25 @@ struct MainTabView: View {
     @State private var selectedTab: Int = 0
 
     init() {
-        // Vlastní styling pro TabBar (tmavý s průhledností)
+        // ✅ Liquid Glass (iOS 26) Styling pro TabBar
         let appearance = UITabBarAppearance()
-        appearance.configureWithDefaultBackground()
-        appearance.backgroundColor = UIColor(red: 0.05, green: 0.05, blue: 0.08, alpha: 0.95)
+        appearance.configureWithTransparentBackground() // Translucent base
+        
+        let blurEffect = UIBlurEffect(style: .systemUltraThinMaterialDark)
+        let effectView = UIVisualEffectView(effect: blurEffect)
         
         // Barva pro nevybrané položky
-        appearance.stackedLayoutAppearance.normal.iconColor = UIColor.white.withAlphaComponent(0.3)
-        appearance.stackedLayoutAppearance.normal.titleTextAttributes = [.foregroundColor: UIColor.white.withAlphaComponent(0.3)]
+        appearance.stackedLayoutAppearance.normal.iconColor = UIColor.white.withAlphaComponent(0.4)
+        appearance.stackedLayoutAppearance.normal.titleTextAttributes = [.foregroundColor: UIColor.white.withAlphaComponent(0.4)]
         
         // Barva pro vybrané položky
-        appearance.stackedLayoutAppearance.selected.iconColor = UIColor.systemBlue
-        appearance.stackedLayoutAppearance.selected.titleTextAttributes = [.foregroundColor: UIColor.systemBlue]
+        appearance.stackedLayoutAppearance.selected.iconColor = UIColor.systemCyan // "Liquid" vibrantní barva
+        appearance.stackedLayoutAppearance.selected.titleTextAttributes = [.foregroundColor: UIColor.systemCyan]
+        
+        appearance.backgroundEffect = blurEffect
         
         UITabBar.appearance().standardAppearance = appearance
+        // Při rolování k okraji plné glass UI
         UITabBar.appearance().scrollEdgeAppearance = appearance
     }
 

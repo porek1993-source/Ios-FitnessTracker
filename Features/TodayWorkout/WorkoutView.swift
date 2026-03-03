@@ -106,8 +106,9 @@ struct WorkoutView: View {
         .navigationBarHidden(true)
         .onChange(of: vm.allExercisesDone) { _, done in
             if done {
-                // Všechny cviky hotové — zobraz completion banner s výzvou ukončit
-                DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                // ✅ Moderní Swift Concurrency místo DispatchQueue.main.asyncAfter
+                Task { @MainActor in
+                    try? await Task.sleep(nanoseconds: 1_000_000_000)  // 1.0s
                     withAnimation { showFinishConfirm = true }
                 }
             }
@@ -259,6 +260,9 @@ struct WorkoutView: View {
     // MARK: - Finish
 
     private func finishWorkout() {
+        // ✅ Haptická odměna za dokončení tréninku! (deepanal.pdf)
+        HapticPatternEngine.shared.playWorkoutComplete()
+        
         // Dokončení tréninku + zápis do DB (předáme skutečnou váhu uživatele)
         let (xpGains, prEvents) = vm.finishWorkout(
             modelContext: modelContext
@@ -269,9 +273,12 @@ struct WorkoutView: View {
         summaryXPGains = xpGains
         summaryCoachMsg = buildCoachMessage(gains: summaryXPGains, prs: summaryPREvents)
 
-        // Pošleme push notifikace za PR (mimo hlavní vlákno s malým delay)
+        // Pošleme push notifikace za PR — s krátkým zpožděním pro lepší UX
         if !prEvents.isEmpty {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+            // ✅ PR Celebrating Haptic (deepanal.pdf)
+            HapticPatternEngine.shared.playPersonalRecordCelebration()
+            Task { @MainActor in
+                try? await Task.sleep(nanoseconds: 1_000_000_000)  // 1.0s
                 for pr in prEvents {
                     NotificationService.shared.sendPersonalRecordNotification(
                         exerciseName: pr.exerciseName,
@@ -284,18 +291,20 @@ struct WorkoutView: View {
         onFinish?(summaryXPGains, summaryPREvents)
 
         // Malý delay aby HK write stihlo dokončit a vrátit výsledek
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+        // ✅ Moderní Swift Concurrency místo DispatchQueue.main.asyncAfter
+        Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 500_000_000)  // 0.5s
             withAnimation { showSummary = true }
         }
     }
 
     private func buildCoachMessage(gains: [XPGain], prs: [PREvent]) -> String {
-        if !prs.isEmpty {
-            return "Nový osobní rekord na \(prs.first!.exerciseName)! \(String(format: "%.1f", prs.first!.newValue)) kg — jsi silnější než kdy dřív. 💪"
+        if let pr = prs.first {
+            return "Nový osobní rekord na \(pr.exerciseName)! \(String(format: "%.1f", pr.newValue)) kg — jsi silnější než kdy dřív. 💪"
         }
         let levelUps = gains.filter { $0.didLevelUp }
-        if !levelUps.isEmpty {
-            return "Level up! \(levelUps.first!.muscleGroup.displayName) → \(levelUps.first!.newLevel.displayName). Tvůj panáček roste! 🔥"
+        if let lu = levelUps.first {
+            return "Level up! \(lu.muscleGroup.displayName) → \(lu.newLevel.displayName). Tvůj panáček roste! 🔥"
         }
         let vol = Int(gains.reduce(0) { $0 + $1.volumeKg })
         return "Hotovo! \(vol) kg objemu. Každý trénink tě posouvá blíž k cíli — jdeme dál!"

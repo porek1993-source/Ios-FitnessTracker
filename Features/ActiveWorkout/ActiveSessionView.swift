@@ -49,13 +49,14 @@ struct ActiveSessionView: View {
             TabView(selection: $vm.currentExerciseIndex) {
                 ForEach(vm.exercises.indices, id: \.self) { idx in
                     ExercisePageView(
-                        exercise:      $vm.exercises[idx],
-                        vm:            vm,
-                        exerciseIndex: idx,
-                        onSwap:        { showSwap = true },
-                        onComplete:    { setIdx in
+                        exercise:           $vm.exercises[idx],
+                        vm:                 vm,
+                        exerciseIndex:      idx,
+                        onSwap:             { showSwap = true },
+                        onComplete:         { setIdx in
                             vm.completeSet(exerciseIndex: idx, setIndex: setIdx)
-                        }
+                        },
+                        onPlateCalculator:  { showPlateCalculator = true }
                     )
                     .tag(idx)
                 }
@@ -96,7 +97,8 @@ struct ActiveSessionView: View {
                             isWarmupDone = true
                         }
                         // Po 30s od startu pracovního cvičení zakážeme návrat
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 30) {
+                        Task { @MainActor in
+                            try? await Task.sleep(nanoseconds: 30_000_000_000)  // 30s
                             canReturnToWarmup = false
                         }
                     },
@@ -151,9 +153,6 @@ struct ActiveSessionView: View {
                     .presentationBackground(AppColors.secondaryBg)
             }
         }
-        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("ShowPlateCalculator"))) { _ in
-            showPlateCalculator = true
-        }
         .fullScreenCover(isPresented: $showSummary) {
             WorkoutSummaryView(
                 session: vm.session,
@@ -169,9 +168,12 @@ struct ActiveSessionView: View {
         }
     }
     
-    // MARK: - Finish Workout Helpers
+    // MARK: - Actions
     
     private func finishWorkout() {
+        // ✅ Haptická odměna za dokončení tréninku! (deepanal.pdf)
+        HapticPatternEngine.shared.playWorkoutComplete()
+        
         let (xpGains, prEvents) = vm.finishWorkout(
             modelContext: modelContext
         )
@@ -181,7 +183,8 @@ struct ActiveSessionView: View {
         summaryCoachMsg = buildCoachMessage(gains: summaryXPGains, prs: summaryPREvents)
 
         if !prEvents.isEmpty {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+            Task { @MainActor in
+                try? await Task.sleep(nanoseconds: 1_000_000_000)  // 1.0s
                 for pr in prEvents {
                     NotificationService.shared.sendPersonalRecordNotification(
                         exerciseName: pr.exerciseName,
@@ -193,18 +196,20 @@ struct ActiveSessionView: View {
 
         onFinish?(summaryXPGains, summaryPREvents)
 
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+        // ✅ Moderní Swift Concurrency místo DispatchQueue.main.asyncAfter
+        Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 500_000_000)  // 0.5s
             withAnimation { showSummary = true }
         }
     }
 
     private func buildCoachMessage(gains: [XPGain], prs: [PREvent]) -> String {
-        if !prs.isEmpty {
-            return "Nový osobní rekord na \(prs.first!.exerciseName)! \(String(format: "%.1f", prs.first!.newValue)) kg — jsi silnější než kdy dřív. 💪"
+        if let pr = prs.first {
+            return "Nový osobní rekord na \(pr.exerciseName)! \(String(format: "%.1f", pr.newValue)) kg — jsi silnější než kdy dřív. 💪"
         }
         let levelUps = gains.filter { $0.didLevelUp }
-        if !levelUps.isEmpty {
-            return "Level up! \(levelUps.first!.muscleGroup.displayName) → \(levelUps.first!.newLevel.displayName). Tvůj panáček roste! 🔥"
+        if let lu = levelUps.first {
+            return "Level up! \(lu.muscleGroup.displayName) → \(lu.newLevel.displayName). Tvůj panáček roste! 🔥"
         }
         let vol = Int(gains.reduce(0) { $0 + $1.volumeKg })
         return "Hotovo! \(vol) kg objemu. Každý trénink tě posouvá blíž k cíli."
@@ -382,8 +387,9 @@ struct ExercisePageView: View {
     @Binding var exercise: SessionExerciseState
     @ObservedObject var vm: WorkoutViewModel
     let exerciseIndex: Int
-    let onSwap:        () -> Void
-    let onComplete:    (Int) -> Void
+    let onSwap:               () -> Void
+    let onComplete:           (Int) -> Void
+    let onPlateCalculator:    () -> Void   // ✅ Direct callback — no NotificationCenter needed
 
     var body: some View {
         ScrollView(showsIndicators: false) {
@@ -406,10 +412,7 @@ struct ExercisePageView: View {
                     
                     if exercise.exercise?.equipment.contains(.barbell) == true {
                         Button {
-                            // Nastavíme showPlateCalculator (musíme to propagovat přes binding,
-                            // nebo použít notifikaci/callback, protože jsme v oddělené view hierarchii.
-                            // Protože `showPlateCalculator` je v root View, přidáme callback sem:)
-                            NotificationCenter.default.post(name: NSNotification.Name("ShowPlateCalculator"), object: nil)
+                            onPlateCalculator()
                         } label: {
                             HStack {
                                 Image(systemName: "plus.forwardslash.minus")

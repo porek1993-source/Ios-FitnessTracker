@@ -56,7 +56,7 @@ final class RestTimerManager: NSObject, UNUserNotificationCenterDelegate {
         
         center.add(request) { error in
             if let error = error {
-                print("⚠️ RestTimerManager: Nelze naplánovat notifikaci (\(error.localizedDescription))")
+                AppLogger.warning("⚠️ RestTimerManager: Nelze naplánovat notifikaci (\(error.localizedDescription))")
             }
         }
     }

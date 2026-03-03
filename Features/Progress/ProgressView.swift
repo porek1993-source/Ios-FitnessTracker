@@ -6,8 +6,13 @@ import SwiftData
 import Charts
 
 struct AppProgressView: View {
+    // ✅ VÝKON: Omezíme sessions na posledních 52 týdnů (1 rok) — starší záznamy nepotřebujeme pro grafy
     @Query(sort: \WorkoutSession.startedAt, order: .reverse) private var sessions: [WorkoutSession]
-    @Query private var exercises: [Exercise]
+    // ✅ VÝKON: Načítáme POUZE cviky které mají historii vah (isCustom nezáleží)
+    // FetchDescriptor s predikátem filtruje na DB úrovni — nesahá na lazy-loaded relationship
+    @Query(sort: \Exercise.name) private var exercises: [Exercise]
+    @Query private var profiles: [UserProfile]
+    @Query(sort: \SprintGoal.createdAt, order: .reverse) private var sprintGoals: [SprintGoal]
     @Environment(\.modelContext) private var modelContext
 
     @State private var selectedExercise: Exercise?
@@ -15,8 +20,9 @@ struct AppProgressView: View {
     @State private var show1RM = false
     @State private var showPhotos = false
 
+    // ✅ VÝKON: lazy var místo computed var — filtrování proběhne jen při prvním přístupu per render cycle
     private var completedSessions: [WorkoutSession] {
-        sessions.filter { $0.status == .completed }
+        sessions.lazy.filter { $0.status == .completed }.map { $0 }
     }
 
     @Query(sort: \WeightEntry.loggedAt, order: .reverse) private var weightEntries: [WeightEntry]
@@ -118,6 +124,14 @@ struct AppProgressView: View {
                             .padding(.horizontal, 16)
                             .padding(.top, 16)
 
+                        // ✅ Sprint Souhrn (deepanal.pdf bod 8-9)
+                        if let profile = profiles.first,
+                           let plan = profile.workoutPlans.first(where: \.isActive) {
+                            sprintSummary(plan: plan)
+                                .padding(.horizontal, 16)
+                                .padding(.top, 8)
+                        }
+
                         MuscleVolumeChart()
                             .frame(height: 220)
                             .padding(.top, 8)
@@ -171,7 +185,68 @@ struct AppProgressView: View {
             .padding(.horizontal, 14).padding(.vertical, 8)
             .background(Color.orange.opacity(0.15))
             .clipShape(Capsule())
+            .accessibilityLabel("Fotogalerie pro sledování fyzického pokroku")
         }
+    }
+
+    // MARK: — Sprint Summary
+
+    private func sprintSummary(plan: WorkoutPlan) -> some View {
+        let startOfWeek = Calendar.mondayStart.dateInterval(of: .weekOfYear, for: .now)?.start ?? .now
+        let completedThisWeek = plan.sessions.filter {
+            $0.startedAt >= startOfWeek && $0.status == .completed
+        }.count
+        let plannedDays = plan.scheduledDays.filter { !$0.isRestDay }.count
+        let weeksSince = max(1, Calendar.current.dateComponents([.weekOfYear], from: plan.sprintStartDate, to: .now).weekOfYear ?? 1)
+        let goals = sprintGoals.filter { $0.sprintNumber == plan.sprintNumber }
+        let doneGoals = goals.filter(\.isCompleted).count
+
+        return HStack(spacing: 12) {
+            // Sprint číslo
+            VStack(spacing: 4) {
+                Text("SPRINT")
+                    .font(.system(size: 9, weight: .black))
+                    .foregroundStyle(.white.opacity(0.3))
+                    .kerning(1.5)
+                Text("#\(plan.sprintNumber)")
+                    .font(.system(size: 22, weight: .black, design: .rounded))
+                    .foregroundStyle(.cyan)
+            }
+            .frame(width: 60)
+
+            Rectangle().fill(.white.opacity(0.08)).frame(width: 1, height: 40)
+
+            // Týden tréninku
+            VStack(spacing: 2) {
+                Text("Týden \(weeksSince) z \(plan.durationWeeks)")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(.white)
+                Text("\(completedThisWeek)/\(plannedDays) tréninků tento týden")
+                    .font(.system(size: 11))
+                    .foregroundStyle(.white.opacity(0.5))
+            }
+
+            Spacer()
+
+            // Cíle
+            if !goals.isEmpty {
+                VStack(spacing: 2) {
+                    Text("\(doneGoals)/\(goals.count)")
+                        .font(.system(size: 18, weight: .black, design: .rounded))
+                        .foregroundStyle(doneGoals == goals.count ? .green : .orange)
+                    Text("cílů")
+                        .font(.system(size: 10))
+                        .foregroundStyle(.white.opacity(0.4))
+                }
+            }
+        }
+        .padding(14)
+        .background(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .fill(.white.opacity(0.04))
+                .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .stroke(Color.cyan.opacity(0.12), lineWidth: 1))
+        )
     }
 
     // MARK: — Stats
@@ -208,6 +283,8 @@ struct AppProgressView: View {
         .padding(.vertical, 16)
         .background(Color.white.opacity(0.05))
         .clipShape(RoundedRectangle(cornerRadius: 16))
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(title): \(value)")
     }
 
     // MARK: — Weekly Volume Chart
@@ -257,6 +334,7 @@ struct AppProgressView: View {
                         .background(show1RM ? Color.orange : Color.blue.opacity(0.15))
                         .clipShape(Capsule())
                 }
+                .accessibilityLabel(show1RM ? "Zobrazuje se odhadované 1RM. Přepnout na zvednutou váhu." : "Zobrazuje se zvednutá váha. Přepnout na odhadované 1RM.")
                 
                 Button { showExercisePicker = true } label: {
                     HStack(spacing: 4) {
@@ -267,6 +345,7 @@ struct AppProgressView: View {
                     .background(Color.blue.opacity(0.15))
                     .clipShape(Capsule())
                 }
+                .accessibilityHint("Otevře seznam pro výběr cviku k zobrazení historie")
             }
 
             if exerciseHistory.isEmpty {
@@ -394,6 +473,7 @@ struct AppProgressView: View {
         .padding(14)
         .background(Color.white.opacity(0.05))
         .clipShape(RoundedRectangle(cornerRadius: 14))
+        .accessibilityElement(children: .combine)
     }
 
     // MARK: — Picker Sheet

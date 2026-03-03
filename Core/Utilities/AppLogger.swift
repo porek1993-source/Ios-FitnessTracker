@@ -77,34 +77,42 @@ struct DebugOverlayView: View {
                     .background(Color.black.opacity(0.9))
                     .foregroundStyle(.white)
                     
-                    ScrollView {
-                        VStack(alignment: .leading, spacing: 4) {
-                            ForEach(logger.logs) { entry in
-                                HStack(alignment: .top, spacing: 5) {
-                                    Text(entry.timestamp, style: .time)
-                                        .font(.system(size: 10, design: .monospaced))
-                                        .foregroundStyle(.gray)
-                                    
-                                    let color: Color = {
-                                        switch entry.type {
-                                        case .info: return .white
-                                        case .success: return .green
-                                        case .error: return .red
-                                        case .warning: return .yellow
-                                        }
-                                    }()
-                                    
-                                    Text(entry.message)
-                                        .font(.system(size: 11, design: .monospaced))
-                                        .foregroundStyle(color)
-                                        .fixedSize(horizontal: false, vertical: true)
+                    ScrollViewReader { proxy in
+                        ScrollView {
+                            VStack(alignment: .leading, spacing: 4) {
+                                ForEach(logger.logs) { entry in
+                                    HStack(alignment: .top, spacing: 5) {
+                                        Text(entry.timestamp, style: .time)
+                                            .font(.system(size: 10, design: .monospaced))
+                                            .foregroundStyle(.gray)
+                                        
+                                        let color: Color = {
+                                            switch entry.type {
+                                            case .info: return .white
+                                            case .success: return .green
+                                            case .error: return .red
+                                            case .warning: return .yellow
+                                            }
+                                        }()
+                                        
+                                        Text(entry.message)
+                                            .font(.system(size: 11, design: .monospaced))
+                                            .foregroundStyle(color)
+                                            .fixedSize(horizontal: false, vertical: true)
+                                    }
+                                    Divider().background(Color.gray.opacity(0.3))
+                                        .id(entry.id)
                                 }
-                                Divider().background(Color.gray.opacity(0.3))
+                            }
+                            .padding(10)
+                        }
+                        .background(Color.black.opacity(0.85))
+                        .onChange(of: logger.logs.count) { _ in
+                            if let first = logger.logs.first {
+                                withAnimation { proxy.scrollTo(first.id, anchor: .top) }
                             }
                         }
-                        .padding(10)
                     }
-                    .background(Color.black.opacity(0.85))
                 }
                 .frame(maxHeight: 400)
                 .cornerRadius(12)

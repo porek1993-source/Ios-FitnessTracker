@@ -16,7 +16,7 @@ enum AppConstants {
            !key.isEmpty {
             return key
         }
-        print("⚠️ GEMINI_API_KEY není nastaven! Pokud běží testy, je to v pořádku, jinak přidej klíč do env vars.")
+        AppLogger.warning("GEMINI_API_KEY není nastaven! Pokud běží testy, je to v pořádku, jinak přidej klíč do env vars.")
         return ""
     }()
 
@@ -57,7 +57,9 @@ enum AppConstants {
     static let progressiveOverloadLookbackSessions: Int = 3
 }
 
-enum AppError: Error, LocalizedError {
+// ✅ Equatable: @Published var error: AppError? správně spustí SwiftUI refresh
+//    i při přiřazení stejného error type s jiným parametrem (např. dvě různé internalError zprávy).
+enum AppError: Error, LocalizedError, Equatable {
     case noPlanForToday
     case encodingFailed
     case healthKitUnavailable

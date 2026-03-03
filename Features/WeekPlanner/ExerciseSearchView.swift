@@ -14,13 +14,18 @@ final class ExerciseSearchViewModel: ObservableObject {
     @Published var isLoading = false
     @Published var selectedExercises: [MuscleWikiExercise] = []
 
-    private let repository = SupabaseExerciseRepository()
     private var searchTask: Task<Void, Never>?
 
-    var results: [MuscleWikiExercise] {
-        guard !query.trimmingCharacters(in: .whitespaces).isEmpty else { return [] }
+    // Místo počítání on-the-fly používáme uložené výsledky
+    @Published var results: [MuscleWikiExercise] = []
+
+    func performSearch() {
+        guard !query.trimmingCharacters(in: .whitespaces).isEmpty else {
+            results = []
+            return
+        }
         let q = query.lowercased()
-        return allExercises.filter {
+        results = allExercises.filter {
             $0.name.localizedCaseInsensitiveContains(q) ||
             $0.muscleGroup.localizedCaseInsensitiveContains(q)
         }
@@ -31,7 +36,7 @@ final class ExerciseSearchViewModel: ObservableObject {
         isLoading = true
         defer { isLoading = false }
         do {
-            allExercises = try await repository.fetchMuscleWikiAll()
+            allExercises = try await AppEnvironment().exerciseRepository.fetchMuscleWikiAll()
         } catch {
             AppLogger.error("Chyba při načítání ExerciseSearchView: \(error.localizedDescription)")
             allExercises = []
@@ -112,6 +117,14 @@ struct ExerciseSearchView: View {
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
         .background(Color.white.opacity(0.06))
+        .onChange(of: vm.query) { _, newValue in
+            vm.searchTask?.cancel()
+            vm.searchTask = Task { @MainActor in
+                try? await Task.sleep(for: .milliseconds(300))
+                guard !Task.isCancelled else { return }
+                vm.performSearch()
+            }
+        }
     }
 
     // MARK: - Content
@@ -156,6 +169,19 @@ struct ExerciseSearchView: View {
                 }
                 .padding(.horizontal, 40)
             } else {
+                // Počet výsledků Badge
+                HStack {
+                    Text("\(vm.results.count) výsledků")
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundStyle(.white.opacity(0.6))
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 4)
+                        .background(Capsule().fill(Color.white.opacity(0.1)))
+                    Spacer()
+                }
+                .padding(.horizontal, 16)
+                .padding(.top, 8)
+
                 ScrollView(showsIndicators: false) {
                     LazyVStack(spacing: 8) {
                         ForEach(vm.results) { exercise in

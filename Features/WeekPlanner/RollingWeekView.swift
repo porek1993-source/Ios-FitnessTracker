@@ -303,9 +303,10 @@ struct RollingWeekView: View {
                             }
                         }
                         .transition(.asymmetric(
-                            insertion: .scale(scale: 0.8).combined(with: .opacity),
+                            insertion: .scale(scale: 0.85).combined(with: .opacity),
                             removal: .scale(scale: 0.9).combined(with: .opacity)
                         ))
+                        .animation(.spring(response: 0.38, dampingFraction: 0.72), value: day.dayType)
                     }
                 }
                 .padding(.horizontal, 4)
@@ -313,10 +314,19 @@ struct RollingWeekView: View {
 
             // Status zpráva
             if let msg = vm.recalculationMessage {
-                Text(msg)
-                    .font(.system(size: 12, weight: .medium))
-                    .foregroundStyle(.white.opacity(0.5))
-                    .transition(.opacity)
+                HStack(spacing: 6) {
+                    Image(systemName: vm.isRecalculating ? "arrow.triangle.2.circlepath" : "checkmark.circle.fill")
+                        .font(.system(size: 11))
+                        .foregroundStyle(vm.isRecalculating ? .white.opacity(0.4) : .appGreenBadge.opacity(0.7))
+                    Text(msg)
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundStyle(.white.opacity(0.5))
+                }
+                .transition(.asymmetric(
+                    insertion: .opacity.combined(with: .move(edge: .bottom)),
+                    removal:   .opacity
+                ))
+                .animation(.spring(response: 0.4, dampingFraction: 0.8), value: msg)
             }
 
             // ── Detail dne se cviky ──────────────────────────────────────────
@@ -341,12 +351,7 @@ struct RollingWeekView: View {
             }
         }
         .padding(20)
-        .background(
-            RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .fill(Color.appCardBackground)
-                .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous)
-                    .stroke(Color.white.opacity(0.05), lineWidth: 1))
-        )
+        .glassCardStyle(cornerRadius: 20)
         .sheet(item: $selectedDayForEdit) { day in
             DayOverrideSheet(day: day) { newType, label in
                 vm.overrideDay(id: day.id, newType: newType, customLabel: label)
@@ -366,7 +371,8 @@ struct RollingWeekView: View {
             // Auto-expand dnešek (nebo příští tréninkový den) pro okamžitý náhled
             if selectedWorkoutDay == nil,
                let firstWorkout = vm.days.first(where: { $0.dayType == .workout }) {
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                Task { @MainActor in
+                    try? await Task.sleep(nanoseconds: 300_000_000)
                     withAnimation(.spring(response: 0.45, dampingFraction: 0.8)) {
                         selectedWorkoutDay = firstWorkout
                     }
@@ -490,6 +496,8 @@ private struct DayCell: View {
             }
         }
         .buttonStyle(.plain)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("\(day.czechDayName) \(day.dayNumber), \(day.dayType.rawValue), \(day.label)")
     }
 }
 
@@ -590,6 +598,7 @@ struct WeekDayExerciseDetailView: View {
     var onStartWorkout: (() -> Void)? = nil
     @Environment(\.modelContext) private var modelContext
     @EnvironmentObject private var healthKit: HealthKitService
+    @EnvironmentObject private var appEnv: AppEnvironment
     @State private var refreshID = UUID()  // Force SwiftUI refresh po repair
 
     // Preview state
@@ -614,7 +623,7 @@ struct WeekDayExerciseDetailView: View {
     }
 
     private var exercises: [PlannedExercise] {
-        let exs = (plannedDay?.plannedExercises ?? []).sorted { $0.order < $1.order }
+        let exs = (plannedDay?.sortedExercises ?? [])
         // Auto-repair: pokud exercise relationship chybí, zkus dohledat podle pořadí
         if exs.contains(where: { $0.exercise == nil }) {
             repairMissingExercises(exs)
@@ -650,7 +659,7 @@ struct WeekDayExerciseDetailView: View {
                 ex.exercise = found
             }
         }
-        try? modelContext.save()
+        try? modelContext.save()  // Non-critical: oprava referencí cviků
     }
 
     var body: some View {
@@ -701,10 +710,11 @@ struct WeekDayExerciseDetailView: View {
         .id(refreshID)
         .onAppear {
             // Pokud máme cviky s nil exercise, oprav a refreshni view
-            let exs = (plannedDay?.plannedExercises ?? []).sorted { $0.order < $1.order }
+            let exs = (plannedDay?.sortedExercises ?? [])
             if exs.contains(where: { $0.exercise == nil }) {
                 repairMissingExercises(exs)
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                Task { @MainActor in
+                    try? await Task.sleep(nanoseconds: 100_000_000)
                     refreshID = UUID()
                 }
             }
@@ -878,7 +888,10 @@ struct WeekDayExerciseDetailView: View {
 
         isGeneratingPreview = true
         Task {
-            let aiService = AITrainerService(modelContext: modelContext, healthKitService: healthKit)
+            guard let aiService = appEnv.aiTrainerService else {
+                await MainActor.run { self.isGeneratingPreview = false }
+                return
+            }
             let response = await aiService.generateTodayWorkout(
                 for: day.date,
                 profile: profile,
@@ -995,7 +1008,11 @@ struct WorkoutLaunchWrapper: View {
         // Vytvoříme session pouze jednou (ne při každém renderu)
         let newSession = WorkoutSession(plan: plan, plannedDay: found)
         modelContext.insert(newSession)
-        try? modelContext.save()
+        do {
+            try modelContext.save()
+        } catch {
+            AppLogger.error("WorkoutLaunchWrapper: Nepodařilo se uložit WorkoutSession: \(error)")
+        }
 
         self.plannedDay = found
         self.session = newSession
