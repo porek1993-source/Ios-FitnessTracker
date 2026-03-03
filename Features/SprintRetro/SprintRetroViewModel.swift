@@ -39,15 +39,16 @@ final class SprintRetroViewModel: ObservableObject {
         missedSessions = max(0, expectedTotal - completedSessions)
         
         // Celkový objem (suma kg * reps přes všechny kompletované sessions)
-        totalVolume = sprintSessions
-            .filter { $0.status == .completed }
-            .reduce(0.0) { total, session in
-                total + session.exercises.reduce(0.0) { exerciseTotal, ex in
-                    exerciseTotal + ex.sets.reduce(0.0) { setTotal, set in
-                        setTotal + (set.weight * Double(set.reps))
-                    }
+        let completed = sprintSessions.filter { $0.status == .completed }
+        var vol: Double = 0
+        for session in completed {
+            for exercise in session.exercises {
+                for set in exercise.sets {
+                    vol += (set.weight * Double(set.reps))
                 }
             }
+        }
+        totalVolume = vol
     }
     
     // MARK: - AI Retrospective

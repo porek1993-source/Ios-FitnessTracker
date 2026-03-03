@@ -531,14 +531,13 @@ struct TrainerDashboardView: View {
             // Injektuj sdílený HealthKitService do VM
             vm.inject(healthKit: healthKit)
 
-            // ✅ VÝKON: Spusť HealthKit auth + vm.load PARALELNĚ (dříve auth blokovala load)
+            // ✅ VÝKON: Spusť HealthKit auth + vm.load
             // HealthKit requestAuthorization() může trvat sekundy (čeká na user dialog)
-            async let authAndSync: Void = {
-                try? await healthKit.requestAuthorization()
-                await HealthBackgroundManager.shared.performForegroundSync(healthKit: healthKit)
-            }()
-            async let dashboardLoad: Void = vm.load(profile: p)
-            _ = await (authAndSync, dashboardLoad)
+            try? await healthKit.requestAuthorization()
+            await HealthBackgroundManager.shared.performForegroundSync(healthKit: healthKit)
+            
+            // ✅ FIX: Voláme sekvenčně, aby nedocházelo k Capture non-sendable UserProfile v child tasku
+            await vm.load(profile: p)
 
             // Offline Sync
             _ = NetworkMonitor.shared // Inicializace monitoru
