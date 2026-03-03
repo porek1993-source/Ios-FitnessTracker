@@ -88,12 +88,12 @@ final class HealthKitWorkoutWriter {
             
             try await builder.endCollection(at: end)
             
-            // ✅ Robustní Swift 6 FIX: Převod na [String: any Sendable]
-            let sendableMetadata: [String: any Sendable] = metadata.compactMapValues { value in
-                if let s = value as? (any Sendable) { return s }
-                return String(describing: value)
-            }
-            try await builder.addMetadata(sendableMetadata as [String: Any])
+            // ✅ Robustní Swift 6 FIX: Použití [String: Sendable] pro bezpečné odeslání do async volání
+            let metadata: [String: Sendable] = [
+                HKMetadataKeyWorkoutBrandName: "Agilní Fitness Trenér",
+                HKMetadataKeyIndoorWorkout: true
+            ]
+            try await builder.addMetadata(metadata as [String: Any])
             
             let workout = try await builder.finishWorkout()
             
@@ -157,15 +157,15 @@ final class HealthKitWorkoutWriter {
             try await builder.addSamples([sample])
         }
         if let metadata = metadata {
-            // ✅ Robustní Swift 6 FIX: Převod na [String: any Sendable] pro bezpečné odeslání do async callu
-            let sendableMetadata: [String: any Sendable] = metadata.compactMapValues { value in
-                if let sendableValue = value as? (any Sendable) {
-                    return sendableValue
-                } else {
-                    return String(describing: value)
-                }
+            // ✅ Robustní Swift 6 FIX: Převod na [String: Sendable] pro bezpečné odeslání
+            // Marker protokol 'Sendable' nelze použít v 'as?', proto kontrolujeme konkrétní typy.
+            let cleanMetadata: [String: Sendable] = metadata.mapValues { value in
+                if let s = value as? String { return s }
+                if let n = value as? NSNumber { return n }
+                if let d = value as? Date { return d }
+                return String(describing: value)
             }
-            try await builder.addMetadata(sendableMetadata as [String: Any])
+            try await builder.addMetadata(cleanMetadata as [String: Any])
         }
         try await builder.endCollection(at: endDate)
         try await builder.finishWorkout()
