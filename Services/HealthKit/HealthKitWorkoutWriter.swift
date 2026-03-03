@@ -92,7 +92,8 @@ final class HealthKitWorkoutWriter {
                 HKMetadataKeyWorkoutBrandName: "Agilní Fitness Trenér",
                 HKMetadataKeyIndoorWorkout: true
             ]
-            try await builder.addMetadata(metadata)
+            // ✅ FIX: NSDictionary bridge pro Swift 6 asynchronní bezpečnost
+            try await builder.addMetadata(metadata as NSDictionary as! [String: Any])
             
             let workout = try await builder.finishWorkout()
             
@@ -156,9 +157,8 @@ final class HealthKitWorkoutWriter {
             try await builder.addSamples([sample])
         }
         if let metadata = metadata {
-            // ✅ FIX: Zamezení data race při bridge do Objective-C
-            let sendableMetadata: [String: Any] = metadata
-            try await builder.addMetadata(sendableMetadata)
+            // ✅ FIX: NSDictionary bridge pro Swift 6 asynchronní bezpečnost
+            try await builder.addMetadata(metadata as NSDictionary as! [String: Any])
         }
         try await builder.endCollection(at: endDate)
         try await builder.finishWorkout()
