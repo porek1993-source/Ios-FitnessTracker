@@ -19,6 +19,9 @@ import SwiftData
 
 @MainActor
 final class AppEnvironment: ObservableObject {
+    
+    /// Jediná sdílená instance pro celou aplikaci (Singleton)
+    static let shared = AppEnvironment()
 
     // MARK: - Sdílené služby (inicializovány při startu, singleton pro celou app)
 
@@ -47,8 +50,9 @@ final class AppEnvironment: ObservableObject {
     private var isConfigured: Bool = false
 
     // MARK: - Inicializace
-
-    init() {
+    
+    /// Soukromý init pro vynucení Singletonu
+    private init() {
         self.healthKitService        = HealthKitService()
         self.healthBackgroundManager = HealthBackgroundManager.shared
         self.exerciseRepository      = SupabaseExerciseRepository()

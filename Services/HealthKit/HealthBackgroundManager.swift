@@ -32,6 +32,9 @@ final class HealthBackgroundManager {
     /// Zamezuje spuštění více sync operací současně.
     private var isSyncing = false
     
+    /// Flag pro zabránění duplicitní registrace BGTask (opravuje crash)
+    private var hasRegisteredTasks = false
+    
     private init() {}
     
     // MARK: - Foreground Sync (volej při otevření aplikace)
@@ -64,7 +67,12 @@ final class HealthBackgroundManager {
     
     /// Zaregistruje background task. Musí být voláno hned po spuštění aplikace.
     func registerBackgroundTasks() {
-        BGTaskScheduler.shared.register(forTaskWithIdentifier: Self.healthSyncTaskIdentifier, using: nil) { task in
+        guard !hasRegisteredTasks else {
+            AppLogger.info("[HealthSync] BGTasks již zaregistrovány, přeskakuji.")
+            return
+        }
+        
+        BGTaskScheduler.shared.register(forTaskWithIdentifier: Self.healthSyncTaskIdentifier, using: nil) { [weak self] task in
             guard let bgTask = task as? BGAppRefreshTask else { return }
             // ✅ FIX #20: BGTaskScheduler handler běží na libovolném vlákně.
             // Přesuneme zpracování na MainActor, ale MUSÍME nastavit expirationHandler
@@ -77,9 +85,11 @@ final class HealthBackgroundManager {
                 bgTask.setTaskCompleted(success: false)
             }
             taskRef = Task { @MainActor in
-                HealthBackgroundManager.shared.handleHealthSync(task: bgTask)
+                self?.handleHealthSync(task: bgTask)
             }
         }
+        
+        hasRegisteredTasks = true
     }
     
     /// Naplánuje další spuštění. Ideálně chceme úkol nad ránem (např. 4:00 AM).

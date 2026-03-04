@@ -19,7 +19,7 @@ struct AgileFitnessTrainerApp: App {
     static let container = SharedModelContainer.container
 
     /// Centrální DI kontejner — životní cyklus svázaný s App, ne s View
-    @StateObject private var appEnv = AppEnvironment()
+    @StateObject private var appEnv = AppEnvironment.shared
 
     // ✅ FIX #17: scenePhase sledujeme pro clearBadge() při přechodu do popředí
     @Environment(\.scenePhase) private var scenePhase
