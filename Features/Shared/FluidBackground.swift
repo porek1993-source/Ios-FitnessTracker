@@ -13,16 +13,8 @@ struct FluidBackground: View {
             MeshGradient(
                 width: 3,
                 height: 3,
-                points: [
-                    [0, 0], [0.5, 0], [1, 0],
-                    [0, 0.5], [0.5, 0.5], [1, 0.5],
-                    [0, 1], [0.5, 1], [1, 1]
-                ].map { .init(x: $0[0] + sin(t + Float($0[0])) * 0.1, y: $0[1] + cos(t + Float($0[1])) * 0.1) },
-                colors: [
-                    AppColors.background, AppColors.background.opacity(0.8), AppColors.secondaryBg,
-                    AppColors.primaryAccent.opacity(0.15), AppColors.secondaryBg, AppColors.background,
-                    AppColors.background, AppColors.accentCyan.opacity(0.1), AppColors.background
-                ]
+                points: computedPoints(for: t),
+                colors: meshColors
             )
             .ignoresSafeArea()
             .onReceive(timer) { _ in
@@ -48,6 +40,31 @@ struct FluidBackground: View {
                 }
             }
         }
+    }
+
+    // MARK: - Helpers
+    
+    @available(iOS 18.0, *)
+    private func computedPoints(for t: Float) -> [SIMD2<Float>] {
+        let basePoints: [[Float]] = [
+            [0, 0], [0.5, 0], [1, 0],
+            [0, 0.5], [0.5, 0.5], [1, 0.5],
+            [0, 1], [0.5, 1], [1, 1]
+        ]
+        
+        return basePoints.map { point in
+            let x = point[0] + sin(t + point[0]) * 0.1
+            let y = point[1] + cos(t + point[1]) * 0.1
+            return SIMD2<Float>(x: x, y: y)
+        }
+    }
+    
+    private var meshColors: [Color] {
+        [
+            AppColors.background, AppColors.background.opacity(0.8), AppColors.secondaryBg,
+            AppColors.primaryAccent.opacity(0.15), AppColors.secondaryBg, AppColors.background,
+            AppColors.background, AppColors.accentCyan.opacity(0.1), AppColors.background
+        ]
     }
 }
 
