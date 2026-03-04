@@ -599,6 +599,14 @@ struct CyclePhaseCard: View {
                 phaseExpandedContent
             }
         }
+        .background(
+            RoundedRectangle(cornerRadius: 14)
+                .fill(isSelected ? phase.accentColor.opacity(0.08) : Color.white.opacity(0.04))
+                .overlay(RoundedRectangle(cornerRadius: 14)
+                    .stroke(isSelected ? phase.accentColor.opacity(0.4) : Color.white.opacity(0.07),
+                            lineWidth: isSelected ? 1.5 : 1))
+        )
+        .animation(.spring(response: 0.28), value: isSelected)
     }
 
     private var phaseExpandedContent: some View {
@@ -620,16 +628,6 @@ struct CyclePhaseCard: View {
             }
         }
         .padding(.horizontal, 13).padding(.bottom, 13)
-    }
-        }
-        .background(
-            RoundedRectangle(cornerRadius: 14)
-                .fill(isSelected ? phase.accentColor.opacity(0.08) : Color.white.opacity(0.04))
-                .overlay(RoundedRectangle(cornerRadius: 14)
-                    .stroke(isSelected ? phase.accentColor.opacity(0.4) : Color.white.opacity(0.07),
-                            lineWidth: isSelected ? 1.5 : 1))
-        )
-        .animation(.spring(response: 0.28), value: isSelected)
     }
 }
 
