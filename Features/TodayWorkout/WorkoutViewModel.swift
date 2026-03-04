@@ -209,7 +209,7 @@ final class WorkoutViewModel: ObservableObject {
     private func enrichWithVideoURLs() async {
         guard exercises.contains(where: { $0.videoUrl == nil }) else { return }
         do {
-            let repo = AppEnvironment().exerciseRepository // ✅ FIX: Sdílená instance místo nové
+            let repo = AppEnvironment.shared.exerciseRepository // ✅ FIX: Sdílená instance místo nové
             let wikiAll = try await repo.fetchMuscleWikiAll()
             let bgContext = ModelContext(SharedModelContainer.container)
 
