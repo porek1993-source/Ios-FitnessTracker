@@ -358,6 +358,14 @@ struct TrainerDashboardView: View {
                             .padding(.horizontal, 18)
                             .padding(.top, 16)
                             
+                        // ── Today's Plan ──────────────────────────────
+                        TodayPlanCard(
+                            vm:          vm,
+                            onStart:     { showWorkout = true }
+                        )
+                        .padding(.horizontal, 18)
+                        .padding(.top, 16)
+
                         // ── Sociální Feed (Aktivita přátel) ───────────
                         SocialFeedView()
                             .padding(.horizontal, 0) // Samo má padding
@@ -368,16 +376,10 @@ struct TrainerDashboardView: View {
                             SprintGoalsCard(sprintNumber: activePlan.sprintNumber)
                                 .padding(.horizontal, 18)
                                 .padding(.top, 16)
+                                .padding(.bottom, 140) // Extra padding so content doesn't hide behind sticky CTA
+                        } else {
+                            Color.clear.frame(height: 140)
                         }
-
-                        // ── Today's Plan ──────────────────────────────
-                        TodayPlanCard(
-                            vm:          vm,
-                            onStart:     { showWorkout = true }
-                        )
-                        .padding(.horizontal, 18)
-                        .padding(.top, 16)
-                        .padding(.bottom, 120) // Extra padding so content doesn't hide behind sticky CTA
 
                     }
                 }

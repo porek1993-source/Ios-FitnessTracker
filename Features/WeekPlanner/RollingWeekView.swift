@@ -367,18 +367,6 @@ struct RollingWeekView: View {
                 onDismiss: { showWorkout = false }
             )
         }
-        .onAppear {
-            // Auto-expand dnešek (nebo příští tréninkový den) pro okamžitý náhled
-            if selectedWorkoutDay == nil,
-               let firstWorkout = vm.days.first(where: { $0.dayType == .workout }) {
-                Task { @MainActor in
-                    try? await Task.sleep(nanoseconds: 300_000_000)
-                    withAnimation(.spring(response: 0.45, dampingFraction: 0.8)) {
-                        selectedWorkoutDay = firstWorkout
-                    }
-                }
-            }
-        }
     }
 }
 

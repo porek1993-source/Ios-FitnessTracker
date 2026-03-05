@@ -4,9 +4,21 @@ import SwiftUI
 // MARK: - Set Header
 
 struct SetHeaderRow: View {
+    @State private var showLegend = false
+
     var body: some View {
         HStack {
-            Text("SET").frame(width: 36, alignment: .leading)
+            HStack(spacing: 4) {
+                Text("SET").frame(width: 36, alignment: .leading)
+                Button {
+                    withAnimation(.spring(response: 0.3)) { showLegend.toggle() }
+                } label: {
+                    Image(systemName: showLegend ? "info.circle.fill" : "info.circle")
+                        .font(.system(size: 11))
+                        .foregroundStyle(.white.opacity(0.4))
+                }
+                .buttonStyle(.plain)
+            }
             Text("KG").frame(maxWidth: .infinity)
             Text("REPS").frame(maxWidth: .infinity)
             Text("RPE").frame(width: 52)
@@ -16,6 +28,48 @@ struct SetHeaderRow: View {
         .foregroundStyle(.white.opacity(0.35))
         .kerning(1.2)
         .padding(.horizontal, 4)
+
+        if showLegend {
+            SetTypeLegendView()
+                .transition(.opacity.combined(with: .move(edge: .top)))
+        }
+    }
+}
+
+// MARK: - Set Type Legend
+
+struct SetTypeLegendView: View {
+    private let items: [(String, Color, String)] = [
+        ("W", .cyan,   "Zahřívací série — lehká váha, zahřátí svalů a kloubů"),
+        ("N", .white,  "Pracovní série — hlavní tréninková zátěž (working set)"),
+        ("D", .orange, "Drop set — snížení váhy bez pauzy, pokračuj do únavy"),
+        ("F", .red,    "Série do selhání — maximální intenzita, poslední rep nelze dokončit")
+    ]
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            ForEach(items, id: \.0) { abbr, color, desc in
+                HStack(alignment: .top, spacing: 10) {
+                    Text(abbr)
+                        .font(.system(size: 11, weight: .black, design: .monospaced))
+                        .foregroundStyle(color)
+                        .frame(width: 14, alignment: .leading)
+                    Text(desc)
+                        .font(.system(size: 11))
+                        .foregroundStyle(.white.opacity(0.6))
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+        }
+        .padding(10)
+        .background(
+            RoundedRectangle(cornerRadius: 10)
+                .fill(Color.white.opacity(0.05))
+                .overlay(RoundedRectangle(cornerRadius: 10)
+                    .stroke(Color.white.opacity(0.1), lineWidth: 1))
+        )
+        .padding(.horizontal, 4)
+        .padding(.bottom, 4)
     }
 }
 
@@ -30,8 +84,14 @@ struct SetRowView: View {
     @FocusState private var weightFocused: Bool
     @FocusState private var repsFocused: Bool
 
+    // Doporučená váha (midpoint targetReps pro rychlé předvyplnění)
+    private var suggestedReps: Int {
+        (setData.targetRepsMin + setData.targetRepsMax) / 2
+    }
+
     var body: some View {
         HStack(spacing: 8) {
+            // ── Číslo/typ série ──────────────────────
             ZStack {
                 Circle()
                     .fill(setData.isCompleted
@@ -43,13 +103,15 @@ struct SetRowView: View {
                         .font(.system(size: 12, weight: .bold))
                         .foregroundStyle(.green)
                 } else {
-                    Text("\(setNumber)")
-                        .font(.system(size: 13, weight: .bold))
-                        .foregroundStyle(isActive ? .white : .white.opacity(0.4))
+                    // Zobrazit typ série zkratkou (W/N/D/F) s barvou
+                    Text(setTypeLabel)
+                        .font(.system(size: 11, weight: .black, design: .monospaced))
+                        .foregroundStyle(setTypeColor)
                 }
             }
             .frame(width: 36)
 
+            // ── Váha ─────────────────────────────────
             CompactNumberField(
                 value: Binding(
                     get: { setData.weightKg },
@@ -68,6 +130,7 @@ struct SetRowView: View {
                 }
             }
 
+            // ── Reps ──────────────────────────────────
             CompactIntField(
                 value: Binding(
                     get: { setData.reps },
@@ -80,6 +143,7 @@ struct SetRowView: View {
             )
             .frame(maxWidth: .infinity)
 
+            // ── RPE ───────────────────────────────────
             RPEPicker(
                 value: Binding(
                     get: { setData.rpe },
@@ -90,29 +154,65 @@ struct SetRowView: View {
             )
             .frame(width: 52)
 
-            Button { onComplete() } label: {
+            // ── Rychlé dokončení ──────────────────────
+            Button {
+                // Pokud ještě nejsou reps vyplněny, předvyplníme midpoint a hned dokončíme
+                if setData.reps == nil { setData.reps = suggestedReps }
+                // Pokud váha není, předvyplníme z historii
+                if setData.weightKg == 0, let prev = setData.previousWeightKg {
+                    setData.weightKg = prev
+                }
+                onComplete()
+            } label: {
                 ZStack {
                     RoundedRectangle(cornerRadius: 10)
-                        .fill(isActive ? (canComplete ? Color.green : Color.white.opacity(0.08)) : Color.clear)
+                        .fill(isActive ? (setData.isCompleted ? Color.green.opacity(0.15) : Color.green.opacity(0.8)) : Color.clear)
                         .frame(width: 44, height: 40)
                     Image(systemName: setData.isCompleted ? "checkmark.circle.fill" : "checkmark")
                         .font(.system(size: setData.isCompleted ? 20 : 16, weight: .semibold))
-                        .foregroundStyle(setData.isCompleted ? .green : (canComplete ? .white : .white.opacity(0.2)))
+                        .foregroundStyle(setData.isCompleted ? .green : (isActive ? .white : .white.opacity(0.2)))
                 }
             }
             .disabled(!isActive && !setData.isCompleted)
             .animation(.spring(response: 0.25), value: setData.isCompleted)
             .accessibilityLabel(setData.isCompleted ? "Série \(setNumber) dokončena" : "Dokončit sérii \(setNumber)")
-            .accessibilityHint(canComplete ? "Klepni pro zaznamenání série" : "Zadej počet opakování")
+            .accessibilityHint("Klepni pro rychlé zaznamenání série")
         }
         .padding(.horizontal, 4)
         .padding(.vertical, 2)
         .opacity(setData.isCompleted ? 0.6 : (isActive ? 1.0 : 0.45))
         .animation(.easeInOut(duration: 0.2), value: isActive)
+        // Předvyplnění váhy a repů při aktivaci série
+        .onAppear {
+            guard isActive, !setData.isCompleted else { return }
+            if setData.weightKg == 0, let prev = setData.previousWeightKg {
+                setData.weightKg = prev
+            }
+            if setData.reps == nil {
+                setData.reps = suggestedReps
+            }
+        }
     }
 
-    // Bodyweight cviky nevyžadují váhu (previousWeightKg == nil → typicky bodyweight)
-    // Ale i u normálních cviků povolíme dokončení pokud uživatel nevyplnil váhu (jsou nastavené reps)
+    // MARK: - Set type display
+    private var setTypeLabel: String {
+        switch setData.type {
+        case .warmup:  return "W"
+        case .normal:  return "N"
+        case .dropset: return "D"
+        case .failure: return "F"
+        }
+    }
+
+    private var setTypeColor: Color {
+        switch setData.type {
+        case .warmup:  return .cyan
+        case .normal:  return .white
+        case .dropset: return .orange
+        case .failure: return .red
+        }
+    }
+
     // MUSÍ odpovídat guardu v WorkoutViewModel.completeSet()!
     private var canComplete: Bool { setData.reps != nil }
 }

@@ -338,6 +338,23 @@ final class WorkoutViewModel: ObservableObject {
 
         startRestTimer(seconds: restSeconds)
 
+        // ── Apple Watch sync ──────────────────────────────────────────
+        // Přiští série na hodinkách (odešleme info o přístí sérii k připravení)
+        let nextSetIndex = setIndex + 1
+        if exercise.sets.indices.contains(nextSetIndex) {
+            let nextSet = exercise.sets[nextSetIndex]
+            WatchIntegrationService.shared.notifySetStarted(
+                exerciseName: exercise.name,
+                setNumber:    nextSetIndex + 1,
+                totalSets:    exercise.sets.count,
+                repsMin:      nextSet.targetRepsMin,
+                repsMax:      nextSet.targetRepsMax,
+                weightKg:     nextSet.weightKg > 0 ? nextSet.weightKg : nextSet.previousWeightKg,
+                restSeconds:  exercise.restSeconds,
+                setType:      nextSet.type.watchLabel
+            )
+        }
+
         let allDone = exercises[exerciseIndex].sets.allSatisfy(\.isCompleted)
         if allDone {
             advanceTask?.cancel()
@@ -447,10 +464,11 @@ final class WorkoutViewModel: ObservableObject {
 
     private func advanceToNextExercise() {
         guard currentExerciseIndex < exercises.count - 1 else {
-            // Všechny cviky dokončeny — upozorni UI
             withAnimation { allExercisesDone = true }
-            if audioEnabled { AudioCoachManager.shared.announce(message: "Trénink dokončen! Skvělý výkon.") }  // ✅ Dedikovaná zpráva pro konec tréninku
+            if audioEnabled { AudioCoachManager.shared.announce(message: "Trénink dokončen! Skvělý výkon.") }
             UINotificationFeedbackGenerator().notificationOccurred(.success)
+            // ── Apple Watch: trénink dokončen ──
+            WatchIntegrationService.shared.notifyWorkoutEnded()
             return
         }
         withAnimation(.easeInOut) { currentExerciseIndex += 1 }
@@ -462,7 +480,24 @@ final class WorkoutViewModel: ObservableObject {
             let targetWeight = next.sets.first(where: { $0.type == .normal })?.weightKg ?? next.sets.first?.previousWeightKg
             AudioCoachManager.shared.announceNextExercise(exerciseName: next.name, targetWeight: targetWeight)
         }
-    }
+
+        // ── Apple Watch: odešleme info o 1. sérii nového cviku ──
+        if exercises.indices.contains(currentExerciseIndex) {
+            let ex      = exercises[currentExerciseIndex]
+            let firstSet = ex.sets.first
+            WatchIntegrationService.shared.notifySetStarted(
+                exerciseName: ex.name,
+                setNumber:    1,
+                totalSets:    ex.sets.count,
+                repsMin:      firstSet?.targetRepsMin ?? 8,
+                repsMax:      firstSet?.targetRepsMax ?? 12,
+                weightKg:     firstSet.flatMap { $0.weightKg > 0 ? $0.weightKg : $0.previousWeightKg },
+                restSeconds:  ex.restSeconds,
+                setType:      firstSet?.type.watchLabel ?? "N"
+            )
+        }
+
+    } // advanceToNextExercise
 
     // MARK: - Smart Swap Logic
 
@@ -785,19 +820,52 @@ extension SessionExerciseState {
         self.coachTip    = response.coachTip
         self.tempo       = response.tempo
         self.restSeconds = response.restSeconds
-        self.sets = (0..<response.sets).map { _ in
-            SetState(
-                type: .normal,
+        self.isWarmupOnly = false
+        self.videoUrl    = nil
+        self.supersetId  = response.supersetId
+
+        // ── Sestaveni sad serie (rozcvicka + pracovni + drop/failure) ──────
+        var allSets: [SetState] = []
+
+        // 1. Zahřívací série před pracovními (pokud AI řekla warmupSets > 0)
+        let wCount = max(0, response.warmupSets ?? 0)
+        if wCount > 0, let kg = response.weightKg, kg > 0 {
+            // Zahřívací: postupně eskalující váhy (50% → 70% → 85%)
+            let warmupPcts: [Double] = [0.5, 0.7, 0.85]
+            for i in 0..<min(wCount, warmupPcts.count) {
+                allSets.append(SetState(
+                    type: .warmup,
+                    targetRepsMin: 5,
+                    targetRepsMax: 8,
+                    weightKg: (kg * warmupPcts[i]).rounded(.toNearestOrAwayFromZero),
+                    previousWeightKg: nil
+                ))
+            }
+        }
+
+        // 2. Pracovní série (N-1 normálních, poslední může být Drop nebo Failure)
+        let workingCount = max(1, response.sets)
+        let isLastDrop    = response.isDropSet  == true
+        let isLastFailure = response.isFailure  == true
+
+        for i in 0..<workingCount {
+            let isLast = (i == workingCount - 1)
+            let setType: SetType
+            if isLast && isLastDrop { setType = .dropset }
+            else if isLast && isLastFailure { setType = .failure }
+            else { setType = .normal }
+
+            allSets.append(SetState(
+                type: setType,
                 targetRepsMin: response.repsMin,
                 targetRepsMax: response.repsMax,
                 weightKg: response.weightKg ?? 0,
                 previousWeightKg: response.weightKg
-            )
+            ))
         }
-        self.isWarmupOnly = false
-        self.videoUrl = nil  // bude nastaveno po nalezení exerciseRef
-        self.supersetId = response.supersetId
-    }
+
+        self.sets = allSets
+    } // init(from: ResponseExercise)
 
     static func warmupExercise(_ wu: WarmUpExercise) -> SessionExerciseState {
         let reps = Int(wu.reps.components(separatedBy: CharacterSet.decimalDigits.inverted).first ?? "10") ?? 10
