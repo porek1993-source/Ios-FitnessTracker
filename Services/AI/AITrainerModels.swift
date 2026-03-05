@@ -12,12 +12,34 @@ struct TrainerRequestContext: Codable {
     let equipment: EquipmentContext
     let progressiveOverload: [OverloadEntry]
     let sessionTimeOverride: Int?    // v minutách
-    
-    // Nové metaparametry pro kompresi tréninků (když nestíhá dodržet vypsané dny v kalendáři)
+
+    // Metaparametry
     let workoutsRemainingInWeek: Int?
     let daysRemainingInWeek: Int?
-
     let isDeloadRecommended: Bool
+
+    /// Trvání posledních 7 dní trenénků — AI zná namáhané svaly a může se vyhnout
+    let recentWorkouts: [RecentSessionContext]
+
+    /// Plánované trenénkky na příští 3 dny — AI neznidí svaly den před noháli
+    let upcomingDays: [UpcomingDayContext]
+}
+
+/// Souhrn dokončeného trenénku pro kontext AI
+struct RecentSessionContext: Codable {
+    let label: String           // "Push", "Pull", "Legs"
+    let daysAgo: Int            // 1 = včera, 2 = předčvírem...
+    let musclesTrained: [String] // klíče svalů
+    let exerciseSlugs: [String]  // co cviciil
+    let totalVolume: Double      // sety*reps*kg (odhad zátěže)
+    let wasDeload: Bool
+}
+
+/// Naplnovaný den v blízké budoucnosti
+struct UpcomingDayContext: Codable {
+    let label: String        // "Legs", "Push"...
+    let daysFromNow: Int     // 1 = zítra, 2 = pozitří...
+    let primaryMuscles: [String]
 }
 
 struct UserContextProfile: Codable {
@@ -277,6 +299,12 @@ struct ResponseExercise: Codable {
     let tempo: String?
     let coachTip: String?
     let supersetId: String?
+    /// Pokud true, POSLEDNÍ série tohoto cviku bude Drop set
+    let isDropSet: Bool?
+    /// Pokud true, POSLEDNÍ série tohoto cviku bude do Selhání
+    let isFailure: Bool?
+    /// Počet zahřívacích sérií (generuje SetType.warmup sety před normálními)
+    let warmupSets: Int?
 }
 
 struct CoolDownExercise: Codable {

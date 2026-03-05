@@ -85,7 +85,7 @@ final class PlannedExercise {
         exercise: Exercise?,
         fallbackSlug: String? = nil,
         fallbackName: String? = nil,
-        targetSets: Int = 3,
+        targetSets: Int = 4,
         targetRepsMin: Int = 8,
         targetRepsMax: Int = 12,
         targetRIR: Int = 2,

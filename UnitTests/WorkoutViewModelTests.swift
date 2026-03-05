@@ -24,7 +24,7 @@ final class WorkoutViewModelTests: XCTestCase {
         XCTAssertEqual(vm.restSecondsRemaining, 0, "Zbývající odpočinek musí být 0.")
         XCTAssertEqual(vm.elapsedSeconds, 0, "Elapsed time musí začínat na 0.")
         XCTAssertEqual(vm.planLabel, "Day 1", "planLabel musí odpovídat parametru.")
-        XCTAssertFalse(vm.audioEnabled, "Audio musí být defaultně vypnuto.")
+        XCTAssertTrue(vm.audioEnabled, "Audio musí být defaultně zapnuto pro lepší UX.")
     }
 
     // ✅ FIX #14: Nové smysluplné testy — předchozí testovaly pouze initial state

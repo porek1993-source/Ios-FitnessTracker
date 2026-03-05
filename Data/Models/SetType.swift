@@ -36,4 +36,7 @@ enum SetType: String, Codable, CaseIterable {
         case .failure: return .warmup
         }
     }
+
+    /// Zkratka pro zobrazení na Apple Watch (W / N / D / F)
+    var watchLabel: String { rawValue }
 }

@@ -290,6 +290,71 @@ targets:
         BUNDLE_LOADER: "$(TEST_HOST)"
         SWIFT_STRICT_CONCURRENCY: complete
 
+  # ─── Watch App ──────────────────────────────────────────────────────
+  AgileTrainerWatch:
+    type: application
+    platform: watchOS
+    deploymentTarget: "10.0"
+
+    sources:
+      - path: Watch/App
+      - path: Watch/Core
+      - path: Watch/Views
+      # Sdílené soubory — Watch potřebuje connectivity manager a typy
+      - path: Watch/WatchConnectivityManager.swift
+      - path: Watch/WatchWorkoutView.swift   # legacy — ponechat pro backward compat
+
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.agilefitness.trainer.watch
+        INFOPLIST_FILE: Watch/Resources/Info.plist
+        CODE_SIGN_ENTITLEMENTS: Watch/Resources/AgileTrainerWatch.entitlements
+        TARGETED_DEVICE_FAMILY: "4"  # 4 = Apple Watch
+        WATCHOS_DEPLOYMENT_TARGET: "10.0"
+        # Always-On Display — vyžaduje WKExtendedRuntimeSession v HKWorkoutSession
+        WK_APP_BUNDLE_NAME: AgileTrainer
+
+    info:
+      path: Watch/Resources/Info.plist
+      properties:
+        CFBundleDevelopmentRegion: cs
+        CFBundleDisplayName: Agile Trainer
+        CFBundleExecutable: $(EXECUTABLE_NAME)
+        CFBundleIdentifier: $(PRODUCT_BUNDLE_IDENTIFIER)
+        CFBundleInfoDictionaryVersion: "6.0"
+        CFBundleName: $(PRODUCT_NAME)
+        CFBundlePackageType: APPL
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        MinimumOSVersion: "10.0"
+        UIUserInterfaceStyle: Dark
+        WKApplication: true
+        # HealthKit on Watch
+        NSHealthShareUsageDescription: >-
+          Agile Trainer čte tepovou frekvenci a spalování kalorií
+          pro real-time tréninkový feedback.
+        NSHealthUpdateUsageDescription: >-
+          Aplikace zapisuje dokončené tréninky do Apple Health.
+        # CoreMotion pro detekci opakování
+        NSMotionUsageDescription: >-
+          Hodinky sledují pohyb zápěstí pro automatické počítání opakování.
+
+    entitlements:
+      path: Watch/Resources/AgileTrainerWatch.entitlements
+      properties:
+        com.apple.developer.healthkit: true
+        com.apple.developer.healthkit.access:
+          - HKQuantityTypeIdentifierHeartRate
+          - HKQuantityTypeIdentifierActiveEnergyBurned
+          - HKWorkoutTypeIdentifier
+        com.apple.security.application-groups:
+          - group.com.agilefitness.shared
+
+    dependencies:
+      - target: AgileTrainer
+        embed: false
+        link: false
+
 # ═══════════════════════════════════════════════════════════════════════
 # SCHEMES
 # ═══════════════════════════════════════════════════════════════════════
@@ -300,6 +365,7 @@ schemes:
       targets:
         AgileTrainer:       all
         AgileTrainerWidget: all
+        AgileTrainerWatch:  [build, run]
         AgileTrainerTests:  [test]
     run:
       config: Debug

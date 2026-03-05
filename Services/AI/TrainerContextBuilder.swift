@@ -110,7 +110,9 @@ final class TrainerContextBuilder {
             sessionTimeOverride: timeLimitMinutes,
             workoutsRemainingInWeek: workoutsRemaining,
             daysRemainingInWeek: daysRemainingInWeek,
-            isDeloadRecommended: profile.isDeloadRecommended
+            isDeloadRecommended: profile.isDeloadRecommended,
+            recentWorkouts:      buildRecentWorkouts(plan: activePlan, relativeTo: date),
+            upcomingDays:        buildUpcomingDays(plan: activePlan, relativeTo: date)
         )
     }
 
@@ -219,6 +221,81 @@ final class TrainerContextBuilder {
                 )
             }
         )
+    }
+
+    // MARK: - History & Calendar Context
+
+    /// Posědních 7 dní tréninků ve formuláři čitelelném pro AI.
+    private func buildRecentWorkouts(plan: WorkoutPlan, relativeTo date: Date) -> [RecentSessionContext] {
+        let cutoff = date.addingTimeInterval(-7 * 24 * 3600)
+        let recent = plan.sessions
+            .filter { $0.startedAt >= cutoff && Calendar.current.startOfDay(for: $0.startedAt) < Calendar.current.startOfDay(for: date) }
+            .sorted { $0.startedAt > $1.startedAt }
+            .prefix(7)
+
+        let calendar = Calendar.current
+        return recent.compactMap { session in
+            let daysAgo = calendar.dateComponents([.day], from: session.startedAt, to: date).day ?? 0
+            guard daysAgo > 0 else { return nil }
+
+            // Sbere slugy cviků provedených v této session
+            let exerciseSlugs: [String] = session.exercises.compactMap { ex in
+                let slug = ex.exercise?.slug ?? ex.fallbackSlug ?? ""
+                return slug.isEmpty ? nil : slug
+            }
+
+            // Odvodime namáhané svaly z plan label (heuristika)
+            let musclesTrained = muscleGroupsForLabel(session.plannedDayName)
+
+            // Odhad celkového tréninkového objemu z dokončených sérií
+            let volume: Double = session.exercises.flatMap(\.completedSets).reduce(0) { acc, s in
+                acc + (Double(s.reps) * s.weightKg)
+            }
+
+            return RecentSessionContext(
+                label:          session.plannedDayName,
+                daysAgo:        daysAgo,
+                musclesTrained: musclesTrained,
+                exerciseSlugs:  exerciseSlugs,
+                totalVolume:    volume,
+                wasDeload:      false
+            )
+        }
+    }
+
+    /// Plánované dny v kalenáři za příští 3 dny (AI nezátěží nohami den před Legs dnem)
+    private func buildUpcomingDays(plan: WorkoutPlan, relativeTo date: Date) -> [UpcomingDayContext] {
+        var result: [UpcomingDayContext] = []
+        let calendar = Calendar.current
+        for offset in 1...3 {
+            guard let future = calendar.date(byAdding: .day, value: offset, to: date) else { continue }
+            let weekday = future.weekday
+            if let day = plan.scheduledDays.first(where: { $0.dayOfWeek == weekday }) {
+                result.append(UpcomingDayContext(
+                    label:         day.label,
+                    daysFromNow:   offset,
+                    primaryMuscles: muscleGroupsForLabel(day.label)
+                ))
+            }
+        }
+        return result
+    }
+
+    /// Heuristické mapování den label → primární svalové skupiny
+    private func muscleGroupsForLabel(_ label: String) -> [String] {
+        let l = label.lowercased()
+        if l.contains("push") {
+            return ["chest", "front-shoulders", "triceps"]
+        } else if l.contains("pull") {
+            return ["lats", "traps-middle", "rear-shoulders", "biceps"]
+        } else if l.contains("leg") || l.contains("lower") || l.contains("nohy") {
+            return ["quads", "hamstrings", "glutes", "calves"]
+        } else if l.contains("upper") {
+            return ["chest", "lats", "front-shoulders", "biceps", "triceps"]
+        } else if l.contains("full") {
+            return ["chest", "lats", "quads", "hamstrings", "glutes", "front-shoulders"]
+        }
+        return []
     }
 
     private func buildFatigueContext() -> FatigueContext {

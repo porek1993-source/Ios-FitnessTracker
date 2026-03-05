@@ -13,10 +13,12 @@ import SwiftData
 final class FallbackWorkoutGenerator {
 
     /// Generuje záložní offline plán. Aktivuje se při výpadku Gemini API.
+    /// - Parameter availableEquipment: Vybavení uživatele pro filtrování cviků. Nil = vše povoleno.
     static func generateFallbackPlan(
         for profile: UserContextProfile,
         day: PlannedWorkoutDay,
-        context: ModelContext
+        context: ModelContext,
+        availableEquipment: [Equipment]? = nil
     ) -> ResponsePlan {
 
         // Škálování vah podle fitness úrovně
@@ -32,23 +34,36 @@ final class FallbackWorkoutGenerator {
         case "intermediate", "středně pokročilý", "střední":
             upperBodyDefault = 40.0
             lowerBodyDefault = 70.0
-            baseSets = 3
+            baseSets = 4
         default: // beginner
             upperBodyDefault = 20.0
             lowerBodyDefault = 40.0
             baseSets = 3
         }
 
+        // Zjistit dostupné vybavení (nil = vše povoleno)
+        let equipment = availableEquipment ?? Equipment.allCases
+        let hasBarbell  = equipment.contains(.barbell)
+        let hasDumbbell = equipment.contains(.dumbbell)
+        let hasCable    = equipment.contains(.cable)
+        let hasMachine  = equipment.contains(.machine)
+        let hasKettlebell = equipment.contains(.kettlebell)
+        let bodyweightOnly = !hasBarbell && !hasDumbbell && !hasCable && !hasMachine && !hasKettlebell
+
         let label = day.label.lowercased()
-        let exercises: [ResponseExercise]
+        var exercises: [ResponseExercise]
 
         // Push den (Prsa + Ramena + Triceps)
         if label.contains("push") {
-            exercises = makePushDay(sets: baseSets, upper: upperBodyDefault)
+            exercises = bodyweightOnly
+                ? makeBodyweightPushDay(sets: baseSets)
+                : makePushDay(sets: baseSets, upper: upperBodyDefault)
 
         // Pull den (Záda + Biceps + Zadní delty)
         } else if label.contains("pull") {
-            exercises = makePullDay(sets: baseSets, upper: upperBodyDefault)
+            exercises = bodyweightOnly
+                ? makeBodyweightPullDay(sets: baseSets)
+                : makePullDay(sets: baseSets, upper: upperBodyDefault)
 
         // Legs den
         } else if label.contains("leg") || label.contains("nohy") {
@@ -71,12 +86,64 @@ final class FallbackWorkoutGenerator {
             exercises = makeFullbodyDay(sets: baseSets, upper: upperBodyDefault, lower: lowerBodyDefault)
         }
 
+        // Filtrování cviků vyžadujících nedostupné vybavení
+        if bodyweightOnly {
+            // Pro bodyweight-only: jen cviky bez váhy (weightKg nil nebo 0)
+            exercises = exercises.filter { ($0.weightKg ?? 0) == 0 }
+        } else if !hasCable && !hasMachine {
+            // Filtrujeme kabelové/strojové cviky — necháme dumbbell alternativy
+            exercises = exercises.filter { ex in
+                !ex.slug.contains("cable") && !ex.slug.contains("machine") &&
+                !ex.slug.contains("pulldown") && ex.slug != "leg-extension" &&
+                ex.slug != "lying-leg-curl"
+            }
+        }
+
+        // ── Profi set programming i v offline plánu ──────────────────────
+        exercises = applyAdvancedSetTypes(to: exercises)
+
         return ResponsePlan(
             motivationalMessage: "Spojení s AI trenérem je dočasně nedostupné. Tady je tvůj offline záložní plán — kvalita tréninku závisí na tobě, ne na internetu. Jdeme na to! 💪",
             warmupUrl: nil,
             exercises: exercises
         )
     }
+
+    /// Přidá zahřívací, drop a failure sety do offline plánu pro profi programování.
+    private static func applyAdvancedSetTypes(to list: [ResponseExercise]) -> [ResponseExercise] {
+        guard !list.isEmpty else { return list }
+        var result = list
+
+        func updated(_ ex: ResponseExercise, warmupSets: Int? = nil, isDropSet: Bool? = nil, isFailure: Bool? = nil, coachTip: String? = nil) -> ResponseExercise {
+            ResponseExercise(
+                name: ex.name, nameEN: ex.nameEN, slug: ex.slug,
+                sets: ex.sets, repsMin: ex.repsMin, repsMax: ex.repsMax,
+                weightKg: ex.weightKg, rir: isFailure == true ? 0 : ex.rir, rpe: ex.rpe,
+                restSeconds: ex.restSeconds, tempo: ex.tempo,
+                coachTip: coachTip ?? ex.coachTip, supersetId: ex.supersetId,
+                isDropSet: isDropSet, isFailure: isFailure, warmupSets: warmupSets
+            )
+        }
+
+        // První cvik (compound) → 1 warmup série
+        result[0] = updated(result[0], warmupSets: 1)
+
+        // Předposlední → Drop set (pokud alespoň 2 cviky)
+        if result.count >= 2 {
+            let i = result.count - 2
+            result[i] = updated(result[i], isDropSet: true,
+                coachTip: "Poslední série: ihned sniž váhu o 30 % a přidej dalších 8–10 repů bez odpočinku.")
+        }
+
+        // Poslední → Failure set
+        let last = result.count - 1
+        result[last] = updated(result[last], isFailure: true,
+            coachTip: "Poslední série tohoto cviku: jdi do selhání — dokud technicky nevytáhneš další rep.")
+
+        return result
+    }
+
+
 
     // MARK: - Day Templates
 
@@ -237,6 +304,51 @@ final class FallbackWorkoutGenerator {
                   coachTip: "Tělo v přímé linii. Hýždě a břicho aktivní po celou dobu.", supersetId: nil)
         ]
     }
+
+    // MARK: - Bodyweight fallbacks (pro uživatele bez vybavení)
+
+    private static func makeBodyweightPushDay(sets: Int) -> [ResponseExercise] {
+        [
+            .init(name: "Kliky (Push Up)", nameEN: "Push Up", slug: "push-up",
+                  sets: sets, repsMin: 10, repsMax: 20, weightKg: nil,
+                  rir: nil, rpe: 7, restSeconds: 90, tempo: "2010",
+                  coachTip: "Tělo v přímé linii. Hrudník se dotýká podlahy. Plný rozsah.", supersetId: nil),
+            .init(name: "Kliky s úzkým úchopem (Diamond)", nameEN: "Diamond Push Up", slug: "push-up-narrow",
+                  sets: sets, repsMin: 8, repsMax: 15, weightKg: nil,
+                  rir: nil, rpe: 7, restSeconds: 75, tempo: nil,
+                  coachTip: "Ruce tvoří diamant. Lokty jdou podél těla, ne ven — rozvíjí triceps.", supersetId: nil),
+            .init(name: "Pike Push Up (ramena)", nameEN: "Pike Push Up", slug: "pike-push-up",
+                  sets: 3, repsMin: 8, repsMax: 12, weightKg: nil,
+                  rir: nil, rpe: 8, restSeconds: 75, tempo: nil,
+                  coachTip: "Kyčle vysoko. Pohyb hlavy k zemi — simuluje tlaky na ramena.", supersetId: nil),
+            .init(name: "Triceps dip (na židli)", nameEN: "Chair Dip", slug: "tricep-dip",
+                  sets: 3, repsMin: 10, repsMax: 15, weightKg: nil,
+                  rir: nil, rpe: 8, restSeconds: 60, tempo: nil,
+                  coachTip: "Záda blízko židle. Lokty jdou přímo dozadu, ne do stran.", supersetId: nil)
+        ]
+    }
+
+    private static func makeBodyweightPullDay(sets: Int) -> [ResponseExercise] {
+        [
+            .init(name: "Přítahy na hrazdě", nameEN: "Pull Up", slug: "pull-up",
+                  sets: sets, repsMin: 3, repsMax: 10, weightKg: nil,
+                  rir: nil, rpe: 7, restSeconds: 120, tempo: "2010",
+                  coachTip: "Visíš plnými rameny. Lopatky dolů, pak teprve ohýbáš lokty.", supersetId: nil),
+            .init(name: "Inverted Row (Australian pull up)", nameEN: "Inverted Row", slug: "inverted-row",
+                  sets: sets, repsMin: 8, repsMax: 15, weightKg: nil,
+                  rir: nil, rpe: 7, restSeconds: 90, tempo: nil,
+                  coachTip: "Tělo v přímé linii. Taháš hrudník ke stolu/tyči.", supersetId: nil),
+            .init(name: "Superman (záda)", nameEN: "Superman Hold", slug: "superman",
+                  sets: 3, repsMin: 12, repsMax: 20, weightKg: nil,
+                  rir: nil, rpe: 7, restSeconds: 60, tempo: nil,
+                  coachTip: "Nahoře vydrž 2 sekundy. Pocítíš zapojení spodní části zad a hýždí.", supersetId: nil),
+            .init(name: "Plank", nameEN: "Plank", slug: "plank",
+                  sets: 3, repsMin: 30, repsMax: 60, weightKg: nil,
+                  rir: nil, rpe: 7, restSeconds: 45, tempo: nil,
+                  coachTip: "Tělo v přímé linii. Hýždě a břicho aktivní po celou dobu.", supersetId: nil)
+        ]
+    }
+
 }
 
 // MARK: - Slug Normalization Map
