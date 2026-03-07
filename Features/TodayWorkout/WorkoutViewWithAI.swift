@@ -82,6 +82,22 @@ struct WorkoutViewWithAI: View {
             return
         }
 
+        // ✅ FIX: Pokud už má session nějaké cviky (např. Rychlý trénink nebo Ručně sestavený plán),
+        // nechceme, aby ho AI přepsalo. Vygenerujeme jen mockup odpověď.
+        if !session.exercises.isEmpty {
+            trainerResponse = TrainerResponse(
+                sessionLabel: plannedDay.label,
+                coachMessage: "Připraveno! Můžeš začít s tréninkem.",
+                warmupItems: [],
+                exercises: []
+            )
+            withAnimation(.spring(response: 0.5)) {
+                isLoading = false
+                showWorkout = true
+            }
+            return
+        }
+
         let response = await aiService.generateTodayWorkout(
             for: .now,
             profile: profile,

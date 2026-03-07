@@ -303,7 +303,8 @@ struct QuickWorkoutPickerView: View {
             microBreaksEnabled: $microBreaksEnabled,
             showSuccess: showMicroBreakSuccess,
             onSchedule: scheduleMicroBreaks,
-            onCancel: cancelMicroBreaks
+            onCancel: cancelMicroBreaks,
+            onSelectBreak: { ex in startMicroBreak(ex) }
         )
     }
 
@@ -474,6 +475,23 @@ struct QuickWorkoutPickerView: View {
     private func cancelMicroBreaks() {
         UNUserNotificationCenter.current().removePendingNotificationRequests(
             withIdentifiers: MicroBreakExercise.deskBreaks.map { "mb_\($0.id)" })
+    }
+
+    private func startMicroBreak(_ ex: MicroBreakExercise) {
+        let plan = QuickWorkoutPlan(
+            label: "Micro-Break: \(ex.title)",
+            icon: ex.icon,
+            accentColor: Color(red: 0.95, green: 0.30, blue: 0.30),
+            exercises: [
+                QuickExerciseTemplate(name: ex.title, nameEN: ex.title, slug: "micro-break-\(ex.id)", sets: 1, repsMin: 1, repsMax: 1, isBodyweight: true, coachTip: ex.instruction, durationSeconds: ex.durationSeconds)
+            ],
+            warmupItems: [],
+            coachNote: ex.benefit,
+            estimatedMinutes: 2,
+            intensity: .low
+        )
+        let session = generatePlanWorkout(plan: plan)
+        finishGeneration(session: session)
     }
 }
 
@@ -739,6 +757,7 @@ struct MicroBreakView: View {
     let showSuccess: Bool
     let onSchedule: () -> Void
     let onCancel: () -> Void
+    let onSelectBreak: (MicroBreakExercise) -> Void
 
     var body: some View {
         let accent = Color(red: 0.95, green: 0.30, blue: 0.30)
@@ -796,22 +815,28 @@ struct MicroBreakView: View {
 
             LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
                 ForEach(MicroBreakExercise.deskBreaks) { ex in
-                    VStack(alignment: .leading, spacing: 7) {
-                        HStack {
-                            Text(ex.icon).font(.system(size: 18))
-                            Spacer()
-                            Text(ex.duration).font(.system(size: 9, weight: .bold))
-                                .foregroundStyle(accent.opacity(0.8))
-                                .padding(.horizontal, 5).padding(.vertical, 2)
-                                .background(Capsule().fill(accent.opacity(0.1)))
+                    Button(action: {
+                        HapticManager.shared.playMediumClick()
+                        onSelectBreak(ex)
+                    }) {
+                        VStack(alignment: .leading, spacing: 7) {
+                            HStack {
+                                Text(ex.icon).font(.system(size: 18))
+                                Spacer()
+                                Text(ex.duration).font(.system(size: 9, weight: .bold))
+                                    .foregroundStyle(accent.opacity(0.8))
+                                    .padding(.horizontal, 5).padding(.vertical, 2)
+                                    .background(Capsule().fill(accent.opacity(0.1)))
+                            }
+                            Text(ex.title).font(.system(size: 11, weight: .bold)).foregroundStyle(.white)
+                            Text(ex.benefit).font(.system(size: 10)).foregroundStyle(.white.opacity(0.48)).lineLimit(2)
                         }
-                        Text(ex.title).font(.system(size: 11, weight: .bold)).foregroundStyle(.white)
-                        Text(ex.benefit).font(.system(size: 10)).foregroundStyle(.white.opacity(0.48)).lineLimit(2)
+                        .padding(11).frame(maxWidth: .infinity, alignment: .leading)
+                        .background(RoundedRectangle(cornerRadius: 11)
+                            .fill(Color.white.opacity(0.04))
+                            .overlay(RoundedRectangle(cornerRadius: 11).stroke(Color.white.opacity(0.07), lineWidth: 1)))
                     }
-                    .padding(11).frame(maxWidth: .infinity, alignment: .leading)
-                    .background(RoundedRectangle(cornerRadius: 11)
-                        .fill(Color.white.opacity(0.04))
-                        .overlay(RoundedRectangle(cornerRadius: 11).stroke(Color.white.opacity(0.07), lineWidth: 1)))
+                    .buttonStyle(.plain)
                 }
             }
 

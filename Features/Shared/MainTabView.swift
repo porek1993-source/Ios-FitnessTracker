@@ -37,30 +37,7 @@ struct MainTabView: View {
                 }
                 .tag(0)
 
-            // 2. Zotavení a Zdraví (Nový Tab)
-            RecoveryInsightsView()
-                .tabItem {
-                    Label("Zotavení", systemImage: "heart.text.square")
-                }
-                .tag(1)
-
-            // 3. Knihovna cviků (MuscleWiki)
-            NavigationStack {
-                ExerciseLibraryView()
-            }
-            .tabItem {
-                Label("Cviky", systemImage: "scalemass.fill")
-            }
-            .tag(2)
-
-            // 4. Komunita & Výzvy
-            CommunityHubView()
-                .tabItem {
-                    Label("Komunita", systemImage: "person.2.fill")
-                }
-                .tag(3)
-
-            // 5. Týdenní Plán
+            // 2. Týdenní Plán
             NavigationStack {
                 ZStack {
                     Color(red: 0.055, green: 0.055, blue: 0.08).ignoresSafeArea()
@@ -76,7 +53,30 @@ struct MainTabView: View {
             .tabItem {
                 Label("Plán", systemImage: "calendar")
             }
-            .tag(4)
+            .tag(1)
+
+            // 3. Zotavení a Zdraví
+            RecoveryInsightsView()
+                .tabItem {
+                    Label("Zotavení", systemImage: "heart.text.square")
+                }
+                .tag(2)
+
+            // 4. Knihovna cviků (MuscleWiki)
+            NavigationStack {
+                ExerciseLibraryView()
+            }
+            .tabItem {
+                Label("Cviky", systemImage: "scalemass.fill")
+            }
+            .tag(3)
+
+            // 5. Komunita & Výzvy
+            CommunityHubView()
+                .tabItem {
+                    Label("Komunita", systemImage: "person.2.fill")
+                }
+                .tag(4)
 
             // 6. Progres
             AppProgressView()

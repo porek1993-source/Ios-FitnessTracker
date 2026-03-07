@@ -223,9 +223,13 @@ struct MicroBreakExercise: Identifiable {
     let id = UUID()
     let title: String
     let icon: String
-    let duration: String
+    let durationSeconds: Int
     let instruction: String
     let benefit: String
+    
+    var duration: String {
+        return "\(durationSeconds) sek"
+    }
 }
 
 // MARK: - Static Data Extensions
@@ -235,7 +239,7 @@ extension MuscleTarget {
         MuscleTarget(id: "chest",     icon: "💪", title: "Hrudník",       subtitle: "Bench, kliky, kladky",
                      muscleGroups: [.chest, .frontShoulders, .triceps],
                      exerciseSlugs: ["bench-press","dumbbell-bench-press","incline-bench-press","cable-fly","push-up","dips"]),
-        MuscleTarget(id: "back",      icon: "🦴", title: "Záda",          subtitle: "Lats, střed, spodní záda",
+        MuscleTarget(id: "back",      icon: "🪽", title: "Záda",          subtitle: "Lats, střed, spodní záda",
                      muscleGroups: [.lats, .trapsMiddle, .rearShoulders, .lowerback],
                      exerciseSlugs: ["pull-up","lat-pulldown","seated-cable-row","bent-over-row","deadlift","face-pull"]),
         MuscleTarget(id: "legs",      icon: "🦵", title: "Nohy",          subtitle: "Quady, hamstringy, hýždě",
@@ -544,28 +548,28 @@ extension SportPrehab {
 
 extension MicroBreakExercise {
     static let deskBreaks: [MicroBreakExercise] = [
-        MicroBreakExercise(title: "Hrudní protažení",       icon: "🦢", duration: "45 sek",
+        MicroBreakExercise(title: "Hrudní protažení",       icon: "🦢", durationSeconds: 45,
                            instruction: "Ruce za hlavu, lokty dozadu. Protáhni hrudník nahoru. Drž 3s, 5×.",
                            benefit: "Kompenzuje hrbení u monitoru."),
-        MicroBreakExercise(title: "Pravidlo 20-20-20",      icon: "👁️", duration: "20 sek",
+        MicroBreakExercise(title: "Pravidlo 20-20-20",      icon: "👁️", durationSeconds: 20,
                            instruction: "Každých 20 minut se podívej na bod 6 metrů daleko po dobu 20 sekund.",
                            benefit: "Uvolňuje ciliární sval. Snižuje únavu zraku."),
-        MicroBreakExercise(title: "Chin Tuck vsedě",        icon: "🖥️", duration: "30 sek",
+        MicroBreakExercise(title: "Chin Tuck vsedě",        icon: "🖥️", durationSeconds: 30,
                            instruction: "Seď rovně. Zasun bradu dozadu. Drž 3s, uvolni. 10×.",
                            benefit: "Přímá prevence krční páteře."),
-        MicroBreakExercise(title: "Hip Flexor Stretch",     icon: "🧘", duration: "60 sek",
+        MicroBreakExercise(title: "Hip Flexor Stretch",     icon: "🧘", durationSeconds: 60,
                            instruction: "Vykroč vpřed, zadní koleno k zemi. 30s každá strana.",
                            benefit: "Zkrácený psoas = bolesti zad."),
-        MicroBreakExercise(title: "Calf Raises vstoje",     icon: "💃", duration: "60 sek",
+        MicroBreakExercise(title: "Calf Raises vstoje",     icon: "💃", durationSeconds: 60,
                            instruction: "U stolu. 20× výpony na špičky. 3 série.",
                            benefit: "Lýtka = druhé srdce. Žilní návrat."),
-        MicroBreakExercise(title: "Wrist Circles & Stretch",icon: "🤲", duration: "45 sek",
+        MicroBreakExercise(title: "Wrist Circles & Stretch",icon: "🤲", durationSeconds: 45,
                            instruction: "Kroužení zápěstí 10× každým směrem. Pak natáhni ruku.",
                            benefit: "Prevence karpálního tunelu."),
-        MicroBreakExercise(title: "Shoulder Rolls",         icon: "🌊", duration: "30 sek",
+        MicroBreakExercise(title: "Shoulder Rolls",         icon: "🌊", durationSeconds: 30,
                            instruction: "10× kroužení ramen vzad. Pak paže do T, lopatky k sobě.",
                            benefit: "Uvolňuje protrakci ramen od PC."),
-        MicroBreakExercise(title: "Nose Trace Breathing",   icon: "🌬️", duration: "90 sek",
+        MicroBreakExercise(title: "Nose Trace Breathing",   icon: "🌬️", durationSeconds: 90,
                            instruction: "Zavři oči. Kresli nosem čtverec ve vzduchu. Automaticky zpomaluje dech.",
                            benefit: "Aktivuje PNS, snižuje kortizol."),
     ]

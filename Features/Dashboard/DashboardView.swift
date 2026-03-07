@@ -193,44 +193,55 @@ struct TrainerDashboardView: View {
                         Divider().background(Color.white.opacity(0.08))
                     }
                 } else {
-                    // ✅ Oblast 4 — Floating Action Button (FAB) pro den odpočinku
-                    // Místo 2 přeplácených tlačítek pod sebou → čistý FAB přístup
-                    HStack {
-                        Spacer()
-                        Menu {
-                            Button {
-                                UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-                                showQuickPicker = true
-                            } label: {
-                                Label("Rychlý trénink", systemImage: "bolt.fill")
+                    // ✅ Oblast 4 — Explicitní tlačítka pro den odpočinku
+                    HStack(spacing: 12) {
+                        Button(action: {
+                            UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                            showQuickPicker = true
+                        }) {
+                            HStack(spacing: 6) {
+                                Image(systemName: "bolt.fill")
+                                Text("Rychlý trénink")
                             }
-                            Button {
-                                UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                                showBuilder = true
-                            } label: {
-                                Label("Sestavit ručně", systemImage: "square.and.pencil")
-                            }
-                        } label: {
-                            ZStack {
-                                Circle()
+                            .font(.system(size: 15, weight: .bold))
+                            .foregroundStyle(.white)
+                            .frame(maxWidth: .infinity, minHeight: 52)
+                            .background(
+                                RoundedRectangle(cornerRadius: 16)
                                     .fill(
                                         LinearGradient(
                                             colors: [AppColors.primaryAccent, AppColors.secondaryAccent],
                                             startPoint: .topLeading, endPoint: .bottomTrailing
                                         )
                                     )
-                                    .frame(width: 56, height: 56)
-                                    .shadow(color: AppColors.primaryAccent.opacity(0.45), radius: 14, y: 6)
-                                Image(systemName: "plus")
-                                    .font(.system(size: 22, weight: .bold))
-                                    .foregroundStyle(.white)
-                            }
+                                    .shadow(color: AppColors.primaryAccent.opacity(0.35), radius: 10, y: 4)
+                            )
                         }
-                        .menuStyle(.button)
+                        .buttonStyle(.plain)
+                        .accessibilityLabel("Spustit rychlý trénink")
+
+                        Button(action: {
+                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                            showBuilder = true
+                        }) {
+                            HStack(spacing: 6) {
+                                Image(systemName: "square.and.pencil")
+                                Text("Vlastní plán")
+                            }
+                            .font(.system(size: 15, weight: .bold))
+                            .foregroundStyle(.white)
+                            .frame(maxWidth: .infinity, minHeight: 52)
+                            .background(
+                                RoundedRectangle(cornerRadius: 16)
+                                    .fill(Color.white.opacity(0.14))
+                            )
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel("Sestavit vlastní plán")
                     }
-                    .padding(.horizontal, 22)
+                    .padding(.horizontal, 18)
                     .padding(.bottom, 12)
-                    .padding(.top, 8)
+                    .padding(.top, 10)
                     .background(.ultraThinMaterial)
                     .overlay(alignment: .top) {
                         Divider().background(Color.white.opacity(0.08))

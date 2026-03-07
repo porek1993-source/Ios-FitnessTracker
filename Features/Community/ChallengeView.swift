@@ -255,6 +255,40 @@ struct CommunityHubView: View {
                 .frame(maxWidth: .infinity)
                 .frame(height: 52)
                 .clipShape(RoundedRectangle(cornerRadius: 14))
+                
+                // Google Sign In
+                Button(action: {
+                    // Placeholder pro AuthManager.shared.signInWithGoogle()
+                }) {
+                    HStack(spacing: 8) {
+                        Image(systemName: "globe")
+                            .font(.system(size: 18))
+                        Text("Pokračovat přes Google")
+                            .font(.system(size: 16, weight: .medium))
+                    }
+                    .foregroundStyle(.black)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 52)
+                    .background(Color.white)
+                    .clipShape(RoundedRectangle(cornerRadius: 14))
+                }
+
+                // Facebook Sign In
+                Button(action: {
+                    // Placeholder pro AuthManager.shared.signInWithFacebook()
+                }) {
+                    HStack(spacing: 8) {
+                        Image(systemName: "person.2.fill")
+                            .font(.system(size: 18))
+                        Text("Pokračovat přes Facebook")
+                            .font(.system(size: 16, weight: .medium))
+                    }
+                    .foregroundStyle(.white)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 52)
+                    .background(Color(red: 0.1, green: 0.46, blue: 0.94))
+                    .clipShape(RoundedRectangle(cornerRadius: 14))
+                }
 
                 if let errorMsg = auth.errorMessage {
                     Text(errorMsg)
