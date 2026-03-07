@@ -168,6 +168,8 @@ struct AppleHealthSection: View {
         Task {
             do {
                 try await healthKitService.requestAuthorization()
+                // ✅ Phase 4: Vyžádat opt-in i pro nutriční a spánková data 
+                try? await HealthKitNutritionService.shared.requestAuthorization()
 
                 // ✅ Úspěch — elegantní česká zpráva
                 await MainActor.run {

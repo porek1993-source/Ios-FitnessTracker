@@ -81,9 +81,6 @@ struct SetRowView: View {
     let isActive: Bool
     let onComplete: () -> Void
 
-    @FocusState private var weightFocused: Bool
-    @FocusState private var repsFocused: Bool
-
     // Doporučená váha (midpoint targetReps pro rychlé předvyplnění)
     private var suggestedReps: Int {
         (setData.targetRepsMin + setData.targetRepsMax) / 2
@@ -118,17 +115,15 @@ struct SetRowView: View {
                     set: { setData.weightKg = $0 ?? 0 }
                 ),
                 placeholder: setData.previousWeightKg.map { String(format: "%.1f", $0) } ?? "—",
-                isFocused: _weightFocused,
                 isActive: isActive,
-                isCompleted: setData.isCompleted
+                isCompleted: setData.isCompleted,
+                onFocusChange: { focused in
+                    if focused && (setData.weightKg == 0), let prev = setData.previousWeightKg {
+                        setData.weightKg = prev
+                    }
+                }
             )
             .frame(maxWidth: .infinity)
-            .onChange(of: weightFocused) { _, focused in
-                // Auto-fill předchozí váhu při prvním klepnutí (pokud je pole prázdné)
-                if focused && (setData.weightKg == 0), let prev = setData.previousWeightKg {
-                    setData.weightKg = prev
-                }
-            }
 
             // ── Reps ──────────────────────────────────
             CompactIntField(
@@ -137,7 +132,6 @@ struct SetRowView: View {
                     set: { setData.reps = $0 }
                 ),
                 placeholder: "\(setData.targetRepsMin)–\(setData.targetRepsMax)",
-                isFocused: _repsFocused,
                 isActive: isActive,
                 isCompleted: setData.isCompleted
             )
@@ -222,9 +216,11 @@ struct SetRowView: View {
 struct CompactNumberField: View {
     @Binding var value: Double?
     let placeholder: String
-    @FocusState var isFocused: Bool
     let isActive: Bool
     let isCompleted: Bool
+    var onFocusChange: ((Bool) -> Void)? = nil
+
+    @FocusState private var isFocused: Bool
     @State private var text = ""
 
     var body: some View {
@@ -241,6 +237,7 @@ struct CompactNumberField: View {
             TextField("", text: $text)
                 .keyboardType(.decimalPad)
                 .focused($isFocused)
+                .onChange(of: isFocused) { _, focused in onFocusChange?(focused) }
                 .font(.system(size: 16, weight: .semibold, design: .monospaced))
                 .foregroundStyle(.white)
                 .multilineTextAlignment(.center)
@@ -266,9 +263,10 @@ struct CompactNumberField: View {
 struct CompactIntField: View {
     @Binding var value: Int?
     let placeholder: String
-    @FocusState var isFocused: Bool
     let isActive: Bool
     let isCompleted: Bool
+
+    @FocusState private var isFocused: Bool
     @State private var text = ""
 
     var body: some View {

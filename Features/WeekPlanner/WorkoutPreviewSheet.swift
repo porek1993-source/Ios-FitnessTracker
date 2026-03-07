@@ -59,14 +59,15 @@ struct WorkoutPreviewSheet: View {
     
     private var emptyExercisesState: some View {
         VStack(spacing: 16) {
-            Image(systemName: "sparkles")
+            Image(systemName: "bolt.heart.fill")
                 .font(.system(size: 40))
-                .foregroundStyle(.blue.opacity(0.4))
-            Text("Cviky budou vygenerovány AI při startu tréninku na základě tvého aktuálního stavu.")
+                .foregroundStyle(AppColors.primaryAccent.opacity(0.8))
+            Text("Tvůj trénink sestavíme až těsně před startem. Potřebujeme nejprve analyzovat tvůj dnešní spánek, svalovou únavu a stav nervové soustavy (HRV) pro dokonalé výsledky.")
                 .font(.system(size: 14))
-                .foregroundStyle(.white.opacity(0.4))
+                .foregroundStyle(.white.opacity(0.6))
                 .multilineTextAlignment(.center)
-                .padding(.horizontal, 40)
+                .padding(.horizontal, 30)
+                .lineSpacing(4)
         }
         .frame(maxWidth: .infinity)
         .padding(.top, 40)

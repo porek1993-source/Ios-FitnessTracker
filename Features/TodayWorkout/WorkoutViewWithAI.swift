@@ -35,7 +35,7 @@ struct WorkoutViewWithAI: View {
             Color(red: 0.05, green: 0.05, blue: 0.08).ignoresSafeArea()
 
             if showWorkout, let response = trainerResponse {
-                ActiveSessionView(
+                WorkoutView(
                     session: session,
                     plan: plannedDay,
                     planLabel: plannedDay.label,
@@ -144,11 +144,11 @@ struct LoadingWorkoutView: View {
     @State private var phase = 0
 
     private let loadingMessages = [
-        "Čtu tvá zdravotní data...",
-        "Analyzuji únavu svalů...",
-        "Vybírám správné váhy...",
-        "Připravuji rozcvičku...",
-        "Skoro hotovo..."
+        "Skenuji stav tvé centrální nervové soustavy (HRV)...",
+        "Vyhodnocuji spánkový dluh a svalovou únavu...",
+        "Hledám optimální váhy na základě minulé historie...",
+        "Připravuji dynamickou rozcvičku pro dnešní blok...",
+        "Finalizuji biomechaniku a kalkuluji RPE..."
     ]
 
     var body: some View {
@@ -182,8 +182,8 @@ struct LoadingWorkoutView: View {
                     .foregroundStyle(.white)
                     .multilineTextAlignment(.center)
 
-                // Animated loading message
-                Text(loadingMessages[min(phase / 2, loadingMessages.count - 1)] + dots)
+                // Animated loading message (nekonečná smyčka bez crashů)
+                Text(loadingMessages[(phase / 4) % loadingMessages.count] + dots)
                     .font(.system(size: 14))
                     .foregroundStyle(.white.opacity(0.4))
                     .animation(.easeInOut, value: phase)
@@ -220,7 +220,7 @@ struct LoadingWorkoutView: View {
 
     private func startAnimation() {
         Task { @MainActor in
-            while phase < 9 && !Task.isCancelled {
+            while !Task.isCancelled {
                 try? await Task.sleep(nanoseconds: 500_000_000)
                 dots = dots.count < 3 ? dots + "." : ""
                 phase += 1

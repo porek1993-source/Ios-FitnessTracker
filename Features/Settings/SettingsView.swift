@@ -91,9 +91,22 @@ struct SettingsView: View {
     // ✅ COMPLIANCE: Apple vyžaduje možnost smazání dat (guideline 5.1.1)
     private func deleteAllData() {
         do {
-            // Smažeme všechny profily (cascade delete)  
+            // Smažeme profily (cascade delete smaže plány, metrics a poznámky)
             let allProfiles = try modelContext.fetch(FetchDescriptor<UserProfile>())
             for p in allProfiles { modelContext.delete(p) }
+            
+            // Smažeme tréninky (cascade delete smaže SessionExercise a CompletedSet)
+            let allSessions = try modelContext.fetch(FetchDescriptor<WorkoutSession>())
+            for s in allSessions { modelContext.delete(s) }
+            
+            // Smažeme záznamy o vahách
+            let allEntries = try modelContext.fetch(FetchDescriptor<WeightEntry>())
+            for w in allEntries { modelContext.delete(w) }
+            
+            // Smažeme uložená fitka (GeoFencing)
+            let allGyms = try modelContext.fetch(FetchDescriptor<GymProfile>())
+            for g in allGyms { modelContext.delete(g) }
+            
             try modelContext.save()
             HapticManager.shared.playSuccess()
             withAnimation { showDataDeleted = true }
@@ -281,6 +294,27 @@ struct ProfileSettingsForm: View {
                 // — lepší error handling, typované stavy, elegantní UX
                 settingsSection(title: "Apple Health", icon: "heart.fill") {
                     AppleHealthSection(healthKitService: healthKitService)
+                }
+
+                // MARK: — Moje Posilovny
+                settingsSection(title: "Moje Posilovny", icon: "location.fill.viewfinder") {
+                    NavigationLink(destination: GymProfilesView()) {
+                        HStack(spacing: 12) {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("Správa posiloven")
+                                    .font(.system(size: 15, weight: .semibold))
+                                    .foregroundStyle(.white)
+                                Text("Aktivuj profily podle tvé GPS polohy")
+                                    .font(.system(size: 12))
+                                    .foregroundStyle(.white.opacity(0.45))
+                            }
+                            Spacer()
+                            Image(systemName: "chevron.right")
+                                .font(.system(size: 12))
+                                .foregroundStyle(.white.opacity(0.3))
+                        }
+                    }
+                    .buttonStyle(.plain)
                 }
 
                 // MARK: — Sprint Retrospektiva

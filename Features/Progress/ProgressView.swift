@@ -124,6 +124,44 @@ struct AppProgressView: View {
                             .padding(.horizontal, 16)
                             .padding(.top, 16)
 
+                        // ✅ Oblast A — Svalová Heatmapa (Phase 3)
+                        MuscleHeatmapCard()
+                            .padding(.horizontal, 16)
+
+                        // ✅ Oblast B — Mezocyklus link (Phase 3)
+                        NavigationLink(destination: MesocyclePlannerView()) {
+                            HStack(spacing: 14) {
+                                ZStack {
+                                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                        .fill(LinearGradient(
+                                            colors: [Color(red: 0.22, green: 0.55, blue: 1.0), Color(red: 0.10, green: 0.38, blue: 0.90)],
+                                            startPoint: .topLeading, endPoint: .bottomTrailing
+                                        ))
+                                        .frame(width: 44, height: 44)
+                                    Image(systemName: "calendar.badge.clock")
+                                        .font(.system(size: 18, weight: .semibold))
+                                        .foregroundStyle(.white)
+                                }
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text("Periodizace a Mezocykly")
+                                        .font(.system(.subheadline, design: .rounded).weight(.bold))
+                                        .foregroundStyle(AppColors.textPrimary)
+                                    Text("Plánuj 8–12 týdenní tréninkové cykly")
+                                        .font(.caption)
+                                        .foregroundStyle(AppColors.textSecondary)
+                                }
+                                Spacer()
+                                Image(systemName: "chevron.right")
+                                    .font(.caption.weight(.bold))
+                                    .foregroundStyle(AppColors.textMuted)
+                            }
+                            .padding(14)
+                            .background(Color.white.opacity(0.05), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                            .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).stroke(Color.white.opacity(0.08), lineWidth: 1))
+                        }
+                        .buttonStyle(.plain)
+                        .padding(.horizontal, 16)
+
                         // ✅ Sprint Souhrn (deepanal.pdf bod 8-9)
                         if let profile = profiles.first,
                            let plan = profile.workoutPlans.first(where: \.isActive) {
@@ -513,4 +551,21 @@ struct AppProgressView: View {
     }
 
 
+}
+
+// MARK: - Placeholders for Phase 3 components
+
+struct MuscleHeatmapCard: View {
+    var body: some View {
+        VStack {
+            Text("Svalová Heatmapa")
+                .font(.headline)
+            Text("Ve vývoji (Phase 3)")
+                .font(.subheadline)
+                .foregroundColor(.secondary)
+        }
+        .frame(maxWidth: .infinity, minHeight: 150)
+        .background(Color.white.opacity(0.05))
+        .cornerRadius(16)
+    }
 }

@@ -397,13 +397,16 @@ final class ActiveSessionViewModel: ObservableObject {
             let completedExCount = exercises.prefix(exerciseIndex + 1).filter { ex in
                 ex.sets.contains(where: \.isCompleted)
             }.count
+            let nextEx: SessionExerciseState? = exerciseIndex + 1 < exercises.count ? exercises[exerciseIndex + 1] : nil
             
             Task { [weak self] in
                 guard let self else { return }
                 await LiveActivityManager.shared.startRestActivity(
                     session: session,
                     currentExercise: exercises[exerciseIndex],
+                    nextExercise: nextEx,
                     currentExerciseIndex: exerciseIndex,
+                    totalExercises: exercises.count,
                     completedExercisesCount: completedExCount,
                     completedSetIndex: setIndex,
                     restSeconds: restSeconds,

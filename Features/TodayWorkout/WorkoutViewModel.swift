@@ -62,43 +62,41 @@ final class WorkoutViewModel: ObservableObject {
                 for (index, ex) in block.exercises.enumerated() {
                     var state = SessionExerciseState(from: ex)
 
-                    // ✅ Hledáme v celé DB, ne jen v plannedExercises
+                    // ✅ Phase 18 FIX: Striktní mapování k eliminaci AI halucinací a ochrana datové suverenity
                     let normalizedSlug = FallbackWorkoutGenerator.normalizedSlug(ex.slug)
                     var exerciseRef: Exercise? = nil
 
-                    // 1. Zkusit najít v plánu (má weight history)
-                    if let plannedEx = plan.plannedExercises.first(where: {
-                        let dbSlug = $0.exercise?.slug.lowercased() ?? ""
-                        let fName = ex.name.lowercased()
-                        return dbSlug == normalizedSlug || dbSlug == ex.slug.lowercased()
-                            || $0.exercise?.nameEN.lowercased() == fName
-                            || $0.exercise?.name.lowercased() == fName
-                            || $0.exercise?.nameEN.lowercased().contains(fName) == true
-                            || $0.exercise?.name.lowercased().contains(fName) == true
-                    }) {
-                        exerciseRef = plannedEx.exercise
+                    // 1. Zkusit najít EXAKTNÍ shodu přes slug (nejspolehlivější, udržuje historii)
+                    exerciseRef = allDBExercises.first { $0.slug.lowercased() == normalizedSlug || $0.slug.lowercased() == ex.slug.lowercased() }
+
+                    // 2. Pokud slug selže, zkusit exaktní jméno z plánu (Fallback pro custom cviky)
+                    if exerciseRef == nil {
+                        if let plannedEx = plan.plannedExercises.first(where: {
+                            let fName = ex.name.lowercased()
+                            return $0.exercise?.nameEN.lowercased() == fName || $0.exercise?.name.lowercased() == fName
+                        }) {
+                            exerciseRef = plannedEx.exercise
+                        }
                     }
 
-                    // 2. Pokud nenalezeno v plánu, hledej v celé DB (fuzzy match)
+                    // 3. Poslední záchrana: Fuzzy match na celé DB (jen pokud model selhal do názvu)
                     if exerciseRef == nil {
                         let fName = ex.name.lowercased()
                         exerciseRef = allDBExercises.first(where: {
-                            $0.slug.lowercased() == normalizedSlug || $0.slug.lowercased() == ex.slug.lowercased()
-                                || $0.nameEN.lowercased() == fName
-                                || $0.name.lowercased() == fName
-                                || $0.name.lowercased().contains(fName)
-                                || $0.nameEN.lowercased().contains(fName)
-                                || fName.contains($0.name.lowercased())
+                            $0.nameEN.lowercased() == fName || $0.name.lowercased() == fName ||
+                            $0.name.lowercased().contains(fName) || $0.nameEN.lowercased().contains(fName) ||
+                            fName.contains($0.name.lowercased())
                         })
                     }
 
                     if let exercise = exerciseRef {
                         // Použij ProgressionEngine pro výpočet cíle
+                        // ✅ FIX: Zohledňujeme pouze POSLEDNÍ trénink daného cviku.
+                        let lastSessionId = exercise.weightHistory.max(by: { $0.loggedAt < $1.loggedAt })?.sessionId
                         let history = exercise.weightHistory
+                            .filter { lastSessionId != nil && $0.sessionId == lastSessionId }
                             .sorted { $0.loggedAt > $1.loggedAt }
-                            .prefix(6)
                             .map { entry in
-                                // ✅ FIX: Používáme SetSnapshot (ValueType) místo @Model CompletedSet
                                 SetSnapshot(from: entry)
                             }
                         
@@ -147,11 +145,12 @@ final class WorkoutViewModel: ObservableObject {
 
                 // Progressive overload s ProgressionEngine
                 if let exercise = planned.exercise {
+                    // ✅ FIX: Zohledňujeme pouze POSLEDNÍ trénink daného cviku.
+                    let lastSessionId = exercise.weightHistory.max(by: { $0.loggedAt < $1.loggedAt })?.sessionId
                     let history = exercise.weightHistory
+                        .filter { lastSessionId != nil && $0.sessionId == lastSessionId }
                         .sorted { $0.loggedAt > $1.loggedAt }
-                        .prefix(6)
                         .map { entry in
-                            // ✅ FIX: Používáme SetSnapshot (ValueType) místo @Model CompletedSet
                             SetSnapshot(from: entry)
                         }
                     
@@ -196,10 +195,26 @@ final class WorkoutViewModel: ObservableObject {
         AudioCoachManager.shared.enable()
         audioCoach?.announceSessionStart()
 
+        // ✅ Phase 4: Upozorni Apple Watch, že trénink začal (spustí HKWorkoutSession + senzory)
+        WatchIntegrationService.shared.notifyWorkoutStarted(title: planLabel)
+
         // ✅ FIX Bug #1: Dohledat chybějící videoURL a coachTip přímo z Supabase MuscleWiki
         // Spustíme async, nezablokujeme UI — výsledky se propisují do @Published exercises
         // ✅ FIX: [weak self] pro zamezení retain cycle v initu
         Task { [weak self] in await self?.enrichWithVideoURLs() }
+
+        // ✅ Phase 4: Registrace příjmu zpráv z Apple Watch
+        WatchIntegrationService.shared.registerMessageHandler(
+            onSetCompleted: { [weak self] reps, weight in
+                self?.handleWatchSetCompleted(reps: reps, weight: weight)
+            },
+            onRestSkipped: { [weak self] in
+                self?.handleWatchRestSkipped()
+            },
+            onHRRecoveryRPE: { [weak self] setNum, rpe in
+                self?.handleWatchHRRecoveryRPE(setNumber: setNum, rpe: rpe)
+            }
+        )
     }
 
     // MARK: - Video URL Enrichment (Bug #1 Fix)
@@ -303,6 +318,22 @@ final class WorkoutViewModel: ObservableObject {
 
         withAnimation(.spring(response: 0.3)) {
             exercises[exerciseIndex].sets[setIndex].isCompleted = true
+            
+            // ✅ RPE Auto-Regulation: Pokud byla série příliš lehká (RPE <= 7) a je další pracovní série
+            let currentSet = exercises[exerciseIndex].sets[setIndex]
+            let nextSetIdx = setIndex + 1
+            if let rpe = currentSet.rpe, rpe <= 7,
+               nextSetIdx < exercises[exerciseIndex].sets.count,
+               exercises[exerciseIndex].sets[nextSetIdx].type == .normal,
+               !exercises[exerciseIndex].sets[nextSetIdx].isCompleted {
+                
+                let currentWeight = currentSet.weightKg
+                if currentWeight > 0 {
+                    // Doporučíme zvýšení váhy o 2.5 kg pro další sérii
+                    exercises[exerciseIndex].sets[nextSetIdx].previousWeightKg = currentWeight + 2.5
+                    exercises[exerciseIndex].sets[nextSetIdx].rpeSuggestionApplied = true
+                }
+            }
         }
         
         // ✅ CHHapticEngine double-tap (deepanal.pdf)
@@ -324,11 +355,14 @@ final class WorkoutViewModel: ObservableObject {
             // Vypočítáme aktuální index a počet dokončených cviků pro Live Activity
             let currentIdx = exerciseIndex
             let completedCount = exercises.filter { $0.sets.allSatisfy { $0.isCompleted } }.count
+            let nextEx: SessionExerciseState? = currentIdx + 1 < exercises.count ? exercises[currentIdx + 1] : nil
             
             await LiveActivityManager.shared.startRestActivity(
                 session:           session,
                 currentExercise:   exercise,
+                nextExercise:      nextEx,
                 currentExerciseIndex: currentIdx,
+                totalExercises:    exercises.count,
                 completedExercisesCount: completedCount,
                 completedSetIndex: setIndex,
                 restSeconds:       restSeconds,
@@ -397,11 +431,21 @@ final class WorkoutViewModel: ObservableObject {
         }
 
         restTimerTask = Task { [weak self] in
+            guard let self else { return }
+            // Haptický countdown: posledních 5 sekund = srdeční tep
+            let hapticCountdownSecs = min(5, seconds)
+            
             while !Task.isCancelled {
                 try? await Task.sleep(nanoseconds: 1_000_000_000)
-                guard let self, !Task.isCancelled else { break }
+                guard !Task.isCancelled else { break }
                 if restSecondsRemaining > 1 {
                     restSecondsRemaining -= 1
+                    
+                    // Bezpečně spustíme haptics až když zbývá přesný čas
+                    if restSecondsRemaining == hapticCountdownSecs {
+                        HapticPatternEngine.shared.playHeartbeatCountdown(seconds: hapticCountdownSecs)
+                    }
+                    
                     if restSecondsRemaining == 10 && audioEnabled {
                         AudioCoachManager.shared.announce(message: "Zbývá 10 vteřin. Připrav se.")
                     }
@@ -458,6 +502,47 @@ final class WorkoutViewModel: ObservableObject {
     /// Přičte čas strávený rozcvičkou k celkovému elapsed time
     func addWarmupTime(seconds: Int) {
         elapsedSeconds += max(0, seconds)
+    }
+
+    // MARK: - Watch Integration Handlers
+
+    private func handleWatchSetCompleted(reps: Int, weight: Double) {
+        let exIdx = currentExerciseIndex
+        guard exercises.indices.contains(exIdx) else { return }
+        
+        guard let currentSetIdx = exercises[exIdx].sets.firstIndex(where: { !$0.isCompleted }) else { return }
+        
+        // Aktualizujeme hodnoty podle hodinek
+        exercises[exIdx].sets[currentSetIdx].reps = reps
+        if weight > 0 {
+            exercises[exIdx].sets[currentSetIdx].weightKg = weight
+        }
+        
+        // Dokončíme sérii
+        completeSet(exerciseIndex: exIdx, setIndex: currentSetIdx)
+        AppLogger.info("⌚️ [WorkoutViewModel] Dokončena série z Apple Watch: rep \(reps), weight \(weight)")
+    }
+
+    private func handleWatchRestSkipped() {
+        if isResting {
+            skipRest()
+            AppLogger.info("⌚️ [WorkoutViewModel] Přeskočena pauza z Apple Watch")
+        }
+    }
+
+    private func handleWatchHRRecoveryRPE(setNumber: Int, rpe: Double) {
+        let exIdx = currentExerciseIndex
+        guard exercises.indices.contains(exIdx) else { return }
+        
+        // ✅ FIX: setNumber z hodinek je globální counter (1, 2, 3… přes celý trénink),
+        // ale exercises[exIdx].sets je per-exercise. Místo indexování globálním číslem
+        // najdeme poslední dokončenou sérii v aktuálním cviku a přiřadíme jí RPE.
+        if let lastCompletedIdx = exercises[exIdx].sets.lastIndex(where: { $0.isCompleted && $0.rpe == nil }) {
+            exercises[exIdx].sets[lastCompletedIdx].rpe = Int(rpe)
+            AppLogger.info("⌚️ [WorkoutViewModel] Přijato HR Recovery RPE \(rpe) pro sérii \(lastCompletedIdx + 1) cviku \(exercises[exIdx].name)")
+        } else {
+            AppLogger.warning("⌚️ [WorkoutViewModel] HR Recovery RPE \(rpe) přijato, ale nenalezena série bez RPE v cviku \(exercises[exIdx].name)")
+        }
     }
 
     @Published var allExercisesDone = false   // true = uživatel dokončil všechny cviky
@@ -598,7 +683,7 @@ final class WorkoutViewModel: ObservableObject {
                     setNumber: setIdx + 1,
                     weightKg: weight,
                     reps: reps,
-                    rpe: set.rpe != nil ? Double(set.rpe!) : nil,
+                    rpe: set.rpe.map { Double($0) },  // ✅ FIX: Odstraněno redundantní force-unwrap Double(set.rpe!)
                     type: set.type
                 )
                 modelContext.insert(cSet)
@@ -654,6 +739,10 @@ final class WorkoutViewModel: ObservableObject {
         audioCoach?.stopAll()
         audioCoach?.disable()
         AudioCoachManager.shared.disable()
+        
+        // Zastavení hodinek při manuálním zrušení tréninku na iPhone!
+        WatchIntegrationService.shared.notifyWorkoutEnded()
+        
         session.status = .skipped
         modelContext.delete(session)
         do {
@@ -670,7 +759,11 @@ final class WorkoutViewModel: ObservableObject {
             guard let exercise = ex.exercise else { continue }
             let maxWeight = ex.sets.filter { $0.isCompleted && $0.type == .normal }
                 .compactMap { $0.weightKg }.max() ?? 0
-            let prev = exercise.lastUsedWeight ?? 0
+            
+            // ✅ FIX: Kontrola vůči HISTORICKÉMU maximu (all-time PR), nejen vůči minulé session.
+            let allTimeMax = exercise.weightHistory.compactMap { $0.weightKg }.max() ?? 0
+            let prev = max(exercise.lastUsedWeight ?? 0, allTimeMax)
+            
             if maxWeight > prev && prev > 0 {
                 prs.append(PREvent(
                     exerciseName: ex.name,

@@ -107,8 +107,21 @@ struct WorkoutSetRowView: View {
                     .transition(.move(edge: .top).combined(with: .opacity))
             }
             
-            // Minulý výkon u série
-            if let histW = currentSet.historicalWeightKg, let histR = currentSet.historicalReps, !currentSet.isCompleted, isActive {
+            // Minulý výkon nebo RPE doporučení u série
+            if currentSet.rpeSuggestionApplied, !currentSet.isCompleted, isActive {
+                HStack(spacing: 4) {
+                    Image(systemName: "sparkles")
+                        .font(.system(size: 10))
+                        .foregroundStyle(.green)
+                    Text("Auto-regulace (RPE): Doporučeno přidat váhu")
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundStyle(.green.opacity(0.85))
+                    Spacer()
+                }
+                .padding(.horizontal, 22)
+                .padding(.bottom, 8)
+                .padding(.top, -4)
+            } else if let histW = currentSet.historicalWeightKg, let histR = currentSet.historicalReps, !currentSet.isCompleted, isActive {
                 let wStr = histW.truncatingRemainder(dividingBy: 1) == 0 ? String(format: "%.0f", histW) : String(format: "%.1f", histW)
                 HStack {
                     Text("Minule: \(wStr)kg × \(histR)")
@@ -134,6 +147,13 @@ struct WorkoutSetRowView: View {
             // Zobrazit RPE pokud je série aktivní a ještě není vyplněné
             if isActive && currentSet.rpe == nil && !currentSet.isWarmup {
                 // Může se rovnou otevírat, ale raději to necháme na uživateli
+            }
+        }
+        .onChange(of: currentSet.previousWeightKg) { _, newVal in
+            if currentSet.rpeSuggestionApplied, let prev = newVal, !currentSet.isCompleted {
+                weightText = prev.truncatingRemainder(dividingBy: 1) == 0
+                    ? String(format: "%.0f", prev) : String(format: "%.1f", prev)
+                currentSet.weightKg = prev
             }
         }
     }

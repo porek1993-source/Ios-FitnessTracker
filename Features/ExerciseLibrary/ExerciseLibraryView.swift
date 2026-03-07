@@ -86,6 +86,9 @@ struct ExerciseLibraryView: View {
             }
             .padding(.bottom, 80)
         }
+        .navigationDestination(for: MuscleWikiExercise.self) { exercise in
+            MuscleWikiDetailView(exercise: exercise)
+        }
         .refreshable {
             await vm.loadAll(forceRefresh: true)
         }
@@ -175,7 +178,7 @@ struct ExerciseLibraryView: View {
                 sectionHeader(section.group)
 
                 ForEach(Array(section.exercises.enumerated()), id: \.element.id) { index, exercise in
-                    NavigationLink(destination: MuscleWikiDetailView(exercise: exercise)) {
+                    NavigationLink(value: exercise) {
                         exerciseRow(exercise)
                     }
                     .buttonStyle(.plain)

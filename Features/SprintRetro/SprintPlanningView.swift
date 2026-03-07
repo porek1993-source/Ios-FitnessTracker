@@ -186,6 +186,7 @@ struct SprintPlanningView: View {
             sprintNumber: sprintNumber
         )
         modelContext.insert(goal)
+        try? modelContext.save()
         
         newGoalTitle = ""
         newGoalDescription = ""
@@ -196,6 +197,7 @@ struct SprintPlanningView: View {
     
     private func deleteGoal(_ goal: SprintGoal) {
         modelContext.delete(goal)
+        try? modelContext.save()
     }
 }
 

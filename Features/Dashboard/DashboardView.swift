@@ -4,250 +4,6 @@
 import SwiftUI
 import SwiftData
 
-// MARK: - Dashboard ViewModel
-
-@MainActor
-final class DashboardViewModel: ObservableObject {
-
-    // Readiness
-    @Published var readinessScore: Double    = 0
-    @Published var readinessLevel: String   = "green"
-    @Published var readinessMessage: String = ""
-    @Published var sleepHours: Double?
-    @Published var hrv: Double?
-    @Published var restingHR: Double?
-
-    // Today's plan
-    @Published var todayPlanLabel: String         = ""
-    @Published var todayPlanSplit: String         = ""
-    @Published var estimatedMinutes: Int          = 60
-    @Published var exerciseCount: Int             = 0
-    @Published var hasPlanToday: Bool             = false
-    @Published var todayPlannedExercises: [PlannedExercise] = []
-    
-    // History
-    @Published var sessionDates: [Date] = []
-
-    // State
-    @Published var isLoadingReadiness: Bool   = true
-    @Published var greeting: String           = ""
-
-    // Streak
-    @Published var weeklyStreak: Int          = 0
-    @Published var completedThisWeek: Int     = 0
-    @Published var plannedThisWeek: Int       = 0
-    @Published var weekDaysState: [DailyWorkoutState] = Array(repeating: .empty, count: 7)
-
-    private var healthKit: HealthKitService?
-
-    init() {
-        self.greeting  = makeGreeting()
-    }
-
-    /// Injektuj sdílený HealthKitService (EnvironmentObject nelze předat v init @StateObject)
-    func inject(healthKit: HealthKitService) {
-        self.healthKit = healthKit
-    }
-
-    func load(profile: UserProfile) async {
-        greeting  = makeGreeting()
-        await loadReadiness(profile: profile)
-        loadPlan(profile: profile)
-        loadWeekStats(profile: profile)
-    }
-
-    // MARK: - Readiness
-
-    private func loadReadiness(profile: UserProfile) async {
-        isLoadingReadiness = true
-        defer { isLoadingReadiness = false }
-
-        // ✅ BEZPEČNOST: 8s timeout chrání UI před zamrznutím pokud HealthKit nereaguje.
-        // fetchDailySummary() může blokovat indefinitně pokud je store nedostupný.
-        let summary: HKDailySummary? = await withTaskGroup(of: HKDailySummary?.self) { group in
-            group.addTask { [weak self] in
-                guard let hk = await self?.healthKit else { return nil }
-                return try? await hk.fetchDailySummary(for: .now)
-            }
-            group.addTask {
-                try? await Task.sleep(nanoseconds: 8_000_000_000)
-                return nil   // Timeout
-            }
-            let result = await group.next() ?? nil
-            group.cancelAll()
-            return result
-        }
-
-        guard let summary else {
-            // Fallback — no HealthKit data nebo timeout
-            readinessScore   = 65
-            readinessLevel   = "orange"
-            readinessMessage = "Připoj Apple Health pro přesnější analýzu."
-            return
-        }
-
-        sleepHours = summary.sleepDurationHours
-        hrv        = summary.hrv
-        restingHR  = summary.restingHeartRate
-
-        // ✅ FIX: Dashboard dříve počítal readiness s nulovými baseliny.
-        // Nyní předáváme profil, aby ReadinessCalculator mohl použít historické průměry (HRV/RHR).
-        let tempSnapshot = buildTempSnapshot(from: summary, profile: profile)
-        let score: Double
-        if let result = ReadinessCalculator.compute(snapshot: tempSnapshot) {
-            score = result.score
-        } else {
-            score = 65
-        }
-
-        withAnimation(.spring(response: 0.8)) {
-            readinessScore = score
-        }
-
-        switch score {
-        case 80...:
-            readinessLevel   = "green"
-            readinessMessage = buildGreenMessage(summary: summary)
-        case 55..<80:
-            readinessLevel   = "orange"
-            readinessMessage = buildOrangeMessage(summary: summary)
-        default:
-            readinessLevel   = "red"
-            readinessMessage = buildRedMessage(summary: summary)
-        }
-    }
-
-    /// Vytvoří dočasný snapshot z HKDailySummary pro použití s ReadinessCalculator.
-    /// Snapshot není uložen do DB — slouží pouze pro výpočet skóre v reálném čase.
-    private func buildTempSnapshot(from summary: HKDailySummary, profile: UserProfile) -> HealthMetricsSnapshot {
-        let snap = HealthMetricsSnapshot(date: .now)
-        snap.sleepDurationHours   = summary.sleepDurationHours
-        snap.sleepEfficiencyPct   = summary.sleepEfficiencyPct
-        snap.heartRateVariabilityMs = summary.hrv
-        snap.restingHeartRate     = summary.restingHeartRate
-        
-        // Načteme baseliny z profilu (stejně jako v HealthBackgroundManager)
-        let history = profile.healthMetricsHistory.sorted(by: { $0.date > $1.date })
-        if let lastValid = history.first(where: { $0.hrvBaselineAvg != nil }) {
-            snap.hrvBaselineAvg = lastValid.hrvBaselineAvg
-            snap.restingHRBaseline = lastValid.restingHRBaseline
-        }
-        
-        return snap
-    }
-
-    private func buildGreenMessage(summary: HKDailySummary) -> String {
-        if let sleep = summary.sleepDurationHours, sleep >= 8 {
-            return "Výborný spánek \(String(format: "%.0f", sleep))h. Dnes můžeš lámat rekordy!"
-        }
-        if let hrv = summary.hrv, hrv > 70 {
-            return "HRV \(Int(hrv)) ms — tělo je plně zotavené. Trénuj naplno."
-        }
-        return "Všechny ukazatele jsou zelené. Skvělý den na výkon!"
-    }
-
-    private func buildOrangeMessage(summary: HKDailySummary) -> String {
-        if let sleep = summary.sleepDurationHours, sleep < 7 {
-            return "Spánek \(String(format: "%.1f", sleep))h byl kratší. Snížím objem o 20 %."
-        }
-        if let rhr = summary.restingHeartRate, rhr > 70 {
-            return "Tep v klidu \(Int(rhr)) bpm — tělo se ještě zotavuje. Trénuj chytře."
-        }
-        return "Střední připravenost. Trénink upravím, abys to zvládl bez přepálení."
-    }
-
-    private func buildRedMessage(summary: HKDailySummary) -> String {
-        if let sleep = summary.sleepDurationHours, sleep < 5 {
-            return "Jen \(String(format: "%.0f", sleep))h spánku. Dnes doporučuji aktivní regeneraci."
-        }
-        return "Tělo potřebuje odpočinek. Navrhnu lehkou mobilitu nebo chůzi."
-    }
-
-    // MARK: - Plan
-
-    private func loadPlan(profile: UserProfile) {
-        guard let activePlan = profile.workoutPlans.first(where: { $0.isActive }) else {
-            hasPlanToday = false; return
-        }
-
-        // Date.weekday extension vrací naši konvenci: 1=Pondělí … 7=Neděle
-        let dayIndex = Date.now.weekday
-
-        if let day = activePlan.scheduledDays.first(where: { $0.dayOfWeek == dayIndex && !$0.isRestDay }) {
-            hasPlanToday              = true
-            todayPlanLabel            = day.label
-            exerciseCount             = day.plannedExercises.count
-            estimatedMinutes          = profile.sessionDurationMinutes
-            todayPlanSplit            = activePlan.splitType.displayName
-            todayPlannedExercises     = day.sortedExercises
-        } else {
-            hasPlanToday  = false
-            todayPlanLabel = "Den odpočinku"
-            todayPlannedExercises = []
-        }
-    }
-
-    private func loadWeekStats(profile: UserProfile) {
-        guard let plan = profile.workoutPlans.first(where: { $0.isActive }) else { return }
-
-        // ✅ FIX: Calendar.mondayStart zajišťuje pondělní začátek týdne nezávisle na locale.
-        // Calendar.mondayStart na všech zařízeních má firstWeekday=2 (pondělí).
-        // což způsobovalo špatné zařazení session do týdnů a posunuté indexy stavů dnů.
-        let startOfWeek = Calendar.mondayStart.dateInterval(of: .weekOfYear, for: .now)?.start ?? .now
-        // date.weekday = 1=Po..7=Ne → 0-based index do states[]: 0=Po..6=Ne
-        let normalizedToday = Date.now.weekday - 1
-        
-        self.sessionDates = plan.sessions.filter { $0.status == .completed }.map { $0.startedAt }
-
-        var states: [DailyWorkoutState] = Array(repeating: .empty, count: 7)
-
-        // 1. Plánované dny
-        for i in 0..<7 {
-            // date.weekday extension: 1=Pondělí … 7=Neděle; states[i] = i+1 den
-            let dayToFind = i + 1
-            let isPlanned = plan.scheduledDays.contains(where: { $0.dayOfWeek == dayToFind && !$0.isRestDay })
-            if isPlanned {
-                states[i] = (i < normalizedToday) ? .missed : (i == normalizedToday ? .todayPlanned : .planned)
-            } else {
-                states[i] = (i == normalizedToday) ? .todayEmpty : .empty
-            }
-        }
-
-        // 2. Hotové dny tento týden
-        let completedThisWeekSessions = plan.sessions.filter {
-            $0.startedAt >= startOfWeek && $0.status == .completed
-        }
-        
-        for session in completedThisWeekSessions {
-            // date.weekday = 1=Po..7=Ne → 0-based index do states[]
-            let normCompDay = session.startedAt.weekday - 1
-            if normCompDay >= 0 && normCompDay < 7 {
-                states[normCompDay] = .completed
-            }
-        }
-
-        self.weekDaysState = states
-        plannedThisWeek   = profile.availableDaysPerWeek
-        completedThisWeek = completedThisWeekSessions.count
-
-        // Výpočet streaku pomocí dedikovaného StreakManageru
-        let allCompleted = plan.sessions
-            .filter { $0.status == .completed && $0.finishedAt != nil }
-        
-        weeklyStreak = StreakManager.calculateWeeklyStreak(completedSessions: allCompleted)
-    }
-
-    private func makeGreeting() -> String {
-        let hour = Calendar.current.component(.hour, from: .now)
-        switch hour {
-        case 5..<12:  return "Dobré ráno"
-        case 12..<17: return "Dobré odpoledne"
-        case 17..<22: return "Dobrý večer"
-        default:      return "Ahoj"
-        }
-    }
-}
-
 // MARK: - TrainerDashboardView
 
 struct TrainerDashboardView: View {
@@ -264,8 +20,11 @@ struct TrainerDashboardView: View {
     @State private var showBuilder  = false
     @State private var showQuickPicker = false
     
+    // Hero animace — matched geometry namespace
+    @Namespace private var heroNS
+
     // Pro spuštění custom tréninku
-    @State private var customSessionToStart: WorkoutSession? = nil // Proměnná pro zobrazení Custom Workout Builderu
+    @State private var customSessionToStart: WorkoutSession? = nil
     @State private var appearedOnce = false
     
     // UI state pro skrývání navigace
@@ -277,43 +36,31 @@ struct TrainerDashboardView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                // Background
-                DashboardBackground()
+                // ✅ 2026 Design: Organicky animované MeshGradient pozadí
+                MeshGradientBackground()
 
                 ScrollView(showsIndicators: false) {
                     VStack(spacing: 0) {
                         // ── Top safe area spacer ──────────────────────
                         Color.clear.frame(height: 60)
-                            .onAppear {
-                                if #available(iOS 18.0, *) {
-                                    // Funkcionalita je řešena přes onScrollGeometryChange níže
-                                }
-                            }
-                        
-                        // ✅ FIX: iOS 18+ API must be guarded by #available
+
+                        // ✅ iOS 18+: Auto-hide TabBar při scrollování dolů
                         if #available(iOS 18.0, *) {
                             Color.clear.frame(height: 0)
                                 .onScrollGeometryChange(for: CGFloat.self) { geo in
                                     geo.contentOffset.y
                                 } action: { oldValue, newValue in
-                                    // Automatické zobrazení při návratu nahoru
                                     if newValue < 50 {
                                         withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
                                             tabBarVisible = true
                                         }
-                                    } else if newValue > oldValue + 10 {
-                                        // Scrollování dolů -> schovat
-                                        if tabBarVisible {
-                                            withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
-                                                tabBarVisible = false
-                                            }
+                                    } else if newValue > oldValue + 10, tabBarVisible {
+                                        withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+                                            tabBarVisible = false
                                         }
-                                    } else if newValue < oldValue - 10 {
-                                        // Scrollování nahoru -> ukázat
-                                        if !tabBarVisible {
-                                            withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
-                                                tabBarVisible = true
-                                            }
+                                    } else if newValue < oldValue - 10, !tabBarVisible {
+                                        withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+                                            tabBarVisible = true
                                         }
                                     }
                                     lastOffset = newValue
@@ -327,11 +74,13 @@ struct TrainerDashboardView: View {
                                 .padding(.bottom, 24)
                         }
 
-                        // ── Readiness Card ────────────────────────────
+                        // ── Readiness Card ─────────────────────────────
+                        // ✅ Skeleton Screen: .redacted() na finální tvar místo šedých bloků
                         ReadinessCardView(vm: vm)
+                            .redacted(reason: vm.isLoadingReadiness ? .placeholder : [])
                             .padding(.horizontal, 18)
 
-                        // ── Weekly Progress ───────────────────────────
+                        // ── Weekly Progress (7 dní — relevantní pro "dnes") ────
                         WeeklyCalendarView(
                             completedCount: vm.completedThisWeek,
                             plannedCount:   vm.plannedThisWeek,
@@ -340,11 +89,6 @@ struct TrainerDashboardView: View {
                         .padding(.horizontal, 18)
                         .padding(.top, 16)
 
-                        // ── Monthly Heatmap Calendar ─────────────────────
-                        WorkoutCalendarView(workoutDates: vm.sessionDates, accentColor: .blue)
-                            .padding(.horizontal, 18)
-                            .padding(.top, 16)
-
                         // ── Body Map Preview ──────────────────────────
                         BodyMapPreviewCard(
                             heatmapVM: heatmapVM,
@@ -352,37 +96,34 @@ struct TrainerDashboardView: View {
                         )
                         .padding(.horizontal, 18)
                         .padding(.top, 16)
-                        
-                        // ── Analytika svalového objemu (7 Dní) ────────
-                        MuscleVolumeChart()
-                            .padding(.horizontal, 18)
-                            .padding(.top, 16)
-                            
+
                         // ── Today's Plan ──────────────────────────────
+                        // ✅ Hero Animace: matchedGeometryEffect umožní plynulý fade
+                        //    na budoucí WorkoutView přechod (namespace sdílen s launch tlačítkem)
                         TodayPlanCard(
                             vm:          vm,
                             onStart:     { showWorkout = true }
                         )
+                        .matchedGeometryEffect(id: "workout-hero-card", in: heroNS, isSource: true)
                         .padding(.horizontal, 18)
                         .padding(.top, 16)
-
-                        // ── Sociální Feed (Aktivita přátel) ───────────
-                        SocialFeedView()
-                            .padding(.horizontal, 0) // Samo má padding
-                            .padding(.top, 16)
 
                         // ── Sprint Goals ───────────────────────────────
                         if let activePlan = profile?.workoutPlans.first(where: \.isActive) {
                             SprintGoalsCard(sprintNumber: activePlan.sprintNumber)
                                 .padding(.horizontal, 18)
                                 .padding(.top, 16)
-                                .padding(.bottom, 140) // Extra padding so content doesn't hide behind sticky CTA
+                                .padding(.bottom, 140)
                         } else {
                             Color.clear.frame(height: 140)
                         }
-
                     }
                 }
+
+                // ✅ Oblast 6: Streak Particle Emitter — padají plamínky při aktivním streaku
+                StreakParticleView(streakCount: vm.weeklyStreak)
+                    .allowsHitTesting(false)
+
             }
             .ignoresSafeArea()
             .preferredColorScheme(.dark)
@@ -420,7 +161,7 @@ struct TrainerDashboardView: View {
                                 .foregroundStyle(.white)
                             }
                             .frame(maxWidth: .infinity)
-                            .frame(height: 56)
+                            .frame(minHeight: 56)
                         }
                         .buttonStyle(.plain)
                         .accessibilityLabel("Začít dnešní trénink")
@@ -438,7 +179,7 @@ struct TrainerDashboardView: View {
                             }
                             .foregroundStyle(.white.opacity(0.55))
                             .frame(maxWidth: .infinity)
-                            .frame(height: 36)
+                            .frame(minHeight: 36)
                         }
                         .buttonStyle(.plain)
                         .accessibilityLabel("Zobrazit náhled plánu")
@@ -452,49 +193,44 @@ struct TrainerDashboardView: View {
                         Divider().background(Color.white.opacity(0.08))
                     }
                 } else {
-                    VStack(spacing: 10) {
-                        // Rychlý trénink — podle partie nebo zdravotního problému
-                        Button(action: {
-                            UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-                            showQuickPicker = true
-                        }) {
-                            HStack(spacing: 10) {
-                                Image(systemName: "bolt.fill")
-                                    .font(.system(size: 14))
-                                    .foregroundStyle(.orange)
-                                Text("Rychlý trénink")
-                                    .font(.system(size: 15, weight: .bold))
+                    // ✅ Oblast 4 — Floating Action Button (FAB) pro den odpočinku
+                    // Místo 2 přeplácených tlačítek pod sebou → čistý FAB přístup
+                    HStack {
+                        Spacer()
+                        Menu {
+                            Button {
+                                UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                                showQuickPicker = true
+                            } label: {
+                                Label("Rychlý trénink", systemImage: "bolt.fill")
+                            }
+                            Button {
+                                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                                showBuilder = true
+                            } label: {
+                                Label("Sestavit ručně", systemImage: "square.and.pencil")
+                            }
+                        } label: {
+                            ZStack {
+                                Circle()
+                                    .fill(
+                                        LinearGradient(
+                                            colors: [AppColors.primaryAccent, AppColors.secondaryAccent],
+                                            startPoint: .topLeading, endPoint: .bottomTrailing
+                                        )
+                                    )
+                                    .frame(width: 56, height: 56)
+                                    .shadow(color: AppColors.primaryAccent.opacity(0.45), radius: 14, y: 6)
+                                Image(systemName: "plus")
+                                    .font(.system(size: 22, weight: .bold))
                                     .foregroundStyle(.white)
                             }
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 14)
-                            .background(
-                                LinearGradient(colors: [.orange.opacity(0.2), .red.opacity(0.15)], startPoint: .leading, endPoint: .trailing)
-                            )
-                            .clipShape(Capsule())
-                            .overlay(Capsule().stroke(Color.orange.opacity(0.35), lineWidth: 1))
                         }
-                        .padding(.horizontal, 22)
-
-                        // Sestavit ručně — výběr cviků z databáze
-                        Button(action: {
-                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                            showBuilder = true
-                        }) {
-                            Text("Sestavit ručně")
-                                .font(.system(size: 15, weight: .bold))
-                                .foregroundStyle(.white.opacity(0.8))
-                                .frame(maxWidth: .infinity)
-                                .padding(.vertical, 14)
-                                .background(Color.white.opacity(0.1))
-                                .clipShape(Capsule())
-                                .overlay(Capsule().stroke(Color.white.opacity(0.15), lineWidth: 1))
-                        }
-                        .padding(.horizontal, 22)
-                        .padding(.top, 4)
-                        
+                        .menuStyle(.button)
                     }
-                    .padding(.bottom, 24)
+                    .padding(.horizontal, 22)
+                    .padding(.bottom, 12)
+                    .padding(.top, 8)
                     .background(.ultraThinMaterial)
                     .overlay(alignment: .top) {
                         Divider().background(Color.white.opacity(0.08))
@@ -604,24 +340,6 @@ struct TrainerDashboardView: View {
     }
 }
 
-// MARK: - Dashboard Background
-
-private struct DashboardBackground: View {
-    var body: some View {
-        ZStack {
-            AppColors.background
-                .ignoresSafeArea()
-
-            // Top atmospheric glow
-            RadialGradient(
-                colors: [AppColors.primaryAccent.opacity(0.20), .clear],
-                center: .init(x: 0.75, y: 0.0),
-                startRadius: 0, endRadius: 380
-            )
-            .ignoresSafeArea()
-        }
-    }
-}
 
 // MARK: ─────────────────────────────────────────────────────────────────────
 // MARK: - ReadinessCardView
@@ -1304,7 +1022,7 @@ struct TodayWorkoutLaunchWrapper: View {
                         Text("Zpět")
                             .font(.system(size: 16, weight: .semibold))
                             .foregroundStyle(.white)
-                            .frame(maxWidth: .infinity).frame(height: 52)
+                            .frame(maxWidth: .infinity).frame(minHeight: 52)
                             .background(RoundedRectangle(cornerRadius: 14).fill(Color.white.opacity(0.12)))
                             .padding(.horizontal, 40)
                     }

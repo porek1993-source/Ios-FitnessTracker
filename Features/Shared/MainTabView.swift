@@ -53,7 +53,14 @@ struct MainTabView: View {
             }
             .tag(2)
 
-            // 4. Týdenní Plán
+            // 4. Komunita & Výzvy
+            CommunityHubView()
+                .tabItem {
+                    Label("Komunita", systemImage: "person.2.fill")
+                }
+                .tag(3)
+
+            // 5. Týdenní Plán
             NavigationStack {
                 ZStack {
                     Color(red: 0.055, green: 0.055, blue: 0.08).ignoresSafeArea()
@@ -69,21 +76,21 @@ struct MainTabView: View {
             .tabItem {
                 Label("Plán", systemImage: "calendar")
             }
-            .tag(3)
+            .tag(4)
 
-            // 5. Progres
+            // 6. Progres
             AppProgressView()
                 .tabItem {
                     Label("Progres", systemImage: "chart.line.uptrend.xyaxis")
                 }
-                .tag(4)
+                .tag(5)
 
-            // 6. Nastavení
+            // 7. Nastavení
             SettingsView()
                 .tabItem {
                     Label("Nastavení", systemImage: "gearshape.fill")
                 }
-                .tag(5)
+                .tag(6)
         }
         .accentColor(.blue)
         .preferredColorScheme(.dark)
