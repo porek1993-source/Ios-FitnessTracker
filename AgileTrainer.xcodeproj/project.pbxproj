@@ -1,0 +1,1695 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		01088291448511F0E24F160A /* MuscleWikiViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 24BBF6E522089F634ED9774C /* MuscleWikiViewModel.swift */; };
+		045D44BAD77BDCFD75BECF6B /* HealthMetricsSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 91BD14EC1F477141FB674839 /* HealthMetricsSnapshot.swift */; };
+		05EAAEE71B0177E4853552B3 /* RollingWeekView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D945CA5F7F7294CD03E4864 /* RollingWeekView.swift */; };
+		0627B486A2B393EFD075E8D6 /* MotionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 295DF9D963697EE887987F8F /* MotionManager.swift */; };
+		07637D26AAE10FC6331BCB02 /* WorkoutSummaryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5DFE3CC751BCFA41F62F0C08 /* WorkoutSummaryView.swift */; };
+		0775739B9C1EF9285FD6ABFD /* ProgressPhoto.swift in Sources */ = {isa = PBXBuildFile; fileRef = 93F1894B34E58CD4A9E0B842 /* ProgressPhoto.swift */; };
+		099EFF4EF1BCA756028D75B0 /* WorkoutViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 67DD10D915AAC0EF853E0233 /* WorkoutViewModel.swift */; };
+		0B9E8361388C2015B4DF971D /* Exercise.swift in Sources */ = {isa = PBXBuildFile; fileRef = E4C0BD3E705631474E3BB6D9 /* Exercise.swift */; };
+		0BB4CA32D60ABE529075ADF5 /* GymProfile.swift in Sources */ = {isa = PBXBuildFile; fileRef = 47EF85C328F1CFFB3F926F57 /* GymProfile.swift */; };
+		0D742AD13829CABD8B1DA497 /* SharedModelContainer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 541D6EB9C0CF06F4E1DEE124 /* SharedModelContainer.swift */; };
+		0E06AFF502A7B5ED12FC48E2 /* SharedModelContainer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 541D6EB9C0CF06F4E1DEE124 /* SharedModelContainer.swift */; };
+		111E7680B513FA2D3BD4A385 /* HRZonedRestTimer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B2ED803D8AEEBC6DF90FCB3 /* HRZonedRestTimer.swift */; };
+		12DC52E5617587AC3AD7DF86 /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 79259307434EBBF016C61143 /* Theme.swift */; };
+		15B72F7BD8AC2F501E4CA635 /* ActiveSessionContrast_and_PlanFallback.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1738188364521799CC45A94 /* ActiveSessionContrast_and_PlanFallback.swift */; };
+		177C72CAA0E6F7FA2F439118 /* HapticManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 13E5C541838EAF9606E5E44D /* HapticManager.swift */; };
+		19A53DE10C5EE6C356BE722C /* GeminiAPIClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0D432FDEFFB488AD321FFF68 /* GeminiAPIClient.swift */; };
+		19A8B76F37A015BC9CFC16B4 /* MuscleMapView_Redesign.swift in Sources */ = {isa = PBXBuildFile; fileRef = B5BAC4CE35F2A1CBCAB4BCBD /* MuscleMapView_Redesign.swift */; };
+		1BD6F2AC4655A656ABDEAB2C /* PerformanceHelpers.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2C0B00109290B4CE267ACE3 /* PerformanceHelpers.swift */; };
+		1BE09355165A2DBE1B7F374C /* ExerciseDetailViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 238D6C8532BF142EBE580FB5 /* ExerciseDetailViewModel.swift */; };
+		1E32EA6DB7C530BA042EA21C /* ExerciseDTO.swift in Sources */ = {isa = PBXBuildFile; fileRef = 503DAF35B5FF6980B2E8762A /* ExerciseDTO.swift */; };
+		1EA1FD8D7A8262B7CD3CF6BD /* WatchConnectivityManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5669497CE4E034624CC410BF /* WatchConnectivityManager.swift */; };
+		21B6BE5F118B4B7F8532D31E /* CustomWorkoutBuilderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 65CA9C1E9727086F3FE74B45 /* CustomWorkoutBuilderView.swift */; };
+		21F2EBCC53CFA564AF6FC36C /* AuthManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32A8EF6643AE01BBDC9F4DE1 /* AuthManager.swift */; };
+		2303C737E39D86975D4D63D0 /* MuscleVolumeChart.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3CACC32EFB69FDE8B5D79929 /* MuscleVolumeChart.swift */; };
+		237C038F728776329DB7359B /* ExerciseSearchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 573522E63A1E9764A1293685 /* ExerciseSearchView.swift */; };
+		29570CB5447CE7EDC00C2F93 /* RestTimerLiveActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0F7024F9D8A993B5525757EF /* RestTimerLiveActivity.swift */; };
+		2A2B0D0C0A9B2B2F95EA6B98 /* Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6EE8980B6F2C7FA5C2BC5D0B /* Extensions.swift */; };
+		2BCD31D80E72C87BDB65FD52 /* HealthKitErrorHandling.swift in Sources */ = {isa = PBXBuildFile; fileRef = A3ECAB48600D7B278982F12F /* HealthKitErrorHandling.swift */; };
+		2BED6F0ADAE63992B0860ACC /* HapticPatternEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1CAC28D63756827E5E7F20CE /* HapticPatternEngine.swift */; };
+		2CA8F47993F70F41A2498BB5 /* HealthKitTypes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 187ADAFD0434341DA5A60CD3 /* HealthKitTypes.swift */; };
+		2DF0FD59DDAEB7F6C397D97E /* Mesocycle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4DD00F08FB73AEB2566B35C9 /* Mesocycle.swift */; };
+		2EA11242665E7917C3930B8D /* WarmupPhaseView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 57CD1E9A8C4E9A2FD5025965 /* WarmupPhaseView.swift */; };
+		320AD9F1351010E6F0C90CC2 /* QuickWorkoutModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F6017F8BD60C0DAB47A7EFF2 /* QuickWorkoutModels.swift */; };
+		322583C437CF91BF6C86FBA8 /* ProgressView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C7ACA7FE84F67E692C59F511 /* ProgressView.swift */; };
+		330C0F46B9A0022DD438A26D /* MeshGradientBackground.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C949F2044733641A749C8D2 /* MeshGradientBackground.swift */; };
+		33FC192EDE648220580DAAE7 /* AgileTrainerWatchApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3E9C25E2819353C3B7342B75 /* AgileTrainerWatchApp.swift */; };
+		350B1ABAB121CC5842090287 /* WatchConnectivityManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5669497CE4E034624CC410BF /* WatchConnectivityManager.swift */; };
+		36007F5B31CAB29ACCBCDF55 /* RestTimerAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8CAC6B41919504797F7704B6 /* RestTimerAttributes.swift */; };
+		36596B12EF2046DE7D22FCD9 /* NotificationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = E8FD01C7386B37B9E9026AF5 /* NotificationService.swift */; };
+		36DD13DCDE7CEF5A1D1E6581 /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = 08E41327886A90F0A8DC79C1 /* Supabase */; };
+		37326A77132C876CB83864FF /* Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6EE8980B6F2C7FA5C2BC5D0B /* Extensions.swift */; };
+		384E5703CA91F21044474F57 /* HealthKitWatchService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4BF70E3FF9328EC92E0AA427 /* HealthKitWatchService.swift */; };
+		3935FF18D7E8FEFDBD08CD20 /* AppLogger.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1B721CD9FFC9B98BA26BEA66 /* AppLogger.swift */; };
+		3A1D9911EE91FB1BA7B668A5 /* MuscleMapView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E94838DBA2CB6644BE1D8CCE /* MuscleMapView.swift */; };
+		3A39D720BD77DB3AE549E6CC /* ToggleDeloadIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = B8B1CAA53CCCD4E2C056A640 /* ToggleDeloadIntent.swift */; };
+		3AF5B52F43CA2C5DF36DAB74 /* WorkoutSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = E4D2642156F04AE529C17F8D /* WorkoutSession.swift */; };
+		3B7F1866F430DF1C3F83332C /* DashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 02E855E448ACF8C3B48D89A9 /* DashboardView.swift */; };
+		3D6C5925C6D3AC9196D4E5FA /* WorkoutPreviewSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = CF0964C018D9E7E1C9E16586 /* WorkoutPreviewSheet.swift */; };
+		3F923ABEC3FAE8231660E938 /* AudioCoachService.swift in Sources */ = {isa = PBXBuildFile; fileRef = D05A9C5567C31446470C330F /* AudioCoachService.swift */; };
+		42C387A3683AA848D60D44CF /* ProgressiveOverloadUseCase.swift in Sources */ = {isa = PBXBuildFile; fileRef = 925BB414A2BD1BF3C2D059AA /* ProgressiveOverloadUseCase.swift */; };
+		42E51F450048A335C68E1119 /* WatchIntegrationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8E207B74EC28108D2B292711 /* WatchIntegrationService.swift */; };
+		42F8885C6DB7E3E1AE9D88C4 /* HeatmapViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF0118FA6BCB986FAEB3986F /* HeatmapViewModel.swift */; };
+		444008D39FC1F3B9C1D982A8 /* VolumeChartView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 06A018353D182FC62D9DA90B /* VolumeChartView.swift */; };
+		44D3996A7B27898C5B6F18A5 /* WorkoutHeaderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4DC52073428D7251DC3BEED7 /* WorkoutHeaderView.swift */; };
+		4543FAF8E6959EA9FB05D2A8 /* WatchConfirmView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 825A517C85C49645E81A2834 /* WatchConfirmView.swift */; };
+		4789A235A5121E45686F31C8 /* MuscleArea.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0EE641CBA0E1F5892B81AC85 /* MuscleArea.swift */; };
+		47F532871D1EBAD2FA64D15C /* AnatomySVGPath.swift in Sources */ = {isa = PBXBuildFile; fileRef = 91A59CB1912340BA674FFE56 /* AnatomySVGPath.swift */; };
+		48A88B35005E61926F57C135 /* HealthBackgroundManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = F54CFEE15F345997A3C53733 /* HealthBackgroundManager.swift */; };
+		4A4CEEEC036D64E9FB6E2B6B /* ShimmerEffect.swift in Sources */ = {isa = PBXBuildFile; fileRef = 89400A013B1478ECD3478AD9 /* ShimmerEffect.swift */; };
+		4ACE4AC1192FA6ABC371EB3D /* LogFatigueIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA16208D59B6DC105427AC61 /* LogFatigueIntent.swift */; };
+		4BF88846A446AE64DC925C4A /* WorkoutSetRowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 84885AEE856BD2CB042CEA85 /* WorkoutSetRowView.swift */; };
+		4C1A54819E23ADFDBFB1DEAD /* ActiveSessionViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9C9D50F305163ADB6CE9A2EC /* ActiveSessionViewModel.swift */; };
+		4DC054CAE7414A0D9A5596D3 /* MuscleXPRecord.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5EB5740F1F06E068E832B283 /* MuscleXPRecord.swift */; };
+		4E791E7DF7495A0D029E076C /* WeightEntry.swift in Sources */ = {isa = PBXBuildFile; fileRef = 84D6D30B1249145AA145956D /* WeightEntry.swift */; };
+		517593C967330AE6B65BFA57 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 099ED479A11FD2FF26C995FC /* SettingsView.swift */; };
+		52BEB9F8EBB92BE58EF7DAFD /* HealthKitNutritionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9AD4EE4211BD95B82E4E6A11 /* HealthKitNutritionService.swift */; };
+		531D91537544CC75E79163E7 /* WorkoutPlan.swift in Sources */ = {isa = PBXBuildFile; fileRef = A91332782DD957D6830142BD /* WorkoutPlan.swift */; };
+		53D028FE4B251D2C101A9C84 /* LiveActivityManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3B9A3307833D4D000FA091F6 /* LiveActivityManager.swift */; };
+		53E2E3D2B5DC9DDA6C742C18 /* OnboardingAIManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 05D9052A10BDBB60EA8EEA8C /* OnboardingAIManager.swift */; };
+		551BCBF890693073A97CA8FE /* FatigueEntry.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3C8A6A1B97CA3E1A72B84A14 /* FatigueEntry.swift */; };
+		5652A19221AAD79077C855A8 /* DetailedBodyFigureView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 62F12BB16AB0C6B47E2F86FE /* DetailedBodyFigureView.swift */; };
+		58392777745ADC4BEDDD05FA /* CircularRestTimerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6DA0B2153D2F5E0C594C9E38 /* CircularRestTimerView.swift */; };
+		5BD54FECE24506B3459C827A /* GymDetectionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40D96F400215BA16F922A0B5 /* GymDetectionService.swift */; };
+		5D433F27F289831951042A72 /* TempoParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = A70C2D1A984D84825E4F6FA2 /* TempoParser.swift */; };
+		5D9D23AA49E2615C33FE7D2F /* Color+App.swift in Sources */ = {isa = PBXBuildFile; fileRef = DE89EC4D426D57331150B5D6 /* Color+App.swift */; };
+		5DD00EC5BE17012FBBA0F748 /* MuscleArea.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0EE641CBA0E1F5892B81AC85 /* MuscleArea.swift */; };
+		5DFA17CA1FEFB0CBAD4565D8 /* DailyReadinessWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = F9A3AD20C7422D54AEFB79E6 /* DailyReadinessWidget.swift */; };
+		5EEED425CA97D7C8E760AF67 /* WorkoutPreviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14EB05E5384DA11E702258A3 /* WorkoutPreviewView.swift */; };
+		5F5B84F0C7CC635C4ACB04A3 /* FatigueEntry.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3C8A6A1B97CA3E1A72B84A14 /* FatigueEntry.swift */; };
+		63214AD17784EE9D9F5D8B2E /* WatchRestView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 144EEA46247BF204133E9D2E /* WatchRestView.swift */; };
+		63349D0F9CFBB40B2ED771EA /* ProgressCameraView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1791A8BA35A2B9C12E2C2EF /* ProgressCameraView.swift */; };
+		639570D7081D5074DC488F1E /* HRRecoveryRPE.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A4309CB4F62617738CA6660 /* HRRecoveryRPE.swift */; };
+		639A2C4A1C465C9F1832F895 /* AIReschedulingEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 452ED9BC22BFBD67A4082244 /* AIReschedulingEngine.swift */; };
+		64E9C530928E77BE509CE698 /* GlobalErrorModifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEC1D992A0FBF4892BB02338 /* GlobalErrorModifier.swift */; };
+		6649871B46D397D84072FBEE /* NetworkMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA8DCF4DD15645BADECBC19B /* NetworkMonitor.swift */; };
+		6764104D789EE454BCE0ECDA /* AppConstants.swift in Sources */ = {isa = PBXBuildFile; fileRef = 08CB1D8DEF752CB952FB126B /* AppConstants.swift */; };
+		6A35E3D8B272234B0B0B82AB /* WorkoutMath.swift in Sources */ = {isa = PBXBuildFile; fileRef = D358351D84A14FD943C64B25 /* WorkoutMath.swift */; };
+		6A9E317C47E6E64BB5EC95A7 /* ExerciseDatabaseLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0BAC7E419B876341B020C74C /* ExerciseDatabaseLoader.swift */; };
+		6AACD396566DF88F08637E1C /* ExerciseNoteView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A23070FE38FA89D8F9332B17 /* ExerciseNoteView.swift */; };
+		6C150F7EAB72FB0BC315036F /* ChallengeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 47BA581EEA3485F018439247 /* ChallengeView.swift */; };
+		6C306E90E35BCC58988D11E5 /* Mesocycle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4DD00F08FB73AEB2566B35C9 /* Mesocycle.swift */; };
+		6CA742364A4CCCAC390A6FFE /* SprintGoalsCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7CB94D428AD83A0C880026F7 /* SprintGoalsCard.swift */; };
+		6FB4ED08777EAB3740299A2A /* FatigueStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = DF1055A9953FFA5BDB3A8505 /* FatigueStore.swift */; };
+		7164B368348C988260D17C4A /* RestTimerLiveActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0F7024F9D8A993B5525757EF /* RestTimerLiveActivity.swift */; };
+		72071829A11CC84E595C6AE2 /* OnboardingChatView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 586FDE4FB8010FE5A71ADB36 /* OnboardingChatView.swift */; };
+		729789B839E4466F8239214E /* ExerciseDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 02D39DA0A519766166A3E36B /* ExerciseDetailView.swift */; };
+		74A5120FFC430C98F95E3AFF /* LiveActivityManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3B9A3307833D4D000FA091F6 /* LiveActivityManager.swift */; };
+		74AC1119FBED795FA9418B51 /* Equipment+SwapSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 530A54C4CF5FD287F54FCE1B /* Equipment+SwapSupport.swift */; };
+		74E2463B6EF353A0CD7349B2 /* SprintPlanningView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB2EA197D760BE80C977F4A1 /* SprintPlanningView.swift */; };
+		752979FA79166ACB0360778B /* SupabaseExerciseRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = D74332F708ACC5F2EBA4338A /* SupabaseExerciseRepository.swift */; };
+		7713F2A9BF9D8537148AB570 /* GetTodayWorkoutIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAB95AE5897CFDC5DB57C0A4 /* GetTodayWorkoutIntent.swift */; };
+		793CAAC1169D38F9FEFACDB0 /* WatchActiveSetView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DDE7E5DD4556B0C565C634CE /* WatchActiveSetView.swift */; };
+		7AEA2EE18192F9721FFA7160 /* SocialFeedView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0A90AD1C3B569124D029A1B /* SocialFeedView.swift */; };
+		7C3F38EA85D11634D3575008 /* MuscleWikiDTO.swift in Sources */ = {isa = PBXBuildFile; fileRef = 439A4199A9B1B92B135B74A0 /* MuscleWikiDTO.swift */; };
+		7D62BEDC4312F168AE916B69 /* RestTimerManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = C89A096FB984DB01C3040BC8 /* RestTimerManager.swift */; };
+		7F0379D08F5A43AE60C1682C /* UserProfile.swift in Sources */ = {isa = PBXBuildFile; fileRef = 41875DDE696BE597F66B4F76 /* UserProfile.swift */; };
+		8036411D1C8E639ECE3D1B2E /* DataExportManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 179F3D53E1814C12C9EE64D5 /* DataExportManager.swift */; };
+		8377701BDBCDB113D0305586 /* WeeklyProgressIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF2FCD62A2DFA20F4D237C56 /* WeeklyProgressIntent.swift */; };
+		85F7A8504CA9F1D737EB02B6 /* SkeletonWorkoutView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC54970C4B8CE59CAD622DE3 /* SkeletonWorkoutView.swift */; };
+		86ECC380004CFDE9E37C5D94 /* Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6EE8980B6F2C7FA5C2BC5D0B /* Extensions.swift */; };
+		87A096CB2D349792E76CA390 /* AIRateLimiter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9AACD458A0C15D8A5633D3CC /* AIRateLimiter.swift */; };
+		8993016178BDD3625873C275 /* FluidBackground.swift in Sources */ = {isa = PBXBuildFile; fileRef = 414EB9F827CB835E11C7C8D5 /* FluidBackground.swift */; };
+		8A6440C656A38E7A2475719B /* WeeklyCalendarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2EA8FC12A77FF7444A7D2CAE /* WeeklyCalendarView.swift */; };
+		8B9451F866390606AA52AAFC /* SprintRetroViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 96EA687519A5B40B714A07EF /* SprintRetroViewModel.swift */; };
+		8CB1D5B3025BA5C8CAC686D6 /* WeeklyReportService.swift in Sources */ = {isa = PBXBuildFile; fileRef = CCCEE20A288CCED45BB7FF48 /* WeeklyReportService.swift */; };
+		8D5ED7CDF7D2FDBC6CAE2329 /* StubViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0684568D915AFD5761B4A71E /* StubViews.swift */; };
+		91B95DF9DDC5E47A691E76D4 /* AITrainerModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 46A5E51BD17813EBB7BE3FAC /* AITrainerModels.swift */; };
+		929243B07B4CD371E5B6048C /* SetType.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6E0091AA6410EDE918788F70 /* SetType.swift */; };
+		92CB9FD40D7593C128B0C3C6 /* HealthWorkoutWriter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 06B1031E9CB531736056FCD0 /* HealthWorkoutWriter.swift */; };
+		9395D2D9B501F97F0C00A72A /* WorkoutCalendarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0822B225966665FE6CC420D0 /* WorkoutCalendarView.swift */; };
+		951C49043F5DF3A06A4E52B7 /* AudioCoach+WorkoutIntegration.swift in Sources */ = {isa = PBXBuildFile; fileRef = E3AAB65D578D9938AFE5F8E0 /* AudioCoach+WorkoutIntegration.swift */; };
+		956122A510FDF36F5EE27C15 /* WelcomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E6556CEF099FEB90BB35EDDB /* WelcomeView.swift */; };
+		9576CD1C279866BD53AAB818 /* HealthKitWorkoutWriter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 999955CB0F0127C3BCAEBEC5 /* HealthKitWorkoutWriter.swift */; };
+		965252536E083A640BA733CA /* OneRepMaxChartView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1755C0465E49FBE3D87774A2 /* OneRepMaxChartView.swift */; };
+		97F900883F707A6AF48AF991 /* MesocyclePlannerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4AAEE603C7D209364C6AC85 /* MesocyclePlannerView.swift */; };
+		9BBC8504DE4EF00FD4105202 /* ExerciseCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 63892AA21C3E66B833E149A1 /* ExerciseCardView.swift */; };
+		A2E9BAB37F6944C2F867E72E /* AudioCoachManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 90BCDD90F6A680318138ED08 /* AudioCoachManager.swift */; };
+		A603A3578A361261E5D18F91 /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0A24744463984E5E0B024F5 /* OnboardingView.swift */; };
+		A6619D6249B4F230E05E80CD /* AITrainerModelsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5D1A2D651097E0ABB0988CE4 /* AITrainerModelsTests.swift */; };
+		A8FC373D14FA9E3EF825AD97 /* Challenge.swift in Sources */ = {isa = PBXBuildFile; fileRef = 26A91A635690ADA41137E39B /* Challenge.swift */; };
+		A927DFC3B6243786BE3AD5F4 /* MainTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1EF51FC1EA6FBD7DD10F9EE2 /* MainTabView.swift */; };
+		AD279ECF816AB9A3D67FFB7F /* Exercise.swift in Sources */ = {isa = PBXBuildFile; fileRef = E4C0BD3E705631474E3BB6D9 /* Exercise.swift */; };
+		AD38B41ED9DF5BB1FCC05AAA /* WorkoutHistoryCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4455A0A1CD5299A8CCE6592C /* WorkoutHistoryCardView.swift */; };
+		AEF4CEE5503D5571D346BA3E /* DashboardViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 38027FB9F3ECBC4D9605A835 /* DashboardViewModel.swift */; };
+		AF8619F6AD8F733DDAC2D9C7 /* SprintGoal.swift in Sources */ = {isa = PBXBuildFile; fileRef = 663594E913107DAC0C17DDEA /* SprintGoal.swift */; };
+		AFEDA696CEBC0EDA985F1A17 /* WorkoutPlanGenerator.swift in Sources */ = {isa = PBXBuildFile; fileRef = BDAC420814DD5E8E91776DAA /* WorkoutPlanGenerator.swift */; };
+		B069C2950AAA14A39BEAF78C /* AppEnvironment.swift in Sources */ = {isa = PBXBuildFile; fileRef = 27D6A81E4C6B938DF7941CAB /* AppEnvironment.swift */; };
+		B1F7E9335EF859691C8D5DF1 /* HealthKitService.swift in Sources */ = {isa = PBXBuildFile; fileRef = BAFB4C2B3B0195BB5B37F046 /* HealthKitService.swift */; };
+		B3AA7E62059D9E51D9A1F27F /* WatchSessionCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 07261E012B6FC306A6B47B96 /* WatchSessionCoordinator.swift */; };
+		B4B1DB3675465EEE54AC7C70 /* WorkoutViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94493BFF4EA65A5656334AD2 /* WorkoutViewModelTests.swift */; };
+		BAFD9826E42058D77B78DC1E /* AgileTrainerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A4F38B76731F73097947501A /* AgileTrainerTests.swift */; };
+		BB04721EF2B23653DF4AFABA /* ProgressPhoto.swift in Sources */ = {isa = PBXBuildFile; fileRef = 93F1894B34E58CD4A9E0B842 /* ProgressPhoto.swift */; };
+		BD898B63268E197BC2AE75EE /* HeatmapView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5DDBFAFF7F336005919BF9EC /* HeatmapView.swift */; };
+		C05EA19537102395E0A67C87 /* GymProfilesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A4C12A23EE12D8B4B1236AB /* GymProfilesView.swift */; };
+		C215810BDD592CCB5F0EBC41 /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 79259307434EBBF016C61143 /* Theme.swift */; };
+		C5BD68D61979A29A530EC83B /* TrainerContextBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = E56E109D9AF5BF091C25786B /* TrainerContextBuilder.swift */; };
+		C6FC4784191B497F14988407 /* SetControlViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = BDA1C52DF373AB5E18FC3A72 /* SetControlViews.swift */; };
+		C86C15089086F31B8B35D2BF /* WorkoutViewWithAI.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B372AC7442F746F0A9230EF /* WorkoutViewWithAI.swift */; };
+		C95FE829C4A6F738E5C13459 /* AICoachChatView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D6F178194EA53D1A3F8D6867 /* AICoachChatView.swift */; };
+		CAD207DED3B1B9421F27E713 /* AITrainerService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A08E3C5F4D9658B77BF800AD /* AITrainerService.swift */; };
+		CBDCEABBBEDD87C6AC14103B /* Challenge.swift in Sources */ = {isa = PBXBuildFile; fileRef = 26A91A635690ADA41137E39B /* Challenge.swift */; };
+		CCF024DF78FCEC6BA8F499B1 /* WorkoutPlan.swift in Sources */ = {isa = PBXBuildFile; fileRef = A91332782DD957D6830142BD /* WorkoutPlan.swift */; };
+		CFED9A0985FA4D6A73FCEAB3 /* WatchRootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CECF051DA0886F38F2C48915 /* WatchRootView.swift */; };
+		D13ED57ED03F2FDA200D0B1F /* AppConstants.swift in Sources */ = {isa = PBXBuildFile; fileRef = 08CB1D8DEF752CB952FB126B /* AppConstants.swift */; };
+		D1C07648236F88227E857ED2 /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 79259307434EBBF016C61143 /* Theme.swift */; };
+		D1E5E0F29412F0B6C23CE594 /* PlateCalculatorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 42F5BE438AFFEF219A46301C /* PlateCalculatorView.swift */; };
+		D389ED25D6D4B010A69DD9FA /* StreakManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB144CBC27D35087A1B840AF /* StreakManager.swift */; };
+		D44355E969B37897808E39EC /* Color+App.swift in Sources */ = {isa = PBXBuildFile; fileRef = DE89EC4D426D57331150B5D6 /* Color+App.swift */; };
+		D56DB401D9EECDA8C063DBE4 /* WorkoutView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC9B470C7E61A91B23102DD1 /* WorkoutView.swift */; };
+		D62A518F91ADC392DB35CD10 /* UserProfile.swift in Sources */ = {isa = PBXBuildFile; fileRef = 41875DDE696BE597F66B4F76 /* UserProfile.swift */; };
+		D696E1708F2CF64F187EE519 /* AddCustomExerciseView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3F0B0FADBC0AB1529EEC02E /* AddCustomExerciseView.swift */; };
+		D855A6AC4AF019EB24CB5477 /* SprintGoal.swift in Sources */ = {isa = PBXBuildFile; fileRef = 663594E913107DAC0C17DDEA /* SprintGoal.swift */; };
+		D8BC18DE4CA7011DDC0DB18C /* GymProfile.swift in Sources */ = {isa = PBXBuildFile; fileRef = 47EF85C328F1CFFB3F926F57 /* GymProfile.swift */; };
+		D976550D808D6EB4DC3B11E6 /* ExerciseMediaView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A08F6EE9D5A8D74CD84D5652 /* ExerciseMediaView.swift */; };
+		DA904F22C259ADFFC930FE41 /* RestTimerAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8CAC6B41919504797F7704B6 /* RestTimerAttributes.swift */; };
+		DDEE8D16DBC868F2D76BE53C /* MuscleWikiDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DDBA52097BA22BAB65F473DD /* MuscleWikiDetailView.swift */; };
+		DEC74A0A7F21D5488730D19C /* EmptyStateView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 689E3AFAD9BE73057588E802 /* EmptyStateView.swift */; };
+		DF412A64A52AA01BF7D18A59 /* WeightEntry.swift in Sources */ = {isa = PBXBuildFile; fileRef = 84D6D30B1249145AA145956D /* WeightEntry.swift */; };
+		DFD7643E94721B498C7E808F /* ExerciseAIEnrichmentService.swift in Sources */ = {isa = PBXBuildFile; fileRef = CF3B40ADB4B26F82B5C2645F /* ExerciseAIEnrichmentService.swift */; };
+		E1C89D97CD9C27EB480E67BA /* AppLogger.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1B721CD9FFC9B98BA26BEA66 /* AppLogger.swift */; };
+		E5ACF177C0FD30010EB4E780 /* SwapExerciseSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = CBA54BEE8BB38926EE92927F /* SwapExerciseSheet.swift */; };
+		E7415A8C9B6C349CB9832C7F /* YouTubeLinkGenerator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 96F2D49632954E297CD9C1A8 /* YouTubeLinkGenerator.swift */; };
+		E822146AB849CB53A82903F6 /* FallbackWorkoutGenerator.swift in Sources */ = {isa = PBXBuildFile; fileRef = A84CEF5E6B99F5FDDAFD2682 /* FallbackWorkoutGenerator.swift */; };
+		EAB630C1412E494DC981119A /* StreakParticleView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 99C535217D69188AEF6828B8 /* StreakParticleView.swift */; };
+		ECB62D691883D7D2097F7441 /* Color+App.swift in Sources */ = {isa = PBXBuildFile; fileRef = DE89EC4D426D57331150B5D6 /* Color+App.swift */; };
+		EDCD70E71407FDC404CE4CF1 /* WorkoutSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = E4D2642156F04AE529C17F8D /* WorkoutSession.swift */; };
+		EEBD6C0EB64E798DD7A8CB04 /* AIResponseCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = 718335DDC833574A5BE1B506 /* AIResponseCache.swift */; };
+		EF4F80ADDA7DCB7AF50324DE /* RecoveryInsightsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0F173A35FD100059CD7046F3 /* RecoveryInsightsView.swift */; };
+		EFFC5CC385F9B67D486D6EE7 /* QuickWorkoutPickerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAE1A58031E1C0DBB2589F79 /* QuickWorkoutPickerView.swift */; };
+		F21732258310DD7B1B949697 /* AppConstants.swift in Sources */ = {isa = PBXBuildFile; fileRef = 08CB1D8DEF752CB952FB126B /* AppConstants.swift */; };
+		F23C6D8E3C2D552125C20BDF /* RestTimerOverlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = 080C1885778A1E3E7B8317E3 /* RestTimerOverlay.swift */; };
+		F2CEB708AF9DFAC9BF14B7B1 /* ExerciseLibraryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B9FFE07572BC069F8B64A683 /* ExerciseLibraryView.swift */; };
+		F46CD5A8EFF0238BBB0550BD /* OfflineSyncManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 872A76C3BDEB40C959C55949 /* OfflineSyncManager.swift */; };
+		F4D46B928E5AD254D032673F /* AgileFitnessTrainerApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6B2293E2CDE9D2810EA199C4 /* AgileFitnessTrainerApp.swift */; };
+		F84E943A95005B01E28DB106 /* HealthMetricsSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 91BD14EC1F477141FB674839 /* HealthMetricsSnapshot.swift */; };
+		F855AED8A828FA782C6467FD /* BeforeAndAfterSliderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 521E193A6BC3E1A353268B4D /* BeforeAndAfterSliderView.swift */; };
+		F8687F6F77EC57294184671B /* SprintRetroView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 82674539DE01C301081C02A5 /* SprintRetroView.swift */; };
+		F921C58EBE0315A4A92472E8 /* GamificationEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3570907A20BF29DF2175F788 /* GamificationEngine.swift */; };
+		FA0040C08D45E93C35A063E1 /* OneRepMaxCalculator.swift in Sources */ = {isa = PBXBuildFile; fileRef = A6ED07CA74EEA5985ADB32DF /* OneRepMaxCalculator.swift */; };
+		FB8606A7C1C873950856E051 /* StartWorkoutIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A1AFF28319456DC65EEAF01 /* StartWorkoutIntent.swift */; };
+		FBB43ECC90AE2D2A824E61F2 /* MuscleXPRecord.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5EB5740F1F06E068E832B283 /* MuscleXPRecord.swift */; };
+		FC225270C27873E5B7817214 /* CoOpSessionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6DEF31379396345900FB93A1 /* CoOpSessionService.swift */; };
+		FC848965A0DEF32CA4445ACD /* SetType.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6E0091AA6410EDE918788F70 /* SetType.swift */; };
+		FE432CF745B138D9BA579C3C /* MuscleRecoveryService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 46A09E05B6754AF6726E812E /* MuscleRecoveryService.swift */; };
+		FEDF18580F804813E28F8E08 /* ActiveSessionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AE57683E31D8584D109DED6B /* ActiveSessionView.swift */; };
+		FEF2D2AF0EA68D2115205DD1 /* AppLogger.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1B721CD9FFC9B98BA26BEA66 /* AppLogger.swift */; };
+		FF76DCA16C1E9CBB66FE5716 /* StoryShareManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4850B991B395A50600377E36 /* StoryShareManager.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		3376CDC4E80793FF8B38B9F7 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 106AA80AC85A4B061F9CBAD0 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = A229E563C0A7558F6C69B3FD;
+			remoteInfo = AgileTrainer;
+		};
+		9B5D7FA8F59BB8F0122FA8BC /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 106AA80AC85A4B061F9CBAD0 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = A229E563C0A7558F6C69B3FD;
+			remoteInfo = AgileTrainer;
+		};
+		ED48EA5148D27F4849E3F1F0 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 106AA80AC85A4B061F9CBAD0 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = A229E563C0A7558F6C69B3FD;
+			remoteInfo = AgileTrainer;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		02D39DA0A519766166A3E36B /* ExerciseDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExerciseDetailView.swift; sourceTree = "<group>"; };
+		02E855E448ACF8C3B48D89A9 /* DashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardView.swift; sourceTree = "<group>"; };
+		05D9052A10BDBB60EA8EEA8C /* OnboardingAIManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingAIManager.swift; sourceTree = "<group>"; };
+		0684568D915AFD5761B4A71E /* StubViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StubViews.swift; sourceTree = "<group>"; };
+		06A018353D182FC62D9DA90B /* VolumeChartView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VolumeChartView.swift; sourceTree = "<group>"; };
+		06B1031E9CB531736056FCD0 /* HealthWorkoutWriter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthWorkoutWriter.swift; sourceTree = "<group>"; };
+		07261E012B6FC306A6B47B96 /* WatchSessionCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchSessionCoordinator.swift; sourceTree = "<group>"; };
+		080C1885778A1E3E7B8317E3 /* RestTimerOverlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RestTimerOverlay.swift; sourceTree = "<group>"; };
+		0822B225966665FE6CC420D0 /* WorkoutCalendarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutCalendarView.swift; sourceTree = "<group>"; };
+		08CB1D8DEF752CB952FB126B /* AppConstants.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppConstants.swift; sourceTree = "<group>"; };
+		099ED479A11FD2FF26C995FC /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		0A1AFF28319456DC65EEAF01 /* StartWorkoutIntent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StartWorkoutIntent.swift; sourceTree = "<group>"; };
+		0BAC7E419B876341B020C74C /* ExerciseDatabaseLoader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExerciseDatabaseLoader.swift; sourceTree = "<group>"; };
+		0D432FDEFFB488AD321FFF68 /* GeminiAPIClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeminiAPIClient.swift; sourceTree = "<group>"; };
+		0EE641CBA0E1F5892B81AC85 /* MuscleArea.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MuscleArea.swift; sourceTree = "<group>"; };
+		0F173A35FD100059CD7046F3 /* RecoveryInsightsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecoveryInsightsView.swift; sourceTree = "<group>"; };
+		0F7024F9D8A993B5525757EF /* RestTimerLiveActivity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RestTimerLiveActivity.swift; sourceTree = "<group>"; };
+		13E5C541838EAF9606E5E44D /* HapticManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HapticManager.swift; sourceTree = "<group>"; };
+		144EEA46247BF204133E9D2E /* WatchRestView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchRestView.swift; sourceTree = "<group>"; };
+		14EB05E5384DA11E702258A3 /* WorkoutPreviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutPreviewView.swift; sourceTree = "<group>"; };
+		1755C0465E49FBE3D87774A2 /* OneRepMaxChartView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OneRepMaxChartView.swift; sourceTree = "<group>"; };
+		179F3D53E1814C12C9EE64D5 /* DataExportManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DataExportManager.swift; sourceTree = "<group>"; };
+		187ADAFD0434341DA5A60CD3 /* HealthKitTypes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthKitTypes.swift; sourceTree = "<group>"; };
+		1B721CD9FFC9B98BA26BEA66 /* AppLogger.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppLogger.swift; sourceTree = "<group>"; };
+		1CAC28D63756827E5E7F20CE /* HapticPatternEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HapticPatternEngine.swift; sourceTree = "<group>"; };
+		1EF51FC1EA6FBD7DD10F9EE2 /* MainTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainTabView.swift; sourceTree = "<group>"; };
+		238D6C8532BF142EBE580FB5 /* ExerciseDetailViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExerciseDetailViewModel.swift; sourceTree = "<group>"; };
+		24BBF6E522089F634ED9774C /* MuscleWikiViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MuscleWikiViewModel.swift; sourceTree = "<group>"; };
+		26A91A635690ADA41137E39B /* Challenge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Challenge.swift; sourceTree = "<group>"; };
+		27D6A81E4C6B938DF7941CAB /* AppEnvironment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppEnvironment.swift; sourceTree = "<group>"; };
+		295DF9D963697EE887987F8F /* MotionManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MotionManager.swift; sourceTree = "<group>"; };
+		2B2ED803D8AEEBC6DF90FCB3 /* HRZonedRestTimer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HRZonedRestTimer.swift; sourceTree = "<group>"; };
+		2EA8FC12A77FF7444A7D2CAE /* WeeklyCalendarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeeklyCalendarView.swift; sourceTree = "<group>"; };
+		32A8EF6643AE01BBDC9F4DE1 /* AuthManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthManager.swift; sourceTree = "<group>"; };
+		334AD721D44BFA1AA99329EE /* AgileTrainerWidget.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = AgileTrainerWidget.entitlements; sourceTree = "<group>"; };
+		3570907A20BF29DF2175F788 /* GamificationEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GamificationEngine.swift; sourceTree = "<group>"; };
+		38027FB9F3ECBC4D9605A835 /* DashboardViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardViewModel.swift; sourceTree = "<group>"; };
+		3B9A3307833D4D000FA091F6 /* LiveActivityManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveActivityManager.swift; sourceTree = "<group>"; };
+		3C8A6A1B97CA3E1A72B84A14 /* FatigueEntry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FatigueEntry.swift; sourceTree = "<group>"; };
+		3CACC32EFB69FDE8B5D79929 /* MuscleVolumeChart.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MuscleVolumeChart.swift; sourceTree = "<group>"; };
+		3E9C25E2819353C3B7342B75 /* AgileTrainerWatchApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgileTrainerWatchApp.swift; sourceTree = "<group>"; };
+		40D96F400215BA16F922A0B5 /* GymDetectionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GymDetectionService.swift; sourceTree = "<group>"; };
+		414EB9F827CB835E11C7C8D5 /* FluidBackground.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FluidBackground.swift; sourceTree = "<group>"; };
+		41875DDE696BE597F66B4F76 /* UserProfile.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserProfile.swift; sourceTree = "<group>"; };
+		42F5BE438AFFEF219A46301C /* PlateCalculatorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlateCalculatorView.swift; sourceTree = "<group>"; };
+		439A4199A9B1B92B135B74A0 /* MuscleWikiDTO.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MuscleWikiDTO.swift; sourceTree = "<group>"; };
+		4455A0A1CD5299A8CCE6592C /* WorkoutHistoryCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutHistoryCardView.swift; sourceTree = "<group>"; };
+		452ED9BC22BFBD67A4082244 /* AIReschedulingEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIReschedulingEngine.swift; sourceTree = "<group>"; };
+		46A09E05B6754AF6726E812E /* MuscleRecoveryService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MuscleRecoveryService.swift; sourceTree = "<group>"; };
+		46A5E51BD17813EBB7BE3FAC /* AITrainerModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AITrainerModels.swift; sourceTree = "<group>"; };
+		47BA581EEA3485F018439247 /* ChallengeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChallengeView.swift; sourceTree = "<group>"; };
+		47EF85C328F1CFFB3F926F57 /* GymProfile.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GymProfile.swift; sourceTree = "<group>"; };
+		4850B991B395A50600377E36 /* StoryShareManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoryShareManager.swift; sourceTree = "<group>"; };
+		4B372AC7442F746F0A9230EF /* WorkoutViewWithAI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutViewWithAI.swift; sourceTree = "<group>"; };
+		4BF70E3FF9328EC92E0AA427 /* HealthKitWatchService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthKitWatchService.swift; sourceTree = "<group>"; };
+		4DC52073428D7251DC3BEED7 /* WorkoutHeaderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutHeaderView.swift; sourceTree = "<group>"; };
+		4DD00F08FB73AEB2566B35C9 /* Mesocycle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Mesocycle.swift; sourceTree = "<group>"; };
+		503DAF35B5FF6980B2E8762A /* ExerciseDTO.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExerciseDTO.swift; sourceTree = "<group>"; };
+		521E193A6BC3E1A353268B4D /* BeforeAndAfterSliderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BeforeAndAfterSliderView.swift; sourceTree = "<group>"; };
+		530A54C4CF5FD287F54FCE1B /* Equipment+SwapSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Equipment+SwapSupport.swift"; sourceTree = "<group>"; };
+		541D6EB9C0CF06F4E1DEE124 /* SharedModelContainer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedModelContainer.swift; sourceTree = "<group>"; };
+		5669497CE4E034624CC410BF /* WatchConnectivityManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchConnectivityManager.swift; sourceTree = "<group>"; };
+		573522E63A1E9764A1293685 /* ExerciseSearchView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExerciseSearchView.swift; sourceTree = "<group>"; };
+		57CD1E9A8C4E9A2FD5025965 /* WarmupPhaseView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WarmupPhaseView.swift; sourceTree = "<group>"; };
+		586FDE4FB8010FE5A71ADB36 /* OnboardingChatView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingChatView.swift; sourceTree = "<group>"; };
+		5C949F2044733641A749C8D2 /* MeshGradientBackground.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MeshGradientBackground.swift; sourceTree = "<group>"; };
+		5D1A2D651097E0ABB0988CE4 /* AITrainerModelsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AITrainerModelsTests.swift; sourceTree = "<group>"; };
+		5DDBFAFF7F336005919BF9EC /* HeatmapView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HeatmapView.swift; sourceTree = "<group>"; };
+		5DFE3CC751BCFA41F62F0C08 /* WorkoutSummaryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutSummaryView.swift; sourceTree = "<group>"; };
+		5EB5740F1F06E068E832B283 /* MuscleXPRecord.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MuscleXPRecord.swift; sourceTree = "<group>"; };
+		62F12BB16AB0C6B47E2F86FE /* DetailedBodyFigureView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DetailedBodyFigureView.swift; sourceTree = "<group>"; };
+		63892AA21C3E66B833E149A1 /* ExerciseCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExerciseCardView.swift; sourceTree = "<group>"; };
+		65880E303884B4EB2278F664 /* AgileTrainerWatch.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = AgileTrainerWatch.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		65CA9C1E9727086F3FE74B45 /* CustomWorkoutBuilderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomWorkoutBuilderView.swift; sourceTree = "<group>"; };
+		663594E913107DAC0C17DDEA /* SprintGoal.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SprintGoal.swift; sourceTree = "<group>"; };
+		67DD10D915AAC0EF853E0233 /* WorkoutViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutViewModel.swift; sourceTree = "<group>"; };
+		689E3AFAD9BE73057588E802 /* EmptyStateView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmptyStateView.swift; sourceTree = "<group>"; };
+		6B2293E2CDE9D2810EA199C4 /* AgileFitnessTrainerApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgileFitnessTrainerApp.swift; sourceTree = "<group>"; };
+		6D945CA5F7F7294CD03E4864 /* RollingWeekView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RollingWeekView.swift; sourceTree = "<group>"; };
+		6DA0B2153D2F5E0C594C9E38 /* CircularRestTimerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CircularRestTimerView.swift; sourceTree = "<group>"; };
+		6DEF31379396345900FB93A1 /* CoOpSessionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoOpSessionService.swift; sourceTree = "<group>"; };
+		6E0091AA6410EDE918788F70 /* SetType.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SetType.swift; sourceTree = "<group>"; };
+		6EE8980B6F2C7FA5C2BC5D0B /* Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Extensions.swift; sourceTree = "<group>"; };
+		718335DDC833574A5BE1B506 /* AIResponseCache.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIResponseCache.swift; sourceTree = "<group>"; };
+		733F306E0971EDBC7E1CDC00 /* AgileTrainerTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = AgileTrainerTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		79259307434EBBF016C61143 /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
+		7A4309CB4F62617738CA6660 /* HRRecoveryRPE.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HRRecoveryRPE.swift; sourceTree = "<group>"; };
+		7A4C12A23EE12D8B4B1236AB /* GymProfilesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GymProfilesView.swift; sourceTree = "<group>"; };
+		7CB94D428AD83A0C880026F7 /* SprintGoalsCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SprintGoalsCard.swift; sourceTree = "<group>"; };
+		825A517C85C49645E81A2834 /* WatchConfirmView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchConfirmView.swift; sourceTree = "<group>"; };
+		82674539DE01C301081C02A5 /* SprintRetroView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SprintRetroView.swift; sourceTree = "<group>"; };
+		84885AEE856BD2CB042CEA85 /* WorkoutSetRowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutSetRowView.swift; sourceTree = "<group>"; };
+		84D6D30B1249145AA145956D /* WeightEntry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeightEntry.swift; sourceTree = "<group>"; };
+		872A76C3BDEB40C959C55949 /* OfflineSyncManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfflineSyncManager.swift; sourceTree = "<group>"; };
+		89400A013B1478ECD3478AD9 /* ShimmerEffect.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShimmerEffect.swift; sourceTree = "<group>"; };
+		8CAC6B41919504797F7704B6 /* RestTimerAttributes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RestTimerAttributes.swift; sourceTree = "<group>"; };
+		8E207B74EC28108D2B292711 /* WatchIntegrationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchIntegrationService.swift; sourceTree = "<group>"; };
+		90BCDD90F6A680318138ED08 /* AudioCoachManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioCoachManager.swift; sourceTree = "<group>"; };
+		91A59CB1912340BA674FFE56 /* AnatomySVGPath.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnatomySVGPath.swift; sourceTree = "<group>"; };
+		91BD14EC1F477141FB674839 /* HealthMetricsSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthMetricsSnapshot.swift; sourceTree = "<group>"; };
+		925BB414A2BD1BF3C2D059AA /* ProgressiveOverloadUseCase.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProgressiveOverloadUseCase.swift; sourceTree = "<group>"; };
+		93F1894B34E58CD4A9E0B842 /* ProgressPhoto.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProgressPhoto.swift; sourceTree = "<group>"; };
+		94493BFF4EA65A5656334AD2 /* WorkoutViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutViewModelTests.swift; sourceTree = "<group>"; };
+		96EA687519A5B40B714A07EF /* SprintRetroViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SprintRetroViewModel.swift; sourceTree = "<group>"; };
+		96F2D49632954E297CD9C1A8 /* YouTubeLinkGenerator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = YouTubeLinkGenerator.swift; sourceTree = "<group>"; };
+		999955CB0F0127C3BCAEBEC5 /* HealthKitWorkoutWriter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthKitWorkoutWriter.swift; sourceTree = "<group>"; };
+		99C535217D69188AEF6828B8 /* StreakParticleView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StreakParticleView.swift; sourceTree = "<group>"; };
+		9AACD458A0C15D8A5633D3CC /* AIRateLimiter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIRateLimiter.swift; sourceTree = "<group>"; };
+		9AD4EE4211BD95B82E4E6A11 /* HealthKitNutritionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthKitNutritionService.swift; sourceTree = "<group>"; };
+		9C9D50F305163ADB6CE9A2EC /* ActiveSessionViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActiveSessionViewModel.swift; sourceTree = "<group>"; };
+		A08E3C5F4D9658B77BF800AD /* AITrainerService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AITrainerService.swift; sourceTree = "<group>"; };
+		A08F6EE9D5A8D74CD84D5652 /* ExerciseMediaView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExerciseMediaView.swift; sourceTree = "<group>"; };
+		A0A24744463984E5E0B024F5 /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
+		A23070FE38FA89D8F9332B17 /* ExerciseNoteView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExerciseNoteView.swift; sourceTree = "<group>"; };
+		A2C0B00109290B4CE267ACE3 /* PerformanceHelpers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PerformanceHelpers.swift; sourceTree = "<group>"; };
+		A3ECAB48600D7B278982F12F /* HealthKitErrorHandling.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthKitErrorHandling.swift; sourceTree = "<group>"; };
+		A4F38B76731F73097947501A /* AgileTrainerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgileTrainerTests.swift; sourceTree = "<group>"; };
+		A6ED07CA74EEA5985ADB32DF /* OneRepMaxCalculator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OneRepMaxCalculator.swift; sourceTree = "<group>"; };
+		A70C2D1A984D84825E4F6FA2 /* TempoParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TempoParser.swift; sourceTree = "<group>"; };
+		A84CEF5E6B99F5FDDAFD2682 /* FallbackWorkoutGenerator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FallbackWorkoutGenerator.swift; sourceTree = "<group>"; };
+		A91332782DD957D6830142BD /* WorkoutPlan.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutPlan.swift; sourceTree = "<group>"; };
+		AAB95AE5897CFDC5DB57C0A4 /* GetTodayWorkoutIntent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GetTodayWorkoutIntent.swift; sourceTree = "<group>"; };
+		AB2EA197D760BE80C977F4A1 /* SprintPlanningView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SprintPlanningView.swift; sourceTree = "<group>"; };
+		AE57683E31D8584D109DED6B /* ActiveSessionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActiveSessionView.swift; sourceTree = "<group>"; };
+		AF05A064DB8885E4A527F3B4 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		B4AAEE603C7D209364C6AC85 /* MesocyclePlannerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MesocyclePlannerView.swift; sourceTree = "<group>"; };
+		B5BAC4CE35F2A1CBCAB4BCBD /* MuscleMapView_Redesign.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MuscleMapView_Redesign.swift; sourceTree = "<group>"; };
+		B8B1CAA53CCCD4E2C056A640 /* ToggleDeloadIntent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToggleDeloadIntent.swift; sourceTree = "<group>"; };
+		B9FFE07572BC069F8B64A683 /* ExerciseLibraryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExerciseLibraryView.swift; sourceTree = "<group>"; };
+		BA16208D59B6DC105427AC61 /* LogFatigueIntent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LogFatigueIntent.swift; sourceTree = "<group>"; };
+		BAFB4C2B3B0195BB5B37F046 /* HealthKitService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthKitService.swift; sourceTree = "<group>"; };
+		BDA1C52DF373AB5E18FC3A72 /* SetControlViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SetControlViews.swift; sourceTree = "<group>"; };
+		BDAC420814DD5E8E91776DAA /* WorkoutPlanGenerator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutPlanGenerator.swift; sourceTree = "<group>"; };
+		C7ACA7FE84F67E692C59F511 /* ProgressView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProgressView.swift; sourceTree = "<group>"; };
+		C89A096FB984DB01C3040BC8 /* RestTimerManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RestTimerManager.swift; sourceTree = "<group>"; };
+		CA8DCF4DD15645BADECBC19B /* NetworkMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkMonitor.swift; sourceTree = "<group>"; };
+		CBA54BEE8BB38926EE92927F /* SwapExerciseSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwapExerciseSheet.swift; sourceTree = "<group>"; };
+		CC9B470C7E61A91B23102DD1 /* WorkoutView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutView.swift; sourceTree = "<group>"; };
+		CCCEE20A288CCED45BB7FF48 /* WeeklyReportService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeeklyReportService.swift; sourceTree = "<group>"; };
+		CECF051DA0886F38F2C48915 /* WatchRootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchRootView.swift; sourceTree = "<group>"; };
+		CF0964C018D9E7E1C9E16586 /* WorkoutPreviewSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutPreviewSheet.swift; sourceTree = "<group>"; };
+		CF3B40ADB4B26F82B5C2645F /* ExerciseAIEnrichmentService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExerciseAIEnrichmentService.swift; sourceTree = "<group>"; };
+		D05A9C5567C31446470C330F /* AudioCoachService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioCoachService.swift; sourceTree = "<group>"; };
+		D1738188364521799CC45A94 /* ActiveSessionContrast_and_PlanFallback.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActiveSessionContrast_and_PlanFallback.swift; sourceTree = "<group>"; };
+		D358351D84A14FD943C64B25 /* WorkoutMath.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutMath.swift; sourceTree = "<group>"; };
+		D3F0B0FADBC0AB1529EEC02E /* AddCustomExerciseView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddCustomExerciseView.swift; sourceTree = "<group>"; };
+		D6F178194EA53D1A3F8D6867 /* AICoachChatView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AICoachChatView.swift; sourceTree = "<group>"; };
+		D74332F708ACC5F2EBA4338A /* SupabaseExerciseRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupabaseExerciseRepository.swift; sourceTree = "<group>"; };
+		DB144CBC27D35087A1B840AF /* StreakManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StreakManager.swift; sourceTree = "<group>"; };
+		DDBA52097BA22BAB65F473DD /* MuscleWikiDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MuscleWikiDetailView.swift; sourceTree = "<group>"; };
+		DDE7E5DD4556B0C565C634CE /* WatchActiveSetView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchActiveSetView.swift; sourceTree = "<group>"; };
+		DE89EC4D426D57331150B5D6 /* Color+App.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Color+App.swift"; sourceTree = "<group>"; };
+		DF1055A9953FFA5BDB3A8505 /* FatigueStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FatigueStore.swift; sourceTree = "<group>"; };
+		E3AAB65D578D9938AFE5F8E0 /* AudioCoach+WorkoutIntegration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AudioCoach+WorkoutIntegration.swift"; sourceTree = "<group>"; };
+		E4C0BD3E705631474E3BB6D9 /* Exercise.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Exercise.swift; sourceTree = "<group>"; };
+		E4D2642156F04AE529C17F8D /* WorkoutSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutSession.swift; sourceTree = "<group>"; };
+		E56E109D9AF5BF091C25786B /* TrainerContextBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrainerContextBuilder.swift; sourceTree = "<group>"; };
+		E6556CEF099FEB90BB35EDDB /* WelcomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WelcomeView.swift; sourceTree = "<group>"; };
+		E8FD01C7386B37B9E9026AF5 /* NotificationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationService.swift; sourceTree = "<group>"; };
+		E94838DBA2CB6644BE1D8CCE /* MuscleMapView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MuscleMapView.swift; sourceTree = "<group>"; };
+		EA92482777B86DE4CA6E2C1D /* AgileTrainerWidget.appex */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = "wrapper.app-extension"; path = AgileTrainerWidget.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		EF0118FA6BCB986FAEB3986F /* HeatmapViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HeatmapViewModel.swift; sourceTree = "<group>"; };
+		F0A90AD1C3B569124D029A1B /* SocialFeedView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SocialFeedView.swift; sourceTree = "<group>"; };
+		F1791A8BA35A2B9C12E2C2EF /* ProgressCameraView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProgressCameraView.swift; sourceTree = "<group>"; };
+		F54CFEE15F345997A3C53733 /* HealthBackgroundManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthBackgroundManager.swift; sourceTree = "<group>"; };
+		F6017F8BD60C0DAB47A7EFF2 /* QuickWorkoutModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickWorkoutModels.swift; sourceTree = "<group>"; };
+		F9A3AD20C7422D54AEFB79E6 /* DailyReadinessWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DailyReadinessWidget.swift; sourceTree = "<group>"; };
+		FAE1A58031E1C0DBB2589F79 /* QuickWorkoutPickerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickWorkoutPickerView.swift; sourceTree = "<group>"; };
+		FC54970C4B8CE59CAD622DE3 /* SkeletonWorkoutView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SkeletonWorkoutView.swift; sourceTree = "<group>"; };
+		FD90DEC9346E8C50357CE7F1 /* AgileTrainer.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = AgileTrainer.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		FEC1D992A0FBF4892BB02338 /* GlobalErrorModifier.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlobalErrorModifier.swift; sourceTree = "<group>"; };
+		FF2FCD62A2DFA20F4D237C56 /* WeeklyProgressIntent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeeklyProgressIntent.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		A1ABC8656219D9C4D3D70354 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				36DD13DCDE7CEF5A1D1E6581 /* Supabase in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		035D10811526F486EA77E16C /* ActiveWorkout */ = {
+			isa = PBXGroup;
+			children = (
+				D1738188364521799CC45A94 /* ActiveSessionContrast_and_PlanFallback.swift */,
+				AE57683E31D8584D109DED6B /* ActiveSessionView.swift */,
+				9C9D50F305163ADB6CE9A2EC /* ActiveSessionViewModel.swift */,
+				6DA0B2153D2F5E0C594C9E38 /* CircularRestTimerView.swift */,
+				A23070FE38FA89D8F9332B17 /* ExerciseNoteView.swift */,
+				2B2ED803D8AEEBC6DF90FCB3 /* HRZonedRestTimer.swift */,
+				C89A096FB984DB01C3040BC8 /* RestTimerManager.swift */,
+				57CD1E9A8C4E9A2FD5025965 /* WarmupPhaseView.swift */,
+				84885AEE856BD2CB042CEA85 /* WorkoutSetRowView.swift */,
+			);
+			path = ActiveWorkout;
+			sourceTree = "<group>";
+		};
+		047770FF2E2DA89FBE00EF55 /* AICoach */ = {
+			isa = PBXGroup;
+			children = (
+				D6F178194EA53D1A3F8D6867 /* AICoachChatView.swift */,
+			);
+			path = AICoach;
+			sourceTree = "<group>";
+		};
+		09191410D05343A187073A8D /* Settings */ = {
+			isa = PBXGroup;
+			children = (
+				32A8EF6643AE01BBDC9F4DE1 /* AuthManager.swift */,
+				179F3D53E1814C12C9EE64D5 /* DataExportManager.swift */,
+				7A4C12A23EE12D8B4B1236AB /* GymProfilesView.swift */,
+				A3ECAB48600D7B278982F12F /* HealthKitErrorHandling.swift */,
+				099ED479A11FD2FF26C995FC /* SettingsView.swift */,
+			);
+			path = Settings;
+			sourceTree = "<group>";
+		};
+		0956A45E5BB33715A15B62A7 /* Onboarding */ = {
+			isa = PBXGroup;
+			children = (
+				586FDE4FB8010FE5A71ADB36 /* OnboardingChatView.swift */,
+				A0A24744463984E5E0B024F5 /* OnboardingView.swift */,
+				E6556CEF099FEB90BB35EDDB /* WelcomeView.swift */,
+			);
+			path = Onboarding;
+			sourceTree = "<group>";
+		};
+		0B508E15191DABE037DCD3A6 /* Sync */ = {
+			isa = PBXGroup;
+			children = (
+				CA8DCF4DD15645BADECBC19B /* NetworkMonitor.swift */,
+				872A76C3BDEB40C959C55949 /* OfflineSyncManager.swift */,
+			);
+			path = Sync;
+			sourceTree = "<group>";
+		};
+		0BEA348549CE292DA2FED0A8 /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				26A91A635690ADA41137E39B /* Challenge.swift */,
+				E4C0BD3E705631474E3BB6D9 /* Exercise.swift */,
+				3C8A6A1B97CA3E1A72B84A14 /* FatigueEntry.swift */,
+				47EF85C328F1CFFB3F926F57 /* GymProfile.swift */,
+				91BD14EC1F477141FB674839 /* HealthMetricsSnapshot.swift */,
+				4DD00F08FB73AEB2566B35C9 /* Mesocycle.swift */,
+				0EE641CBA0E1F5892B81AC85 /* MuscleArea.swift */,
+				5EB5740F1F06E068E832B283 /* MuscleXPRecord.swift */,
+				93F1894B34E58CD4A9E0B842 /* ProgressPhoto.swift */,
+				6E0091AA6410EDE918788F70 /* SetType.swift */,
+				663594E913107DAC0C17DDEA /* SprintGoal.swift */,
+				41875DDE696BE597F66B4F76 /* UserProfile.swift */,
+				84D6D30B1249145AA145956D /* WeightEntry.swift */,
+				A91332782DD957D6830142BD /* WorkoutPlan.swift */,
+				E4D2642156F04AE529C17F8D /* WorkoutSession.swift */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+		13A1B648471E76D5D5511075 /* Summary */ = {
+			isa = PBXGroup;
+			children = (
+				5DFE3CC751BCFA41F62F0C08 /* WorkoutSummaryView.swift */,
+			);
+			path = Summary;
+			sourceTree = "<group>";
+		};
+		1645C8934382A71B20180BAB /* Watch */ = {
+			isa = PBXGroup;
+			children = (
+				8E207B74EC28108D2B292711 /* WatchIntegrationService.swift */,
+			);
+			path = Watch;
+			sourceTree = "<group>";
+		};
+		16CEFC195EFC3F5C1B692CE7 /* Watch */ = {
+			isa = PBXGroup;
+			children = (
+				EDE12C2D395E2C058C80E8C0 /* App */,
+				42CB5147151DCC713DCE21BD /* Core */,
+				C6BCED2C577B312921D3275C /* Views */,
+				5669497CE4E034624CC410BF /* WatchConnectivityManager.swift */,
+			);
+			path = Watch;
+			sourceTree = "<group>";
+		};
+		2390C3E45B5877248B0CCEB9 /* HealthKit */ = {
+			isa = PBXGroup;
+			children = (
+				DF1055A9953FFA5BDB3A8505 /* FatigueStore.swift */,
+				F54CFEE15F345997A3C53733 /* HealthBackgroundManager.swift */,
+				9AD4EE4211BD95B82E4E6A11 /* HealthKitNutritionService.swift */,
+				BAFB4C2B3B0195BB5B37F046 /* HealthKitService.swift */,
+				999955CB0F0127C3BCAEBEC5 /* HealthKitWorkoutWriter.swift */,
+				06B1031E9CB531736056FCD0 /* HealthWorkoutWriter.swift */,
+			);
+			path = HealthKit;
+			sourceTree = "<group>";
+		};
+		2961CCCFC74BC835C2AC912E /* SprintRetro */ = {
+			isa = PBXGroup;
+			children = (
+				7CB94D428AD83A0C880026F7 /* SprintGoalsCard.swift */,
+				AB2EA197D760BE80C977F4A1 /* SprintPlanningView.swift */,
+				82674539DE01C301081C02A5 /* SprintRetroView.swift */,
+				96EA687519A5B40B714A07EF /* SprintRetroViewModel.swift */,
+			);
+			path = SprintRetro;
+			sourceTree = "<group>";
+		};
+		3F8D446241608239E1A4572D /* ExerciseLibrary */ = {
+			isa = PBXGroup;
+			children = (
+				B9FFE07572BC069F8B64A683 /* ExerciseLibraryView.swift */,
+				DDBA52097BA22BAB65F473DD /* MuscleWikiDetailView.swift */,
+				24BBF6E522089F634ED9774C /* MuscleWikiViewModel.swift */,
+			);
+			path = ExerciseLibrary;
+			sourceTree = "<group>";
+		};
+		42CB5147151DCC713DCE21BD /* Core */ = {
+			isa = PBXGroup;
+			children = (
+				4BF70E3FF9328EC92E0AA427 /* HealthKitWatchService.swift */,
+				7A4309CB4F62617738CA6660 /* HRRecoveryRPE.swift */,
+				295DF9D963697EE887987F8F /* MotionManager.swift */,
+				07261E012B6FC306A6B47B96 /* WatchSessionCoordinator.swift */,
+			);
+			path = Core;
+			sourceTree = "<group>";
+		};
+		476DE114EEB0E0508F6C1705 /* UnitTests */ = {
+			isa = PBXGroup;
+			children = (
+				A4F38B76731F73097947501A /* AgileTrainerTests.swift */,
+				5D1A2D651097E0ABB0988CE4 /* AITrainerModelsTests.swift */,
+				94493BFF4EA65A5656334AD2 /* WorkoutViewModelTests.swift */,
+			);
+			path = UnitTests;
+			sourceTree = "<group>";
+		};
+		477BF13504374C0A65DE5EA1 /* Building */ = {
+			isa = PBXGroup;
+			children = (
+				D3F0B0FADBC0AB1529EEC02E /* AddCustomExerciseView.swift */,
+				65CA9C1E9727086F3FE74B45 /* CustomWorkoutBuilderView.swift */,
+				F6017F8BD60C0DAB47A7EFF2 /* QuickWorkoutModels.swift */,
+				FAE1A58031E1C0DBB2589F79 /* QuickWorkoutPickerView.swift */,
+			);
+			path = Building;
+			sourceTree = "<group>";
+		};
+		4939222D3DF668CA1AAF6936 /* Core */ = {
+			isa = PBXGroup;
+			children = (
+				A417F472CC67ACB1CA9E80F2 /* Constants */,
+				5B8F36EED76D034C96B89E44 /* Extensions */,
+				53BAEAAE9A3C2142240936B5 /* Utilities */,
+				541D6EB9C0CF06F4E1DEE124 /* SharedModelContainer.swift */,
+				79259307434EBBF016C61143 /* Theme.swift */,
+			);
+			path = Core;
+			sourceTree = "<group>";
+		};
+		5355ACB830EC508248852353 /* WeekPlanner */ = {
+			isa = PBXGroup;
+			children = (
+				573522E63A1E9764A1293685 /* ExerciseSearchView.swift */,
+				6D945CA5F7F7294CD03E4864 /* RollingWeekView.swift */,
+				CF0964C018D9E7E1C9E16586 /* WorkoutPreviewSheet.swift */,
+			);
+			path = WeekPlanner;
+			sourceTree = "<group>";
+		};
+		53BAEAAE9A3C2142240936B5 /* Utilities */ = {
+			isa = PBXGroup;
+			children = (
+				1B721CD9FFC9B98BA26BEA66 /* AppLogger.swift */,
+				13E5C541838EAF9606E5E44D /* HapticManager.swift */,
+				1CAC28D63756827E5E7F20CE /* HapticPatternEngine.swift */,
+				A2C0B00109290B4CE267ACE3 /* PerformanceHelpers.swift */,
+				A70C2D1A984D84825E4F6FA2 /* TempoParser.swift */,
+				96F2D49632954E297CD9C1A8 /* YouTubeLinkGenerator.swift */,
+			);
+			path = Utilities;
+			sourceTree = "<group>";
+		};
+		5B8F36EED76D034C96B89E44 /* Extensions */ = {
+			isa = PBXGroup;
+			children = (
+				DE89EC4D426D57331150B5D6 /* Color+App.swift */,
+				530A54C4CF5FD287F54FCE1B /* Equipment+SwapSupport.swift */,
+				6EE8980B6F2C7FA5C2BC5D0B /* Extensions.swift */,
+			);
+			path = Extensions;
+			sourceTree = "<group>";
+		};
+		66F6E96E531BC3B3F31241E9 /* Dashboard */ = {
+			isa = PBXGroup;
+			children = (
+				02E855E448ACF8C3B48D89A9 /* DashboardView.swift */,
+				38027FB9F3ECBC4D9605A835 /* DashboardViewModel.swift */,
+				F0A90AD1C3B569124D029A1B /* SocialFeedView.swift */,
+				2EA8FC12A77FF7444A7D2CAE /* WeeklyCalendarView.swift */,
+			);
+			path = Dashboard;
+			sourceTree = "<group>";
+		};
+		6A36503297D9CD70189E11D9 /* UseCases */ = {
+			isa = PBXGroup;
+			children = (
+				A6ED07CA74EEA5985ADB32DF /* OneRepMaxCalculator.swift */,
+				925BB414A2BD1BF3C2D059AA /* ProgressiveOverloadUseCase.swift */,
+				DB144CBC27D35087A1B840AF /* StreakManager.swift */,
+			);
+			path = UseCases;
+			sourceTree = "<group>";
+		};
+		6F1FAFA9A484DB5B5168657C /* Community */ = {
+			isa = PBXGroup;
+			children = (
+				47BA581EEA3485F018439247 /* ChallengeView.swift */,
+			);
+			path = Community;
+			sourceTree = "<group>";
+		};
+		79CF87CD0DF13652A9D3380B /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				FD90DEC9346E8C50357CE7F1 /* AgileTrainer.app */,
+				733F306E0971EDBC7E1CDC00 /* AgileTrainerTests.xctest */,
+				65880E303884B4EB2278F664 /* AgileTrainerWatch.app */,
+				EA92482777B86DE4CA6E2C1D /* AgileTrainerWidget.appex */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		7E31B36F160A6E4A8FD1B5F3 = {
+			isa = PBXGroup;
+			children = (
+				893C354DFDFFB00438E85C54 /* App */,
+				4939222D3DF668CA1AAF6936 /* Core */,
+				8CA3477A8F0B764068CC08B8 /* Data */,
+				EFCD4D1BB044F73885303048 /* Domain */,
+				84BA746D3520660E970EE094 /* Features */,
+				BB5FF9CCA90E321978597835 /* LiveActivity */,
+				DA1AC1EAF95BCEE646917F45 /* Services */,
+				476DE114EEB0E0508F6C1705 /* UnitTests */,
+				16CEFC195EFC3F5C1B692CE7 /* Watch */,
+				9A89FF1D842C6A48C104BA64 /* Widget */,
+				79CF87CD0DF13652A9D3380B /* Products */,
+			);
+			indentWidth = 4;
+			sourceTree = "<group>";
+			tabWidth = 4;
+			usesTabs = 0;
+		};
+		7E9BB027D404B3C5667F9AEA /* Analytics */ = {
+			isa = PBXGroup;
+			children = (
+				3CACC32EFB69FDE8B5D79929 /* MuscleVolumeChart.swift */,
+			);
+			path = Analytics;
+			sourceTree = "<group>";
+		};
+		84BA746D3520660E970EE094 /* Features */ = {
+			isa = PBXGroup;
+			children = (
+				035D10811526F486EA77E16C /* ActiveWorkout */,
+				047770FF2E2DA89FBE00EF55 /* AICoach */,
+				7E9BB027D404B3C5667F9AEA /* Analytics */,
+				477BF13504374C0A65DE5EA1 /* Building */,
+				6F1FAFA9A484DB5B5168657C /* Community */,
+				66F6E96E531BC3B3F31241E9 /* Dashboard */,
+				D6C2FC802C46C7A50F18979A /* ExerciseDetail */,
+				3F8D446241608239E1A4572D /* ExerciseLibrary */,
+				0956A45E5BB33715A15B62A7 /* Onboarding */,
+				99921ECA2FBFE641BCE1D560 /* Progress */,
+				09191410D05343A187073A8D /* Settings */,
+				FF64D7C23CCC815D27254B8A /* Shared */,
+				2961CCCFC74BC835C2AC912E /* SprintRetro */,
+				13A1B648471E76D5D5511075 /* Summary */,
+				D76DF44CB6E8EEBA42E0BB18 /* TodayWorkout */,
+				5355ACB830EC508248852353 /* WeekPlanner */,
+				0684568D915AFD5761B4A71E /* StubViews.swift */,
+			);
+			path = Features;
+			sourceTree = "<group>";
+		};
+		893C354DFDFFB00438E85C54 /* App */ = {
+			isa = PBXGroup;
+			children = (
+				6B2293E2CDE9D2810EA199C4 /* AgileFitnessTrainerApp.swift */,
+				27D6A81E4C6B938DF7941CAB /* AppEnvironment.swift */,
+			);
+			path = App;
+			sourceTree = "<group>";
+		};
+		8CA3477A8F0B764068CC08B8 /* Data */ = {
+			isa = PBXGroup;
+			children = (
+				0BEA348549CE292DA2FED0A8 /* Models */,
+				F80BCFD9DA24D2C4C418E534 /* Supabase */,
+				0BAC7E419B876341B020C74C /* ExerciseDatabaseLoader.swift */,
+			);
+			path = Data;
+			sourceTree = "<group>";
+		};
+		99921ECA2FBFE641BCE1D560 /* Progress */ = {
+			isa = PBXGroup;
+			children = (
+				C8BDF51AB3B8F5EF411AC347 /* Comparison */,
+				B4AAEE603C7D209364C6AC85 /* MesocyclePlannerView.swift */,
+				1755C0465E49FBE3D87774A2 /* OneRepMaxChartView.swift */,
+				F1791A8BA35A2B9C12E2C2EF /* ProgressCameraView.swift */,
+				C7ACA7FE84F67E692C59F511 /* ProgressView.swift */,
+				0F173A35FD100059CD7046F3 /* RecoveryInsightsView.swift */,
+				06A018353D182FC62D9DA90B /* VolumeChartView.swift */,
+				0822B225966665FE6CC420D0 /* WorkoutCalendarView.swift */,
+				4455A0A1CD5299A8CCE6592C /* WorkoutHistoryCardView.swift */,
+			);
+			path = Progress;
+			sourceTree = "<group>";
+		};
+		9A89FF1D842C6A48C104BA64 /* Widget */ = {
+			isa = PBXGroup;
+			children = (
+				334AD721D44BFA1AA99329EE /* AgileTrainerWidget.entitlements */,
+				F9A3AD20C7422D54AEFB79E6 /* DailyReadinessWidget.swift */,
+				AF05A064DB8885E4A527F3B4 /* Info.plist */,
+			);
+			path = Widget;
+			sourceTree = "<group>";
+		};
+		A417F472CC67ACB1CA9E80F2 /* Constants */ = {
+			isa = PBXGroup;
+			children = (
+				08CB1D8DEF752CB952FB126B /* AppConstants.swift */,
+				187ADAFD0434341DA5A60CD3 /* HealthKitTypes.swift */,
+			);
+			path = Constants;
+			sourceTree = "<group>";
+		};
+		BA198DE389779612F10C5A32 /* AI */ = {
+			isa = PBXGroup;
+			children = (
+				9AACD458A0C15D8A5633D3CC /* AIRateLimiter.swift */,
+				452ED9BC22BFBD67A4082244 /* AIReschedulingEngine.swift */,
+				718335DDC833574A5BE1B506 /* AIResponseCache.swift */,
+				46A5E51BD17813EBB7BE3FAC /* AITrainerModels.swift */,
+				A08E3C5F4D9658B77BF800AD /* AITrainerService.swift */,
+				CF3B40ADB4B26F82B5C2645F /* ExerciseAIEnrichmentService.swift */,
+				A84CEF5E6B99F5FDDAFD2682 /* FallbackWorkoutGenerator.swift */,
+				0D432FDEFFB488AD321FFF68 /* GeminiAPIClient.swift */,
+				05D9052A10BDBB60EA8EEA8C /* OnboardingAIManager.swift */,
+				E56E109D9AF5BF091C25786B /* TrainerContextBuilder.swift */,
+				CCCEE20A288CCED45BB7FF48 /* WeeklyReportService.swift */,
+			);
+			path = AI;
+			sourceTree = "<group>";
+		};
+		BB5FF9CCA90E321978597835 /* LiveActivity */ = {
+			isa = PBXGroup;
+			children = (
+				3B9A3307833D4D000FA091F6 /* LiveActivityManager.swift */,
+				8CAC6B41919504797F7704B6 /* RestTimerAttributes.swift */,
+				0F7024F9D8A993B5525757EF /* RestTimerLiveActivity.swift */,
+			);
+			path = LiveActivity;
+			sourceTree = "<group>";
+		};
+		C6BCED2C577B312921D3275C /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				DDE7E5DD4556B0C565C634CE /* WatchActiveSetView.swift */,
+				825A517C85C49645E81A2834 /* WatchConfirmView.swift */,
+				144EEA46247BF204133E9D2E /* WatchRestView.swift */,
+				CECF051DA0886F38F2C48915 /* WatchRootView.swift */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+		C8BDF51AB3B8F5EF411AC347 /* Comparison */ = {
+			isa = PBXGroup;
+			children = (
+				521E193A6BC3E1A353268B4D /* BeforeAndAfterSliderView.swift */,
+			);
+			path = Comparison;
+			sourceTree = "<group>";
+		};
+		D3D577994EB27A6BE5A6C832 /* Social */ = {
+			isa = PBXGroup;
+			children = (
+				6DEF31379396345900FB93A1 /* CoOpSessionService.swift */,
+				4850B991B395A50600377E36 /* StoryShareManager.swift */,
+			);
+			path = Social;
+			sourceTree = "<group>";
+		};
+		D6C2FC802C46C7A50F18979A /* ExerciseDetail */ = {
+			isa = PBXGroup;
+			children = (
+				02D39DA0A519766166A3E36B /* ExerciseDetailView.swift */,
+				238D6C8532BF142EBE580FB5 /* ExerciseDetailViewModel.swift */,
+			);
+			path = ExerciseDetail;
+			sourceTree = "<group>";
+		};
+		D76DF44CB6E8EEBA42E0BB18 /* TodayWorkout */ = {
+			isa = PBXGroup;
+			children = (
+				63892AA21C3E66B833E149A1 /* ExerciseCardView.swift */,
+				5DDBFAFF7F336005919BF9EC /* HeatmapView.swift */,
+				EF0118FA6BCB986FAEB3986F /* HeatmapViewModel.swift */,
+				B5BAC4CE35F2A1CBCAB4BCBD /* MuscleMapView_Redesign.swift */,
+				E94838DBA2CB6644BE1D8CCE /* MuscleMapView.swift */,
+				080C1885778A1E3E7B8317E3 /* RestTimerOverlay.swift */,
+				BDA1C52DF373AB5E18FC3A72 /* SetControlViews.swift */,
+				4DC52073428D7251DC3BEED7 /* WorkoutHeaderView.swift */,
+				14EB05E5384DA11E702258A3 /* WorkoutPreviewView.swift */,
+				CC9B470C7E61A91B23102DD1 /* WorkoutView.swift */,
+				67DD10D915AAC0EF853E0233 /* WorkoutViewModel.swift */,
+				4B372AC7442F746F0A9230EF /* WorkoutViewWithAI.swift */,
+			);
+			path = TodayWorkout;
+			sourceTree = "<group>";
+		};
+		DA1AC1EAF95BCEE646917F45 /* Services */ = {
+			isa = PBXGroup;
+			children = (
+				BA198DE389779612F10C5A32 /* AI */,
+				F5BDF9BC8B385ECA48221BD6 /* Audio */,
+				2390C3E45B5877248B0CCEB9 /* HealthKit */,
+				DC526CEFF594739861318E6E /* Intents */,
+				D3D577994EB27A6BE5A6C832 /* Social */,
+				0B508E15191DABE037DCD3A6 /* Sync */,
+				1645C8934382A71B20180BAB /* Watch */,
+				40D96F400215BA16F922A0B5 /* GymDetectionService.swift */,
+				46A09E05B6754AF6726E812E /* MuscleRecoveryService.swift */,
+				E8FD01C7386B37B9E9026AF5 /* NotificationService.swift */,
+				D358351D84A14FD943C64B25 /* WorkoutMath.swift */,
+			);
+			path = Services;
+			sourceTree = "<group>";
+		};
+		DC526CEFF594739861318E6E /* Intents */ = {
+			isa = PBXGroup;
+			children = (
+				AAB95AE5897CFDC5DB57C0A4 /* GetTodayWorkoutIntent.swift */,
+				BA16208D59B6DC105427AC61 /* LogFatigueIntent.swift */,
+				0A1AFF28319456DC65EEAF01 /* StartWorkoutIntent.swift */,
+				B8B1CAA53CCCD4E2C056A640 /* ToggleDeloadIntent.swift */,
+				FF2FCD62A2DFA20F4D237C56 /* WeeklyProgressIntent.swift */,
+			);
+			path = Intents;
+			sourceTree = "<group>";
+		};
+		EDE12C2D395E2C058C80E8C0 /* App */ = {
+			isa = PBXGroup;
+			children = (
+				3E9C25E2819353C3B7342B75 /* AgileTrainerWatchApp.swift */,
+			);
+			path = App;
+			sourceTree = "<group>";
+		};
+		EFCD4D1BB044F73885303048 /* Domain */ = {
+			isa = PBXGroup;
+			children = (
+				6A36503297D9CD70189E11D9 /* UseCases */,
+				3570907A20BF29DF2175F788 /* GamificationEngine.swift */,
+				BDAC420814DD5E8E91776DAA /* WorkoutPlanGenerator.swift */,
+			);
+			path = Domain;
+			sourceTree = "<group>";
+		};
+		F5BDF9BC8B385ECA48221BD6 /* Audio */ = {
+			isa = PBXGroup;
+			children = (
+				E3AAB65D578D9938AFE5F8E0 /* AudioCoach+WorkoutIntegration.swift */,
+				90BCDD90F6A680318138ED08 /* AudioCoachManager.swift */,
+				D05A9C5567C31446470C330F /* AudioCoachService.swift */,
+			);
+			path = Audio;
+			sourceTree = "<group>";
+		};
+		F80BCFD9DA24D2C4C418E534 /* Supabase */ = {
+			isa = PBXGroup;
+			children = (
+				503DAF35B5FF6980B2E8762A /* ExerciseDTO.swift */,
+				439A4199A9B1B92B135B74A0 /* MuscleWikiDTO.swift */,
+				D74332F708ACC5F2EBA4338A /* SupabaseExerciseRepository.swift */,
+			);
+			path = Supabase;
+			sourceTree = "<group>";
+		};
+		FF64D7C23CCC815D27254B8A /* Shared */ = {
+			isa = PBXGroup;
+			children = (
+				91A59CB1912340BA674FFE56 /* AnatomySVGPath.swift */,
+				62F12BB16AB0C6B47E2F86FE /* DetailedBodyFigureView.swift */,
+				689E3AFAD9BE73057588E802 /* EmptyStateView.swift */,
+				A08F6EE9D5A8D74CD84D5652 /* ExerciseMediaView.swift */,
+				414EB9F827CB835E11C7C8D5 /* FluidBackground.swift */,
+				FEC1D992A0FBF4892BB02338 /* GlobalErrorModifier.swift */,
+				1EF51FC1EA6FBD7DD10F9EE2 /* MainTabView.swift */,
+				5C949F2044733641A749C8D2 /* MeshGradientBackground.swift */,
+				42F5BE438AFFEF219A46301C /* PlateCalculatorView.swift */,
+				89400A013B1478ECD3478AD9 /* ShimmerEffect.swift */,
+				FC54970C4B8CE59CAD622DE3 /* SkeletonWorkoutView.swift */,
+				99C535217D69188AEF6828B8 /* StreakParticleView.swift */,
+				CBA54BEE8BB38926EE92927F /* SwapExerciseSheet.swift */,
+			);
+			path = Shared;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		0D1039654E0566A1E770F59A /* AgileTrainerWidget */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 068FACB83610105F0D12BEE6 /* Build configuration list for PBXNativeTarget "AgileTrainerWidget" */;
+			buildPhases = (
+				BDB14275ADC8C78AE24045DF /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				81058C69E187BE399C391D3A /* PBXTargetDependency */,
+			);
+			name = AgileTrainerWidget;
+			packageProductDependencies = (
+			);
+			productName = AgileTrainerWidget;
+			productReference = EA92482777B86DE4CA6E2C1D /* AgileTrainerWidget.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
+		A229E563C0A7558F6C69B3FD /* AgileTrainer */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = FC1A5770BD3C3BC5FA165D99 /* Build configuration list for PBXNativeTarget "AgileTrainer" */;
+			buildPhases = (
+				D8E603693F597221952E4CE3 /* ✅ SwiftLint */,
+				CAEA3E18B51E91593D8EC011 /* Sources */,
+				A1ABC8656219D9C4D3D70354 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = AgileTrainer;
+			packageProductDependencies = (
+				08E41327886A90F0A8DC79C1 /* Supabase */,
+			);
+			productName = AgileTrainer;
+			productReference = FD90DEC9346E8C50357CE7F1 /* AgileTrainer.app */;
+			productType = "com.apple.product-type.application";
+		};
+		C8C5908AFC0FE2BFD85D8A85 /* AgileTrainerWatch */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 6C211E8105D2032C17D82CE2 /* Build configuration list for PBXNativeTarget "AgileTrainerWatch" */;
+			buildPhases = (
+				C40BE5E3F75A758626BE1064 /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				D101A7CB2E4A42C1720C0F5F /* PBXTargetDependency */,
+			);
+			name = AgileTrainerWatch;
+			packageProductDependencies = (
+			);
+			productName = AgileTrainerWatch;
+			productReference = 65880E303884B4EB2278F664 /* AgileTrainerWatch.app */;
+			productType = "com.apple.product-type.application";
+		};
+		E97B9DA1330A3242B429A019 /* AgileTrainerTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = F4F6232602AE367C44BD6A08 /* Build configuration list for PBXNativeTarget "AgileTrainerTests" */;
+			buildPhases = (
+				F5EF88757DC88B26A7DE8843 /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				6A3967556E74D47E73F4F262 /* PBXTargetDependency */,
+			);
+			name = AgileTrainerTests;
+			packageProductDependencies = (
+			);
+			productName = AgileTrainerTests;
+			productReference = 733F306E0971EDBC7E1CDC00 /* AgileTrainerTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		106AA80AC85A4B061F9CBAD0 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1620;
+				TargetAttributes = {
+					0D1039654E0566A1E770F59A = {
+						DevelopmentTeam = "$(DEVELOPMENT_TEAM_ID)";
+						ProvisioningStyle = Manual;
+					};
+					A229E563C0A7558F6C69B3FD = {
+						DevelopmentTeam = "$(DEVELOPMENT_TEAM_ID)";
+						ProvisioningStyle = Manual;
+					};
+					C8C5908AFC0FE2BFD85D8A85 = {
+						DevelopmentTeam = "$(DEVELOPMENT_TEAM_ID)";
+						ProvisioningStyle = Manual;
+					};
+					E97B9DA1330A3242B429A019 = {
+						DevelopmentTeam = "$(DEVELOPMENT_TEAM_ID)";
+						ProvisioningStyle = Manual;
+					};
+				};
+			};
+			buildConfigurationList = 1D8A4ACBE0E0BC109C9B27D6 /* Build configuration list for PBXProject "AgileTrainer" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = cs;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				cs,
+			);
+			mainGroup = 7E31B36F160A6E4A8FD1B5F3;
+			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				8259BCA5CA3EA49973BA2D16 /* XCRemoteSwiftPackageReference "supabase-swift" */,
+			);
+			preferredProjectObjectVersion = 77;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				A229E563C0A7558F6C69B3FD /* AgileTrainer */,
+				E97B9DA1330A3242B429A019 /* AgileTrainerTests */,
+				C8C5908AFC0FE2BFD85D8A85 /* AgileTrainerWatch */,
+				0D1039654E0566A1E770F59A /* AgileTrainerWidget */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		D8E603693F597221952E4CE3 /* ✅ SwiftLint */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			name = "✅ SwiftLint";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "if which swiftlint > /dev/null; then\n  swiftlint --config .swiftlint.yml || true\nelse\n  echo \"warning: SwiftLint není nainstalován. Spusť: brew install swiftlint\"\nfi\n";
+		};
+/* End PBXShellScriptBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		BDB14275ADC8C78AE24045DF /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				6764104D789EE454BCE0ECDA /* AppConstants.swift in Sources */,
+				FEF2D2AF0EA68D2115205DD1 /* AppLogger.swift in Sources */,
+				A8FC373D14FA9E3EF825AD97 /* Challenge.swift in Sources */,
+				ECB62D691883D7D2097F7441 /* Color+App.swift in Sources */,
+				5DFA17CA1FEFB0CBAD4565D8 /* DailyReadinessWidget.swift in Sources */,
+				0B9E8361388C2015B4DF971D /* Exercise.swift in Sources */,
+				86ECC380004CFDE9E37C5D94 /* Extensions.swift in Sources */,
+				5F5B84F0C7CC635C4ACB04A3 /* FatigueEntry.swift in Sources */,
+				0BB4CA32D60ABE529075ADF5 /* GymProfile.swift in Sources */,
+				045D44BAD77BDCFD75BECF6B /* HealthMetricsSnapshot.swift in Sources */,
+				74A5120FFC430C98F95E3AFF /* LiveActivityManager.swift in Sources */,
+				6C306E90E35BCC58988D11E5 /* Mesocycle.swift in Sources */,
+				4789A235A5121E45686F31C8 /* MuscleArea.swift in Sources */,
+				FBB43ECC90AE2D2A824E61F2 /* MuscleXPRecord.swift in Sources */,
+				0775739B9C1EF9285FD6ABFD /* ProgressPhoto.swift in Sources */,
+				DA904F22C259ADFFC930FE41 /* RestTimerAttributes.swift in Sources */,
+				7164B368348C988260D17C4A /* RestTimerLiveActivity.swift in Sources */,
+				929243B07B4CD371E5B6048C /* SetType.swift in Sources */,
+				0D742AD13829CABD8B1DA497 /* SharedModelContainer.swift in Sources */,
+				AF8619F6AD8F733DDAC2D9C7 /* SprintGoal.swift in Sources */,
+				C215810BDD592CCB5F0EBC41 /* Theme.swift in Sources */,
+				7F0379D08F5A43AE60C1682C /* UserProfile.swift in Sources */,
+				DF412A64A52AA01BF7D18A59 /* WeightEntry.swift in Sources */,
+				CCF024DF78FCEC6BA8F499B1 /* WorkoutPlan.swift in Sources */,
+				3AF5B52F43CA2C5DF36DAB74 /* WorkoutSession.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		C40BE5E3F75A758626BE1064 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				33FC192EDE648220580DAAE7 /* AgileTrainerWatchApp.swift in Sources */,
+				F21732258310DD7B1B949697 /* AppConstants.swift in Sources */,
+				3935FF18D7E8FEFDBD08CD20 /* AppLogger.swift in Sources */,
+				5D9D23AA49E2615C33FE7D2F /* Color+App.swift in Sources */,
+				37326A77132C876CB83864FF /* Extensions.swift in Sources */,
+				639570D7081D5074DC488F1E /* HRRecoveryRPE.swift in Sources */,
+				384E5703CA91F21044474F57 /* HealthKitWatchService.swift in Sources */,
+				0627B486A2B393EFD075E8D6 /* MotionManager.swift in Sources */,
+				D1C07648236F88227E857ED2 /* Theme.swift in Sources */,
+				793CAAC1169D38F9FEFACDB0 /* WatchActiveSetView.swift in Sources */,
+				4543FAF8E6959EA9FB05D2A8 /* WatchConfirmView.swift in Sources */,
+				1EA1FD8D7A8262B7CD3CF6BD /* WatchConnectivityManager.swift in Sources */,
+				63214AD17784EE9D9F5D8B2E /* WatchRestView.swift in Sources */,
+				CFED9A0985FA4D6A73FCEAB3 /* WatchRootView.swift in Sources */,
+				B3AA7E62059D9E51D9A1F27F /* WatchSessionCoordinator.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		CAEA3E18B51E91593D8EC011 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				C95FE829C4A6F738E5C13459 /* AICoachChatView.swift in Sources */,
+				87A096CB2D349792E76CA390 /* AIRateLimiter.swift in Sources */,
+				639A2C4A1C465C9F1832F895 /* AIReschedulingEngine.swift in Sources */,
+				EEBD6C0EB64E798DD7A8CB04 /* AIResponseCache.swift in Sources */,
+				91B95DF9DDC5E47A691E76D4 /* AITrainerModels.swift in Sources */,
+				CAD207DED3B1B9421F27E713 /* AITrainerService.swift in Sources */,
+				15B72F7BD8AC2F501E4CA635 /* ActiveSessionContrast_and_PlanFallback.swift in Sources */,
+				FEDF18580F804813E28F8E08 /* ActiveSessionView.swift in Sources */,
+				4C1A54819E23ADFDBFB1DEAD /* ActiveSessionViewModel.swift in Sources */,
+				D696E1708F2CF64F187EE519 /* AddCustomExerciseView.swift in Sources */,
+				F4D46B928E5AD254D032673F /* AgileFitnessTrainerApp.swift in Sources */,
+				47F532871D1EBAD2FA64D15C /* AnatomySVGPath.swift in Sources */,
+				D13ED57ED03F2FDA200D0B1F /* AppConstants.swift in Sources */,
+				B069C2950AAA14A39BEAF78C /* AppEnvironment.swift in Sources */,
+				E1C89D97CD9C27EB480E67BA /* AppLogger.swift in Sources */,
+				951C49043F5DF3A06A4E52B7 /* AudioCoach+WorkoutIntegration.swift in Sources */,
+				A2E9BAB37F6944C2F867E72E /* AudioCoachManager.swift in Sources */,
+				3F923ABEC3FAE8231660E938 /* AudioCoachService.swift in Sources */,
+				21F2EBCC53CFA564AF6FC36C /* AuthManager.swift in Sources */,
+				F855AED8A828FA782C6467FD /* BeforeAndAfterSliderView.swift in Sources */,
+				CBDCEABBBEDD87C6AC14103B /* Challenge.swift in Sources */,
+				6C150F7EAB72FB0BC315036F /* ChallengeView.swift in Sources */,
+				58392777745ADC4BEDDD05FA /* CircularRestTimerView.swift in Sources */,
+				FC225270C27873E5B7817214 /* CoOpSessionService.swift in Sources */,
+				D44355E969B37897808E39EC /* Color+App.swift in Sources */,
+				21B6BE5F118B4B7F8532D31E /* CustomWorkoutBuilderView.swift in Sources */,
+				3B7F1866F430DF1C3F83332C /* DashboardView.swift in Sources */,
+				AEF4CEE5503D5571D346BA3E /* DashboardViewModel.swift in Sources */,
+				8036411D1C8E639ECE3D1B2E /* DataExportManager.swift in Sources */,
+				5652A19221AAD79077C855A8 /* DetailedBodyFigureView.swift in Sources */,
+				DEC74A0A7F21D5488730D19C /* EmptyStateView.swift in Sources */,
+				74AC1119FBED795FA9418B51 /* Equipment+SwapSupport.swift in Sources */,
+				AD279ECF816AB9A3D67FFB7F /* Exercise.swift in Sources */,
+				DFD7643E94721B498C7E808F /* ExerciseAIEnrichmentService.swift in Sources */,
+				9BBC8504DE4EF00FD4105202 /* ExerciseCardView.swift in Sources */,
+				1E32EA6DB7C530BA042EA21C /* ExerciseDTO.swift in Sources */,
+				6A9E317C47E6E64BB5EC95A7 /* ExerciseDatabaseLoader.swift in Sources */,
+				729789B839E4466F8239214E /* ExerciseDetailView.swift in Sources */,
+				1BE09355165A2DBE1B7F374C /* ExerciseDetailViewModel.swift in Sources */,
+				F2CEB708AF9DFAC9BF14B7B1 /* ExerciseLibraryView.swift in Sources */,
+				D976550D808D6EB4DC3B11E6 /* ExerciseMediaView.swift in Sources */,
+				6AACD396566DF88F08637E1C /* ExerciseNoteView.swift in Sources */,
+				237C038F728776329DB7359B /* ExerciseSearchView.swift in Sources */,
+				2A2B0D0C0A9B2B2F95EA6B98 /* Extensions.swift in Sources */,
+				E822146AB849CB53A82903F6 /* FallbackWorkoutGenerator.swift in Sources */,
+				551BCBF890693073A97CA8FE /* FatigueEntry.swift in Sources */,
+				6FB4ED08777EAB3740299A2A /* FatigueStore.swift in Sources */,
+				8993016178BDD3625873C275 /* FluidBackground.swift in Sources */,
+				F921C58EBE0315A4A92472E8 /* GamificationEngine.swift in Sources */,
+				19A53DE10C5EE6C356BE722C /* GeminiAPIClient.swift in Sources */,
+				7713F2A9BF9D8537148AB570 /* GetTodayWorkoutIntent.swift in Sources */,
+				64E9C530928E77BE509CE698 /* GlobalErrorModifier.swift in Sources */,
+				5BD54FECE24506B3459C827A /* GymDetectionService.swift in Sources */,
+				D8BC18DE4CA7011DDC0DB18C /* GymProfile.swift in Sources */,
+				C05EA19537102395E0A67C87 /* GymProfilesView.swift in Sources */,
+				111E7680B513FA2D3BD4A385 /* HRZonedRestTimer.swift in Sources */,
+				177C72CAA0E6F7FA2F439118 /* HapticManager.swift in Sources */,
+				2BED6F0ADAE63992B0860ACC /* HapticPatternEngine.swift in Sources */,
+				48A88B35005E61926F57C135 /* HealthBackgroundManager.swift in Sources */,
+				2BCD31D80E72C87BDB65FD52 /* HealthKitErrorHandling.swift in Sources */,
+				52BEB9F8EBB92BE58EF7DAFD /* HealthKitNutritionService.swift in Sources */,
+				B1F7E9335EF859691C8D5DF1 /* HealthKitService.swift in Sources */,
+				2CA8F47993F70F41A2498BB5 /* HealthKitTypes.swift in Sources */,
+				9576CD1C279866BD53AAB818 /* HealthKitWorkoutWriter.swift in Sources */,
+				F84E943A95005B01E28DB106 /* HealthMetricsSnapshot.swift in Sources */,
+				92CB9FD40D7593C128B0C3C6 /* HealthWorkoutWriter.swift in Sources */,
+				BD898B63268E197BC2AE75EE /* HeatmapView.swift in Sources */,
+				42F8885C6DB7E3E1AE9D88C4 /* HeatmapViewModel.swift in Sources */,
+				53D028FE4B251D2C101A9C84 /* LiveActivityManager.swift in Sources */,
+				4ACE4AC1192FA6ABC371EB3D /* LogFatigueIntent.swift in Sources */,
+				A927DFC3B6243786BE3AD5F4 /* MainTabView.swift in Sources */,
+				330C0F46B9A0022DD438A26D /* MeshGradientBackground.swift in Sources */,
+				2DF0FD59DDAEB7F6C397D97E /* Mesocycle.swift in Sources */,
+				97F900883F707A6AF48AF991 /* MesocyclePlannerView.swift in Sources */,
+				5DD00EC5BE17012FBBA0F748 /* MuscleArea.swift in Sources */,
+				3A1D9911EE91FB1BA7B668A5 /* MuscleMapView.swift in Sources */,
+				19A8B76F37A015BC9CFC16B4 /* MuscleMapView_Redesign.swift in Sources */,
+				FE432CF745B138D9BA579C3C /* MuscleRecoveryService.swift in Sources */,
+				2303C737E39D86975D4D63D0 /* MuscleVolumeChart.swift in Sources */,
+				7C3F38EA85D11634D3575008 /* MuscleWikiDTO.swift in Sources */,
+				DDEE8D16DBC868F2D76BE53C /* MuscleWikiDetailView.swift in Sources */,
+				01088291448511F0E24F160A /* MuscleWikiViewModel.swift in Sources */,
+				4DC054CAE7414A0D9A5596D3 /* MuscleXPRecord.swift in Sources */,
+				6649871B46D397D84072FBEE /* NetworkMonitor.swift in Sources */,
+				36596B12EF2046DE7D22FCD9 /* NotificationService.swift in Sources */,
+				F46CD5A8EFF0238BBB0550BD /* OfflineSyncManager.swift in Sources */,
+				53E2E3D2B5DC9DDA6C742C18 /* OnboardingAIManager.swift in Sources */,
+				72071829A11CC84E595C6AE2 /* OnboardingChatView.swift in Sources */,
+				A603A3578A361261E5D18F91 /* OnboardingView.swift in Sources */,
+				FA0040C08D45E93C35A063E1 /* OneRepMaxCalculator.swift in Sources */,
+				965252536E083A640BA733CA /* OneRepMaxChartView.swift in Sources */,
+				1BD6F2AC4655A656ABDEAB2C /* PerformanceHelpers.swift in Sources */,
+				D1E5E0F29412F0B6C23CE594 /* PlateCalculatorView.swift in Sources */,
+				63349D0F9CFBB40B2ED771EA /* ProgressCameraView.swift in Sources */,
+				BB04721EF2B23653DF4AFABA /* ProgressPhoto.swift in Sources */,
+				322583C437CF91BF6C86FBA8 /* ProgressView.swift in Sources */,
+				42C387A3683AA848D60D44CF /* ProgressiveOverloadUseCase.swift in Sources */,
+				320AD9F1351010E6F0C90CC2 /* QuickWorkoutModels.swift in Sources */,
+				EFFC5CC385F9B67D486D6EE7 /* QuickWorkoutPickerView.swift in Sources */,
+				EF4F80ADDA7DCB7AF50324DE /* RecoveryInsightsView.swift in Sources */,
+				36007F5B31CAB29ACCBCDF55 /* RestTimerAttributes.swift in Sources */,
+				29570CB5447CE7EDC00C2F93 /* RestTimerLiveActivity.swift in Sources */,
+				7D62BEDC4312F168AE916B69 /* RestTimerManager.swift in Sources */,
+				F23C6D8E3C2D552125C20BDF /* RestTimerOverlay.swift in Sources */,
+				05EAAEE71B0177E4853552B3 /* RollingWeekView.swift in Sources */,
+				C6FC4784191B497F14988407 /* SetControlViews.swift in Sources */,
+				FC848965A0DEF32CA4445ACD /* SetType.swift in Sources */,
+				517593C967330AE6B65BFA57 /* SettingsView.swift in Sources */,
+				0E06AFF502A7B5ED12FC48E2 /* SharedModelContainer.swift in Sources */,
+				4A4CEEEC036D64E9FB6E2B6B /* ShimmerEffect.swift in Sources */,
+				85F7A8504CA9F1D737EB02B6 /* SkeletonWorkoutView.swift in Sources */,
+				7AEA2EE18192F9721FFA7160 /* SocialFeedView.swift in Sources */,
+				D855A6AC4AF019EB24CB5477 /* SprintGoal.swift in Sources */,
+				6CA742364A4CCCAC390A6FFE /* SprintGoalsCard.swift in Sources */,
+				74E2463B6EF353A0CD7349B2 /* SprintPlanningView.swift in Sources */,
+				F8687F6F77EC57294184671B /* SprintRetroView.swift in Sources */,
+				8B9451F866390606AA52AAFC /* SprintRetroViewModel.swift in Sources */,
+				FB8606A7C1C873950856E051 /* StartWorkoutIntent.swift in Sources */,
+				FF76DCA16C1E9CBB66FE5716 /* StoryShareManager.swift in Sources */,
+				D389ED25D6D4B010A69DD9FA /* StreakManager.swift in Sources */,
+				EAB630C1412E494DC981119A /* StreakParticleView.swift in Sources */,
+				8D5ED7CDF7D2FDBC6CAE2329 /* StubViews.swift in Sources */,
+				752979FA79166ACB0360778B /* SupabaseExerciseRepository.swift in Sources */,
+				E5ACF177C0FD30010EB4E780 /* SwapExerciseSheet.swift in Sources */,
+				5D433F27F289831951042A72 /* TempoParser.swift in Sources */,
+				12DC52E5617587AC3AD7DF86 /* Theme.swift in Sources */,
+				3A39D720BD77DB3AE549E6CC /* ToggleDeloadIntent.swift in Sources */,
+				C5BD68D61979A29A530EC83B /* TrainerContextBuilder.swift in Sources */,
+				D62A518F91ADC392DB35CD10 /* UserProfile.swift in Sources */,
+				444008D39FC1F3B9C1D982A8 /* VolumeChartView.swift in Sources */,
+				2EA11242665E7917C3930B8D /* WarmupPhaseView.swift in Sources */,
+				350B1ABAB121CC5842090287 /* WatchConnectivityManager.swift in Sources */,
+				42E51F450048A335C68E1119 /* WatchIntegrationService.swift in Sources */,
+				8A6440C656A38E7A2475719B /* WeeklyCalendarView.swift in Sources */,
+				8377701BDBCDB113D0305586 /* WeeklyProgressIntent.swift in Sources */,
+				8CB1D5B3025BA5C8CAC686D6 /* WeeklyReportService.swift in Sources */,
+				4E791E7DF7495A0D029E076C /* WeightEntry.swift in Sources */,
+				956122A510FDF36F5EE27C15 /* WelcomeView.swift in Sources */,
+				9395D2D9B501F97F0C00A72A /* WorkoutCalendarView.swift in Sources */,
+				44D3996A7B27898C5B6F18A5 /* WorkoutHeaderView.swift in Sources */,
+				AD38B41ED9DF5BB1FCC05AAA /* WorkoutHistoryCardView.swift in Sources */,
+				6A35E3D8B272234B0B0B82AB /* WorkoutMath.swift in Sources */,
+				531D91537544CC75E79163E7 /* WorkoutPlan.swift in Sources */,
+				AFEDA696CEBC0EDA985F1A17 /* WorkoutPlanGenerator.swift in Sources */,
+				3D6C5925C6D3AC9196D4E5FA /* WorkoutPreviewSheet.swift in Sources */,
+				5EEED425CA97D7C8E760AF67 /* WorkoutPreviewView.swift in Sources */,
+				EDCD70E71407FDC404CE4CF1 /* WorkoutSession.swift in Sources */,
+				4BF88846A446AE64DC925C4A /* WorkoutSetRowView.swift in Sources */,
+				07637D26AAE10FC6331BCB02 /* WorkoutSummaryView.swift in Sources */,
+				D56DB401D9EECDA8C063DBE4 /* WorkoutView.swift in Sources */,
+				099EFF4EF1BCA756028D75B0 /* WorkoutViewModel.swift in Sources */,
+				C86C15089086F31B8B35D2BF /* WorkoutViewWithAI.swift in Sources */,
+				E7415A8C9B6C349CB9832C7F /* YouTubeLinkGenerator.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		F5EF88757DC88B26A7DE8843 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A6619D6249B4F230E05E80CD /* AITrainerModelsTests.swift in Sources */,
+				BAFD9826E42058D77B78DC1E /* AgileTrainerTests.swift in Sources */,
+				B4B1DB3675465EEE54AC7C70 /* WorkoutViewModelTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		6A3967556E74D47E73F4F262 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = A229E563C0A7558F6C69B3FD /* AgileTrainer */;
+			targetProxy = 9B5D7FA8F59BB8F0122FA8BC /* PBXContainerItemProxy */;
+		};
+		81058C69E187BE399C391D3A /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = A229E563C0A7558F6C69B3FD /* AgileTrainer */;
+			targetProxy = 3376CDC4E80793FF8B38B9F7 /* PBXContainerItemProxy */;
+		};
+		D101A7CB2E4A42C1720C0F5F /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = A229E563C0A7558F6C69B3FD /* AgileTrainer */;
+			targetProxy = ED48EA5148D27F4849E3F1F0 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		1C931134D70B16D6E6D9C74A /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = Watch/Resources/AgileTrainerWatch.entitlements;
+				INFOPLIST_FILE = Watch/Resources/Info.plist;
+				PRODUCT_BUNDLE_IDENTIFIER = com.agilefitness.trainer.watch;
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				TARGETED_DEVICE_FAMILY = 4;
+				WATCHOS_DEPLOYMENT_TARGET = 10.0;
+				WK_APP_BUNDLE_NAME = AgileTrainer;
+			};
+			name = Release;
+		};
+		235B64AA66203FD80911B79A /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = Widget/AgileTrainerWidget.entitlements;
+				INFOPLIST_FILE = Widget/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.agilefitness.trainer.widget;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		4C38DC460292EE7B57986EB7 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = Resources/AgileTrainer.entitlements;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				INFOPLIST_FILE = Resources/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.agilefitness.trainer;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		73E7549642E567808EAFD408 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = Watch/Resources/AgileTrainerWatch.entitlements;
+				INFOPLIST_FILE = Watch/Resources/Info.plist;
+				PRODUCT_BUNDLE_IDENTIFIER = com.agilefitness.trainer.watch;
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				TARGETED_DEVICE_FAMILY = 4;
+				WATCHOS_DEPLOYMENT_TARGET = 10.0;
+				WK_APP_BUNDLE_NAME = AgileTrainer;
+			};
+			name = Debug;
+		};
+		8EEBAB3AC78C3B88E514C0CE /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.agilefitness.trainer.tests;
+				SDKROOT = iphoneos;
+				SWIFT_STRICT_CONCURRENCY = complete;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/AgileTrainer.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/AgileTrainer";
+			};
+			name = Release;
+		};
+		DA1CA1E7649DE0F37A6148A8 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = Resources/AgileTrainer.entitlements;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				INFOPLIST_FILE = Resources/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.agilefitness.trainer;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		DADD9DCCE44A27DB2AF77207 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = Widget/AgileTrainerWidget.entitlements;
+				INFOPLIST_FILE = Widget/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.agilefitness.trainer.widget;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		DE55D711242D0DBE1A96ECD9 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_STYLE = Manual;
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = "$(DEVELOPMENT_TEAM_ID)";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = s;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				GEMINI_API_KEY = "$(GEMINI_API_KEY)";
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MARKETING_VERSION = 1.0.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				OTHER_LDFLAGS = "-ObjC";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPABASE_ANON_KEY = "$(SUPABASE_ANON_KEY)";
+				SUPABASE_URL = "$(SUPABASE_URL)";
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_STRICT_CONCURRENCY = complete;
+				SWIFT_VERSION = 5.10;
+				TARGETED_DEVICE_FAMILY = 1;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		F27834123737122B2250B68E /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.agilefitness.trainer.tests;
+				SDKROOT = iphoneos;
+				SWIFT_STRICT_CONCURRENCY = complete;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/AgileTrainer.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/AgileTrainer";
+			};
+			name = Debug;
+		};
+		F8D7629108947A785C15FC22 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_STYLE = Manual;
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = "$(DEVELOPMENT_TEAM_ID)";
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				GEMINI_API_KEY = "$(GEMINI_API_KEY)";
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MARKETING_VERSION = 1.0.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				OTHER_LDFLAGS = "-ObjC";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPABASE_ANON_KEY = "$(SUPABASE_ANON_KEY)";
+				SUPABASE_URL = "$(SUPABASE_URL)";
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_STRICT_CONCURRENCY = complete;
+				SWIFT_VERSION = 5.10;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Debug;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		068FACB83610105F0D12BEE6 /* Build configuration list for PBXNativeTarget "AgileTrainerWidget" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				235B64AA66203FD80911B79A /* Debug */,
+				DADD9DCCE44A27DB2AF77207 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		1D8A4ACBE0E0BC109C9B27D6 /* Build configuration list for PBXProject "AgileTrainer" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				F8D7629108947A785C15FC22 /* Debug */,
+				DE55D711242D0DBE1A96ECD9 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		6C211E8105D2032C17D82CE2 /* Build configuration list for PBXNativeTarget "AgileTrainerWatch" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				73E7549642E567808EAFD408 /* Debug */,
+				1C931134D70B16D6E6D9C74A /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		F4F6232602AE367C44BD6A08 /* Build configuration list for PBXNativeTarget "AgileTrainerTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				F27834123737122B2250B68E /* Debug */,
+				8EEBAB3AC78C3B88E514C0CE /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		FC1A5770BD3C3BC5FA165D99 /* Build configuration list for PBXNativeTarget "AgileTrainer" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				DA1CA1E7649DE0F37A6148A8 /* Debug */,
+				4C38DC460292EE7B57986EB7 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		8259BCA5CA3EA49973BA2D16 /* XCRemoteSwiftPackageReference "supabase-swift" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/supabase/supabase-swift";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.5.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		08E41327886A90F0A8DC79C1 /* Supabase */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 8259BCA5CA3EA49973BA2D16 /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = Supabase;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = 106AA80AC85A4B061F9CBAD0 /* Project object */;
+}
