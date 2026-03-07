@@ -2,6 +2,10 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>BGTaskSchedulerPermittedIdentifiers</key>
+	<array>
+		<string>com.agilefitness.healthSync</string>
+	</array>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>cs</string>
 	<key>CFBundleDisplayName</key>
@@ -20,37 +24,58 @@
 	<string>$(MARKETING_VERSION)</string>
 	<key>CFBundleVersion</key>
 	<string>$(CURRENT_PROJECT_VERSION)</string>
+	<key>GEMINI_API_KEY</key>
+	<string>$(GEMINI_API_KEY)</string>
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>instagram-stories</string>
+	</array>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>MinimumOSVersion</key>
+	<string>17.0</string>
+	<key>NSHealthShareUsageDescription</key>
+	<string>Agilní trenér čte tvůj spánek, HRV a tepovou frekvenci z Apple Health. Tato data Jakubovi (AI trenérovi) umožňují personalizovat dnešní trénink a předejít přetrénování a zranění.</string>
+	<key>NSHealthUpdateUsageDescription</key>
+	<string>Aplikace zapisuje tvé odcvičené tréninky a spálené kalorie do Apple Health, abys měl kompletní přehled o své fyzické aktivitě na jednom místě.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Aplikace nepoužívá mikrofon — ale systém tuto hodnotu vyžaduje pro AVAudioSession.</string>
+	<key>NSSupportsLiveActivities</key>
+	<true/>
+	<key>NSUserNotificationUsageDescription</key>
+	<string>Jakub ti pošle denní připomínku tréninku a týdenní přehled tvých výsledků.</string>
+	<key>SUPABASE_ANON_KEY</key>
+	<string>$(SUPABASE_ANON_KEY)</string>
+	<key>SUPABASE_URL</key>
+	<string>$(SUPABASE_URL)</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>
 		<false/>
 	</dict>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>fetch</string>
+		<string>processing</string>
+		<string>location</string>
+	</array>
 	<key>UILaunchScreen</key>
-	<dict/>
+	<dict>
+		<key>UIColorName</key>
+		<string></string>
+		<key>UIImageName</key>
+		<string></string>
+	</dict>
+	<key>UIRequiredDeviceCapabilities</key>
+	<array>
+		<string>arm64</string>
+		<string>healthkit</string>
+	</array>
 	<key>UISupportedInterfaceOrientations</key>
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>
 	</array>
-	<key>UIRequiredDeviceCapabilities</key>
-	<array>
-		<string>armv7</string>
-		<string>healthkit</string>
-	</array>
-	<key>NSHealthShareUsageDescription</key>
-	<string>Agilní trenér čte tvůj spánek, HRV a tepovou frekvenci z Apple Health. Tato data Jakubovi (AI trenérovi) umožňují personalizovat dnešní trénink a předejít přetrénování.</string>
-	<key>NSHealthUpdateUsageDescription</key>
-	<string>Aplikace zapisuje tvé odcvičené tréninky a spálené kalorie do Apple Health, abys měl kompletní přehled o své fyzické aktivitě.</string>
-	<key>LSApplicationQueriesSchemes</key>
-	<array>
-		<string>instagram-stories</string>
-	</array>
-	<key>GEMINI_API_KEY</key>
-	<string>$(GEMINI_API_KEY)</string>
-	<key>SUPABASE_URL</key>
-	<string>$(SUPABASE_URL)</string>
-	<key>SUPABASE_ANON_KEY</key>
-	<string>$(SUPABASE_ANON_KEY)</string>
+	<key>UIUserInterfaceStyle</key>
+	<string>Dark</string>
 </dict>
 </plist>

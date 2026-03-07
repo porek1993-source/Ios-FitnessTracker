@@ -74,6 +74,7 @@ struct SetState: Identifiable {
     var previousWeightKg: Double?
     var historicalWeightKg: Double?
     var historicalReps: Int?
+    var rpeSuggestionApplied: Bool = false
     
     // Pro zpětnou kompatibilitu
     var targetReps: Int { targetRepsMin }

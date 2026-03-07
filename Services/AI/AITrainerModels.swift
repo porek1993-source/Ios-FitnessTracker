@@ -47,12 +47,19 @@ struct UserContextProfile: Codable {
     let fitnessLevel: String
     let primaryGoal: String
     let sessionDurationMinutes: Int
+    // ✅ Phase 4: Klinická data z Onboarding V2
+    let injuries: [String]             // Zranění — AI se jim vyhne
+    let lifestyleConstraints: [String] // Sedavá práce, stres, málo spánku&#8230;
+    let medicalNotes: String?          // Volný text (alergíe, léky, …)
 
-    init(fitnessLevel: String, primaryGoal: String = "Všeobecná kondice", name: String = "Uživatel", sessionDurationMinutes: Int = 60) {
+    init(fitnessLevel: String, primaryGoal: String = "Všeobecná kondice", name: String = "Uživatel", sessionDurationMinutes: Int = 60, injuries: [String] = [], lifestyleConstraints: [String] = [], medicalNotes: String? = nil) {
         self.name = name
         self.fitnessLevel = fitnessLevel
         self.primaryGoal = primaryGoal
         self.sessionDurationMinutes = sessionDurationMinutes
+        self.injuries = injuries
+        self.lifestyleConstraints = lifestyleConstraints
+        self.medicalNotes = medicalNotes
     }
 }
 
@@ -84,6 +91,7 @@ struct HealthContext: Codable {
     let readinessScore: Double?
     let readinessLevel: String?
     let externalActivities: [ExternalActivityContext]
+    let aiBiomarkersContext: String?    // ✅ Phase 4: Nutriční a spánková doporučení z HealthKit
 }
 
 struct ExternalActivityContext: Codable {
@@ -213,6 +221,7 @@ struct EquipmentContext: Codable {
     let location: String
     let availableEquipment: [String]
     let filterOverride: [String]? // Přidáno: specifický filtr vybraný uživatelem v UI
+    let aiGymProfileContext: String? // ✅ Phase 4: Geo-fenced gym vybavení
 }
 
 struct OverloadEntry: Codable {
@@ -322,7 +331,10 @@ extension UserContextProfile {
             fitnessLevel: fitnessLevel,
             primaryGoal: "hypertrophy",
             name: "Athlete",
-            sessionDurationMinutes: 60
+            sessionDurationMinutes: 60,
+            injuries: [],
+            lifestyleConstraints: [],
+            medicalNotes: nil
         )
     }
 }

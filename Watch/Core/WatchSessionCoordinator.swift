@@ -55,6 +55,11 @@ final class WatchSessionCoordinator: ObservableObject {
     private var autoConfirmTimer: AnyCancellable?
     private var cancellables = Set<AnyCancellable>()
 
+    // ✅ Phase 4: HR Recovery RPE tracking
+    private var peakHeartRateAtSetEnd: Int = 0
+    private var completedSetCount: Int = 0
+    private var hrRecoveryTask: Task<Void, Never>?
+
     /// Pauza na základě tepu (nil = fixní čas)
     var heartRateTargetForResume: Int? = nil
 
@@ -63,6 +68,7 @@ final class WatchSessionCoordinator: ObservableObject {
     private init() {
         setupNotifications()
         setupHeartRateAutoResume()
+        setupVBTAutoEnd()          // ✅ Phase 4: VBT auto-end
         startElapsedTimer()
     }
 
@@ -86,6 +92,20 @@ final class WatchSessionCoordinator: ObservableObject {
                       let target = self.heartRateTargetForResume,
                       bpm > 0 && bpm <= target else { return }
                 self.finishRest()
+            }
+            .store(in: &cancellables)
+    }
+
+    // ✅ Phase 4: VBT Auto-End
+    private func setupVBTAutoEnd() {
+        motion.$setEndSuggested
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] suggested in
+                guard let self, suggested, self.phase == .active else { return }
+                // Auto-ukončení série při detekci snížení rychlosti pod práh selhání
+                AppLogger.info("[WatchCoordinator] VBT auto-end triggered")
+                self.endSet()
+                WKInterfaceDevice.current().play(.notification)
             }
             .store(in: &cancellables)
     }
@@ -157,6 +177,9 @@ final class WatchSessionCoordinator: ObservableObject {
     func endSet() {
         motion.stopTracking()
         confirmedReps = max(motion.detectedReps, 1)
+        // ✅ Phase 4: Zachytit peak HR pro HR Recovery RPE
+        peakHeartRateAtSetEnd = health.heartRate
+        completedSetCount += 1
         withAnimation(.spring(response: 0.3)) { phase = .confirming }
         WKInterfaceDevice.current().play(.notification)
         startAutoConfirm()
@@ -194,6 +217,24 @@ final class WatchSessionCoordinator: ObservableObject {
         )
         startRest(seconds: totalRestSeconds)
         WKInterfaceDevice.current().play(.success)
+        
+        // ✅ Phase 4: Naplánuj HR Recovery RPE odhad po 60s pauzy
+        let peakHR = peakHeartRateAtSetEnd
+        let setNum = completedSetCount
+        guard peakHR > 0 else { return }
+        
+        // Zrušit předchozí běžící task, aby se RPE neposílalo duplicitně nebo špatně
+        hrRecoveryTask?.cancel()
+        hrRecoveryTask = Task { @MainActor [weak self] in
+            guard let self else { return }
+            try? await Task.sleep(nanoseconds: 60_000_000_000) // 60 sekund pauzy
+            guard !Task.isCancelled else { return }
+            guard self.phase == .resting else { return }       // Uživatel ještě pauzuje
+            
+            let recoveryHR = self.health.heartRate
+            let msg = HRRecoveryRPE.makeMessage(peakHR: peakHR, recoveryHR: recoveryHR, setNumber: setNum)
+            WatchConnectivityManager.shared.sendMessage(msg)
+        }
     }
 
     // MARK: - Pauza
@@ -222,13 +263,16 @@ final class WatchSessionCoordinator: ObservableObject {
 
     func skipRest() {
         restTimer?.cancel()
+        // Explicitní přeskočení → informujeme iOS
+        WatchConnectivityManager.shared.sendRestSkipped()
         finishRest()
         WKInterfaceDevice.current().play(.directionDown)
     }
 
     private func finishRest() {
         restTimer?.cancel()
-        WatchConnectivityManager.shared.sendRestSkipped()
+        // ✅ FIX: Neposíláme "restSkipped" z finishRest() — to se volá i při přirozeném
+        // vypršení pauzy. Pouze skipRest() (explicitní přeskočení uživatelem) posílá skip signal na iOS.
         withAnimation(.spring(response: 0.35)) { phase = .active }
         WKInterfaceDevice.current().play(.stop)
     }

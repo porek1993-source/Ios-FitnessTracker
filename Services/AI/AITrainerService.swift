@@ -62,6 +62,10 @@ final class AITrainerService: ObservableObject {
         return """
         Jsi iKorba, osobní fitness trenér. Odpovídej VÝHRADNĚ validním JSON objektem.
 
+        ⚠️ OMEZENÍ INTENZITY: RPE nesmí překročit 9. Brutální série do selhání (RPE 10) na těžkých compound cvicích striktně ZAKÁZÁNY.
+        ⚠️ ZÁKAZ 1RM: Běžný trénink neobsahuje maximálky — generuj vždy alespoň 3 opakování, nikdy méně.
+        ⚠️ PAUZY: Odpočinek (restSeconds) nesmí být kratší než 45s a delší než 240s!
+
         DATABÁZE SVALŮ (16 klíčů) — používej VŽDY tyto přesné Supabase klíče:
         Přední: traps, front-shoulders, chest, biceps, forearms, obliques, abdominals, quads, calves
         Zadní:  rear-shoulders, triceps, lats, traps-middle, lowerback, hamstrings, glutes
@@ -143,7 +147,7 @@ final class AITrainerService: ObservableObject {
         // ── KROK 1: Zkontroluj cache ─────────────────────────────────────────
         // Cache hit = nenastane žádné síťové volání → nulové náklady, okamžitá odpověď
 
-        if let cached = WorkoutCache.load(for: date, plannedDayID: plannedDay.id, context: modelContext) {
+        if let cached = WorkoutCache.load(for: date, plannedDayID: plannedDay.persistentModelID, context: modelContext) {
             AppLogger.info("✅ [AITrainer] Cache HIT → \(date.formatted(date: .abbreviated, time: .omitted)) — Gemini se nevolá.")
             cacheHit = true
             // Validace i pro cachovane odpovedi - cache mohla obsahovat starsi plan s malo cviky
@@ -152,7 +156,23 @@ final class AITrainerService: ObservableObject {
 
         AppLogger.info("ℹ️ [AITrainer] Vyhodnocuji nutnost použití AI (šetření API)...")
 
-        // ── KROK 2: Smart API Routing ─────────────────────────────────────────
+        // ── KROK 2: Rate Limit ochrana (max. 5 AI volání/den) ────────────────
+        // Chrání před zneužitím a nadměrnými náklady za API.
+        // Pokud uživatel překročil denní limit → automaticky fallback.
+        if !AIRateLimiter.canMakeCall() {
+            let remaining = AIRateLimiter.remainingCalls()
+            AppLogger.warning("⚠️ [AITrainer] Denní limit AI dosažen (0/\(AIRateLimiter.dailyLimit) zbývá). Vrácen offline plán.")
+            let fallback = FallbackWorkoutGenerator.generateFallbackPlan(
+                for: UserContextProfile(fitnessLevel: profile.fitnessLevel.rawValue),
+                day: plannedDay,
+                context: modelContext,
+                availableEquipment: equipmentOverride.map(Array.init) ?? profile.availableEquipment
+            )
+            offlineMessage = "iKorba dnes plně využil svůj AI limit. Tady je tvůj standardní plán. 💪\n(Limit se resetuje o půlnoci)"
+            return TrainerResponse.fromFallback(fallback, dayLabel: plannedDay.label)
+        }
+
+        // ── KROK 3: Smart API Routing ─────────────────────────────────────────
         
         // Získáme dnešní snapshot (HealthBackgroundManager jej ukládal)
         // Získáme dnešní snapshot
@@ -174,6 +194,8 @@ final class AITrainerService: ObservableObject {
                     equipmentOverride: equipmentOverride,
                     timeLimitMinutes: timeLimitMinutes
                 )
+                // ✅ Rate limiter: zaznamenej volání po úspěšné odpovědi
+                AIRateLimiter.recordCall()
             } else {
                 AppLogger.info("⚡️ [AITrainer] Běžný tréninkový den bez komplikací -> Vracím offline plán (šetření klíčů API).")
                 let fallback = FallbackWorkoutGenerator.generateFallbackPlan(
@@ -193,7 +215,7 @@ final class AITrainerService: ObservableObject {
             // ── KROK 3: Asynchronní uložení do cache (neblokuje UI) ──────────
             let responseSnapshot = validatedResponse
             let dateSnapshot     = date
-            let planIDSnapshot   = plannedDay.id
+            let planIDSnapshot   = plannedDay.persistentModelID
             
             // Zápis musí proběhnout na background threadu (BackgroundContext)
             let container = SharedModelContainer.container
@@ -212,7 +234,7 @@ final class AITrainerService: ObservableObject {
         } catch {
             // ── KROK 4: Graceful degradation ────────────────────────────────
             AppLogger.warning("⚠️ [AITrainer] API selhalo (\(error)) → aktivuji offline fallback.")
-            HapticManager.shared.playWarning()
+            HapticManager.shared.playError() // Premium error feedback
 
             let fallback = FallbackWorkoutGenerator.generateFallbackPlan(
                 for: UserContextProfile(fitnessLevel: profile.fitnessLevel.rawValue),
@@ -221,7 +243,15 @@ final class AITrainerService: ObservableObject {
                 availableEquipment: equipmentOverride.map(Array.init) ?? profile.availableEquipment
             )
 
-            offlineMessage = "iKorba je momentálně offline — tady je tvůj standardní plán. 💪"
+            // ✅ Analýza příčiny pro lepší komunikaci
+            if error is APITimeoutError {
+                offlineMessage = "Čas na spojení s mozkem iKorba vypršel. Nechceme tě nechat čekat – tady je tvůj perfektní offline plán. 💪"
+            } else if let geminiErr = error as? GeminiError, case .jsonParsingFailed = geminiErr {
+                offlineMessage = "iKorba se lehko spletl při sestavování tréninku. Přepnuto na bezpečný záložní plán. 💪"
+            } else {
+                offlineMessage = "iKorba je momentálně offline — tady je tvůj standardní plán. 💪"
+            }
+
             return TrainerResponse.fromFallback(fallback, dayLabel: plannedDay.label)
         }
     }
@@ -230,7 +260,7 @@ final class AITrainerService: ObservableObject {
 
     /// Vymaže cache pro dnešní den a vynutí regeneraci při dalším volání.
     func invalidateTodayCache(plannedDay: PlannedWorkoutDay) {
-        WorkoutCache.invalidate(for: .now, plannedDayID: plannedDay.id)
+        WorkoutCache.invalidate(for: .now, plannedDayID: plannedDay.persistentModelID)
         AppLogger.info("🗑️ [AITrainer] Cache dnešního tréninku vymazána (manuální).")
     }
 
@@ -430,6 +460,19 @@ private extension AITrainerService {
         
         // 4. ROZCVIČKA (Warmup phase)
         promptStr += "⚠️ ROZCVIČKA: Přidej k tréninku klíč 'warmupExercises' (pole Stringů), které bude obsahovat 3 specifické dynamické cviky na rozcvičení cílových svalů dne (např. 'Kroužení rameny', 'Výpady bez váhy').\n"
+        
+        // 5. Phase 4: KLINICKÁ DATA A OMEZENÍ
+        if !context.userProfile.injuries.isEmpty {
+            promptStr += "⚠️ MEDICAL ALERTS (Zranění): Uživatel má tato zranění: \(context.userProfile.injuries.joined(separator: ", ")). Striktně se VYHNI cvikům, které tyto partie zatěžují nebo v nich způsobují bolest!\n"
+        }
+        
+        if !context.userProfile.lifestyleConstraints.isEmpty {
+            promptStr += "⚠️ LIFESTYLE CONSTRAINTS: Uživatel hlásí tato omezení: \(context.userProfile.lifestyleConstraints.joined(separator: ", ")). Přizpůsob trénink (např. u sedavého zaměstnání přidej cviky na mobilitu kyčlí a protažení prsních svalů).\n"
+        }
+        
+        if let notes = context.userProfile.medicalNotes, !notes.isEmpty {
+            promptStr += "⚠️ MEDICAL NOTES: \(notes)\n"
+        }
                 
         return promptStr
     }
@@ -781,39 +824,39 @@ enum AIExerciseCountValidator {
     // MARK: - Fallback Isolation Exercises
 
     private static let pushIsolations: [ResponseExercise] = [
-        ResponseExercise(name: "Rozpažování s jednoručkami (Lateral raise)", nameEN: "Dumbbell Lateral Raise", slug: "lateral-raise",
+        ResponseExercise(name: "Lateral Raise", nameEN: "Dumbbell Lateral Raise", slug: "lateral-raise",
             sets: 3, repsMin: 12, repsMax: 15, weightKg: nil, rir: 1, rpe: nil, restSeconds: 60, tempo: nil,
-            coachTip: "Paže mírně před tělem, lokty vedou pohyb.", supersetId: nil),
-        ResponseExercise(name: "Triceps pushdown (kabel)", nameEN: "Cable Tricep Pushdown", slug: "tricep-pushdown",
+            coachTip: "Paže mírně před tělem, lokty vedou pohyb.", supersetId: nil, isDropSet: nil, isFailure: nil, warmupSets: nil),
+        ResponseExercise(name: "Cable Tricep Pushdown", nameEN: "Cable Tricep Pushdown", slug: "tricep-pushdown",
             sets: 3, repsMin: 12, repsMax: 15, weightKg: nil, rir: 1, rpe: nil, restSeconds: 60, tempo: nil,
-            coachTip: "Lokty pevně u těla, plný rozsah pohybu.", supersetId: nil)
+            coachTip: "Lokty pevně u těla, plný rozsah pohybu.", supersetId: nil, isDropSet: nil, isFailure: nil, warmupSets: nil)
     ]
 
     private static let pullIsolations: [ResponseExercise] = [
-        ResponseExercise(name: "Face pull (kabel)", nameEN: "Cable Face Pull", slug: "face-pull",
+        ResponseExercise(name: "Cable Face Pull", nameEN: "Cable Face Pull", slug: "face-pull",
             sets: 3, repsMin: 15, repsMax: 20, weightKg: nil, rir: 1, rpe: nil, restSeconds: 60, tempo: nil,
-            coachTip: "Taháš k obličeji, palce za hlavou.", supersetId: nil),
-        ResponseExercise(name: "Bicepsový zdvih s jednoručkami", nameEN: "Dumbbell Bicep Curl", slug: "dumbbell-curl",
+            coachTip: "Taháš k obličeji, palce za hlavou.", supersetId: nil, isDropSet: nil, isFailure: nil, warmupSets: nil),
+        ResponseExercise(name: "Dumbbell Curl", nameEN: "Dumbbell Bicep Curl", slug: "dumbbell-curl",
             sets: 3, repsMin: 10, repsMax: 14, weightKg: nil, rir: 1, rpe: nil, restSeconds: 60, tempo: nil,
-            coachTip: "Lokty zůstávají u těla, nekývej trupem.", supersetId: nil)
+            coachTip: "Lokty zůstávají u těla, nekývej trupem.", supersetId: nil, isDropSet: nil, isFailure: nil, warmupSets: nil)
     ]
 
     private static let legIsolations: [ResponseExercise] = [
-        ResponseExercise(name: "Předkopávání (Leg extension)", nameEN: "Leg Extension", slug: "leg-extension",
+        ResponseExercise(name: "Leg Extension", nameEN: "Leg Extension", slug: "leg-extension",
             sets: 3, repsMin: 12, repsMax: 16, weightKg: nil, rir: 1, rpe: nil, restSeconds: 60, tempo: nil,
-            coachTip: "Nahoře 1 sekundu drž kontrakci kvadricepsů.", supersetId: nil),
-        ResponseExercise(name: "Stojný výpon na lýtka", nameEN: "Standing Calf Raise", slug: "calf-raise",
+            coachTip: "Nahoře 1 sekundu drž kontrakci kvadricepsů.", supersetId: nil, isDropSet: nil, isFailure: nil, warmupSets: nil),
+        ResponseExercise(name: "Standing Calf Raise", nameEN: "Standing Calf Raise", slug: "calf-raise",
             sets: 4, repsMin: 15, repsMax: 20, weightKg: nil, rir: 1, rpe: nil, restSeconds: 45, tempo: nil,
-            coachTip: "Plný rozsah! Dole protáhni, nahoře 1 sekundu drž.", supersetId: nil)
+            coachTip: "Plný rozsah! Dole protáhni, nahoře 1 sekundu drž.", supersetId: nil, isDropSet: nil, isFailure: nil, warmupSets: nil)
     ]
 
     private static let genericIsolations: [ResponseExercise] = [
-        ResponseExercise(name: "Plank (výdrž)", nameEN: "Plank", slug: "plank",
+        ResponseExercise(name: "Plank", nameEN: "Plank", slug: "plank",
             sets: 3, repsMin: 30, repsMax: 60, weightKg: nil, rir: 0, rpe: nil, restSeconds: 45, tempo: nil,
-            coachTip: "Tělo v přímé linii, hýždě a břicho aktivní.", supersetId: nil),
-        ResponseExercise(name: "Face pull (kabel)", nameEN: "Cable Face Pull", slug: "face-pull",
+            coachTip: "Tělo v přímé linii, hýždě a břicho aktivní.", supersetId: nil, isDropSet: nil, isFailure: nil, warmupSets: nil),
+        ResponseExercise(name: "Cable Face Pull", nameEN: "Cable Face Pull", slug: "face-pull",
             sets: 3, repsMin: 15, repsMax: 20, weightKg: nil, rir: 1, rpe: nil, restSeconds: 60, tempo: nil,
-            coachTip: "Klíčový preventivní cvik pro zdravá ramena.", supersetId: nil)
+            coachTip: "Klíčový preventivní cvik pro zdravá ramena.", supersetId: nil, isDropSet: nil, isFailure: nil, warmupSets: nil)
     ]
 }
 

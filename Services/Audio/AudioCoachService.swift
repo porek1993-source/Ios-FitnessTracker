@@ -314,16 +314,17 @@ final class AudioCoachService: NSObject, ObservableObject {
     internal func speak(_ event: CoachSpeech) {
         guard isEnabled, isSessionActive else { return }
 
-        // Deduplikace — nespouštěj stejnou hlášku víckrát rychle za sebou
-        // (metronom může spustit tempoPhase opakovaně)
-        if case .tempoPhase = event, synthesizer.isSpeaking { return }
-
         let utterance = makeSpeech(event.utteranceText, rate: event.rate)
         utterance.volume = event.volume
 
-        // Pro tempo cues přeruš stávající mluvení
-        if case .tempoPhase = event, synthesizer.isSpeaking {
-            synthesizer.stopSpeaking(at: .immediate)
+        // Pro tempo cues: přeruš stávající mluvení a nahraď okamžitě
+        if case .tempoPhase = event {
+            if synthesizer.isSpeaking {
+                synthesizer.stopSpeaking(at: .immediate)
+            }
+        } else {
+            // Non-tempo cues: pokud aktuálně mluví tempo, nezdržuj
+            if synthesizer.isSpeaking { return }
         }
 
         DispatchQueue.main.async { [weak self] in

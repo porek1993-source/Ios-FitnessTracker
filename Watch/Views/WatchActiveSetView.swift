@@ -9,6 +9,26 @@ struct WatchActiveSetView: View {
 
     var body: some View {
         VStack(spacing: 0) {
+
+            // ✅ Phase 4: VBT Zóna — horní nabínzka zvonu rychlosti
+            HStack(spacing: 6) {
+                Text(session.motion.vbtZone.icon)
+                    .font(.system(size: 12))
+                Text(session.motion.vbtZone.rawValue)
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundStyle(vbtColor)
+                Spacer()
+                // Vrcholová rychlost za sérii
+                if session.motion.peakVelocity > 0.002 {
+                    Text(String(format: "%.3f m/s ▲", session.motion.peakVelocity))
+                        .font(.system(size: 9, design: .monospaced))
+                        .foregroundStyle(.white.opacity(0.4))
+                }
+            }
+            .padding(.horizontal, 10)
+            .padding(.top, 6)
+            .padding(.bottom, 2)
+
             // ── Hlavička: Cvik + série ─────────────────────────────────────
             VStack(spacing: 2) {
                 Text(session.currentSet?.exerciseName ?? "—")
@@ -147,6 +167,17 @@ struct WatchActiveSetView: View {
         case .cardio:        return .yellow
         case .peak:          return .orange
         case .red:           return .red
+        }
+    }
+
+    // ✅ Phase 4: VBT zóna barva
+    private var vbtColor: Color {
+        switch session.motion.vbtZone {
+        case .explosive: return .green
+        case .strength:  return .yellow
+        case .fatigue:   return .orange
+        case .failure:   return .red
+        case .idle:      return .white.opacity(0.3)
         }
     }
 

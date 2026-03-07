@@ -105,7 +105,7 @@ final class NotificationService {
         content.body = "Tvoje data ukazují příznaky přetrénování. Tento týden si dej lehčí tréninky."
         content.sound = .default
 
-        let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 2, repeats: false)
+        let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 3, repeats: false)
         let request = UNNotificationRequest(identifier: "deload_reminder", content: content, trigger: trigger)
         UNUserNotificationCenter.current().add(request)
     }

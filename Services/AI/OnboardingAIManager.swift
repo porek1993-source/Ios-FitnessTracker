@@ -37,6 +37,10 @@ struct OnboardingProfileDTO: Decodable {
     let availableDaysPerWeek:  Int
     let preferredSplitType:    String
     let sessionDurationMinutes: Int
+    // ✅ Phase 4: Klinická data z hlubokého onboardingu
+    let injuries:               [String]?
+    let lifestyleConstraints:   [String]?
+    let medicalNotes:           String?
 
     enum CodingKeys: String, CodingKey {
         case name, jmeno
@@ -55,6 +59,9 @@ struct OnboardingProfileDTO: Decodable {
         case preferred_split
         case sessionDurationMinutes = "sessionDurationMinutes"
         case session_duration, delka_treninku
+        case injuries, zraneni
+        case lifestyleConstraints, lifestyle_constraints, omezeni
+        case medicalNotes, medical_notes, zdravotni_poznamky
     }
 
     init(from decoder: Decoder) throws {
@@ -101,6 +108,18 @@ struct OnboardingProfileDTO: Decodable {
         sessionDurationMinutes = try container.decodeIfPresent(Int.self, forKey: .sessionDurationMinutes) ??
                                  container.decodeIfPresent(Int.self, forKey: .session_duration) ??
                                  container.decodeIfPresent(Int.self, forKey: .delka_treninku) ?? 60
+                                 
+        // ✅ Phase 4: Klinická data
+        injuries = try container.decodeIfPresent([String].self, forKey: .injuries) ??
+                   container.decodeIfPresent([String].self, forKey: .zraneni)
+                   
+        lifestyleConstraints = try container.decodeIfPresent([String].self, forKey: .lifestyleConstraints) ??
+                               container.decodeIfPresent([String].self, forKey: .lifestyle_constraints) ??
+                               container.decodeIfPresent([String].self, forKey: .omezeni)
+                               
+        medicalNotes = try container.decodeIfPresent(String.self, forKey: .medicalNotes) ??
+                       container.decodeIfPresent(String.self, forKey: .medical_notes) ??
+                       container.decodeIfPresent(String.self, forKey: .zdravotni_poznamky)
     }
 
     /// Converts DTO → SwiftData UserProfile
@@ -161,6 +180,10 @@ struct OnboardingProfileDTO: Decodable {
             preferredSplitType:    split,
             sessionDurationMinutes: sessionDurationMinutes
         )
+        // ✅ Phase 4: Klinická data
+        profile.injuries = injuries ?? []
+        profile.lifestyleConstraints = lifestyleConstraints ?? []
+        profile.medicalNotes = medicalNotes
         return profile
     }
 }
@@ -211,7 +234,43 @@ final class OnboardingAIManager: ObservableObject {
         else {
             // Inline fallback — pokud soubor chybí
             return """
-            Jsi iKorba, osobní fitness trenér. Zjisti od uživatele jméno, věk, výšku, váhu, cíl, úroveň zkušeností a počet tréninkových dní. Mluv přátelsky, tykej. Až budeš mít vše, ukonči odpověď blokem ###PROFILE_JSON### { ... } ###END_JSON###.
+            Jsi iKorba, osobní fitness trenér-specialista. Tvůj úkol je zjistit od uživatele kompletní profil pro vytvoření individualizovaného tréninkového plánu. Mluv přátelsky, tykej, používej česky.
+
+            POSLOUPNOST OTÁZEK (ptej se postupně, nechtěj vše najednou):
+            1. Jméno
+            2. Věk, výška, váha
+            3. Pohlaví
+            4. Hlavní cíl: síla / objem (hypertrofie) / hubnutí / vytrvalost / udržování
+            5. Zkušenosti: začátečník / pokročilý / expert
+            6. Kolik dní v týdnu a jak dlouho chce cvičit?
+            7. KLÍČOVÁ OTÁZKA — zranění: "Máš nějaká zranění nebo místa, kde tě bolí při cvičení? (rameno, koleno, záda, zápěstí...)" Pokud ano, přesně zjisti které pohyby bolí.
+            8. Práce a životní styl: "Jakou máš práci — hodně sedíš nebo se pohybuješ? Jak moc jsi pod stresem?" 
+            9. Spánek: "Kolik hodin průměrně spíš?"
+
+            Po získání všech dat (minimálně body 1–7) ukonči konverzaci výstupem takto:
+            [krátká motivační věta]
+            ###PROFILE_JSON###
+            {
+              "name": "...",
+              "ageYears": ...,
+              "gender": "male|female|other",
+              "heightCm": ...,
+              "weightKg": ...,
+              "primaryGoal": "hypertrophy|strength|weightLoss|endurance|maintenance",
+              "fitnessLevel": "beginner|intermediate|advanced",
+              "availableDaysPerWeek": ...,
+              "preferredSplitType": "fullBody|upperLower|ppl",
+              "sessionDurationMinutes": ...,
+              "injuries": ["..."],
+              "lifestyleConstraints": ["..."],
+              "medicalNotes": "..."
+            }
+            ###END_JSON###
+
+            PRAVIDLA:
+            - Reaguj empat·icky na zranění — navrhni, že cviky budou uzpůsobeny.
+            - Pokud uživatel řekne "nic mě nebolí", přidej injuries: [].
+            - Nikdy nevytvárej profil bez odpovědí na body 1–7.
             """
         }
         return text

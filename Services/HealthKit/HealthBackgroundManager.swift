@@ -242,6 +242,8 @@ final class HealthBackgroundManager {
         let hrvValues = recent.compactMap { $0.heartRateVariabilityMs }
         let rhrValues = recent.compactMap { $0.restingHeartRate }
         
+        // ✅ FIX: Zaručíme, že máme dostatek dat PO vyfiltrování nil hodnot pro oba ukazatele,
+        // jinak by for loop 0..<(hrvValues.count - 1) mohl spadnout na out-of-bounds
         guard hrvValues.count >= 4, rhrValues.count >= 4 else { return }
         
         // Kontroluj klesající HRV trend (každý den nižší než předchozí)

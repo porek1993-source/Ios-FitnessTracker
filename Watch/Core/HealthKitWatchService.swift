@@ -75,6 +75,9 @@ final class HealthKitWatchService: NSObject, ObservableObject {
             try await builder.endCollection(at: Date())
             _ = try await builder.finishWorkout()
         } catch { /* logujeme ale nespadneme */ }
+        // ✅ FIX: Uvolni reference na ukončenou session/builder (prevence resource leak a konfliktu při dalším tréninku)
+        self.session = nil
+        self.builder = nil
         isSessionActive = false
     }
 

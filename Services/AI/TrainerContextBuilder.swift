@@ -119,11 +119,15 @@ final class TrainerContextBuilder {
     // MARK: - Subsections
 
     private func buildUserProfile(profile: UserProfile) -> UserContextProfile {
-        UserContextProfile(
-            fitnessLevel: profile.fitnessLevel.rawValue,
-            primaryGoal: profile.primaryGoal.rawValue,
-            name: profile.name,
-            sessionDurationMinutes: profile.sessionDurationMinutes
+        return UserContextProfile(
+            fitnessLevel:           profile.fitnessLevel.rawValue,
+            primaryGoal:            profile.primaryGoal.displayName,
+            name:                   profile.name,
+            sessionDurationMinutes: profile.sessionDurationMinutes,
+            // ✅ Phase 4: Klinická data — zranění a životní omezení
+            injuries:               profile.injuries ?? [],
+            lifestyleConstraints:   profile.lifestyleConstraints ?? [],
+            medicalNotes:           profile.medicalNotes
         )
     }
 
@@ -200,6 +204,7 @@ final class TrainerContextBuilder {
         activities: [HKWorkoutSummary]
     ) -> HealthContext {
         let readiness = snapshot.flatMap { ReadinessCalculator.compute(snapshot: $0) }
+        let biomarkers = HealthKitNutritionService.shared.readiness.aiContextBlock
 
         return HealthContext(
             sleepDurationHours:   hk.sleepDurationHours,
@@ -219,7 +224,8 @@ final class TrainerContextBuilder {
                     energyKcal: $0.totalEnergyKcal,
                     hoursAgo: Date().timeIntervalSince($0.startDate) / 3600
                 )
-            }
+            },
+            aiBiomarkersContext:  biomarkers.isEmpty ? nil : biomarkers
         )
     }
 
@@ -303,10 +309,12 @@ final class TrainerContextBuilder {
     }
 
     private func buildEquipmentContext(profile: UserProfile, override: Set<Equipment>?) -> EquipmentContext {
-        EquipmentContext(
+        let gymText = GymDetectionService.shared.aiEquipmentContext
+        return EquipmentContext(
             location: profile.currentLocation ?? "gym",
             availableEquipment: profile.availableEquipment.map(\.rawValue),
-            filterOverride: override?.map(\.rawValue)
+            filterOverride: override?.map(\.rawValue),
+            aiGymProfileContext: gymText.isEmpty ? nil : gymText
         )
     }
 
@@ -316,7 +324,7 @@ final class TrainerContextBuilder {
             let history = Array(
                 exercise.weightHistory
                     .sorted { $0.loggedAt > $1.loggedAt }
-                    .prefix(9)
+                    .prefix(30)
             )
             guard let s = ProgressiveOverloadUseCase.suggest(history: history) else { return nil }
             return OverloadEntry(

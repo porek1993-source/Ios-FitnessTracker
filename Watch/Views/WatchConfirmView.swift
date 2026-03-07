@@ -43,7 +43,10 @@ struct WatchConfirmView: View {
                     focusedField = .reps
                 }
                 .digitalCrownRotation(
-                    $session.confirmedReps,
+                    Binding(
+                        get: { Double(session.confirmedReps) },
+                        set: { session.confirmedReps = Int($0) }
+                    ),
                     from: 1, through: 30, by: 1,
                     sensitivity: .medium,
                     isContinuous: false,

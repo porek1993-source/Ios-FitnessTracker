@@ -12,7 +12,9 @@ final class LiveActivityManager: ObservableObject {
     func startRestActivity(
         session: WorkoutSession,
         currentExercise: SessionExerciseState,
+        nextExercise: SessionExerciseState? = nil,
         currentExerciseIndex: Int,
+        totalExercises: Int,
         completedExercisesCount: Int,
         completedSetIndex: Int,
         restSeconds: Int,
@@ -21,29 +23,50 @@ final class LiveActivityManager: ObservableObject {
         await endCurrentActivity()
         guard ActivityAuthorizationInfo().areActivitiesEnabled else { return }
 
-        let completedSets = completedSetIndex + 1
-        let nextSetNumber = completedSets + 1
-        let totalSets     = currentExercise.sets.count
-
         let attributes = RestTimerAttributes(
             workoutSessionId:      session.id,
             exerciseSlug:          currentExercise.slug,
             planLabel:             planLabel,
-            totalExercises:        6, // Možná nahradit realným počtem ze session
+            totalExercises:        totalExercises,
             currentExerciseIndex:  currentExerciseIndex
         )
 
-        let nextSet = currentExercise.sets[safe: completedSets] ?? currentExercise.sets.last ?? currentExercise.sets[0]
+        let isLastSet = completedSetIndex == currentExercise.sets.count - 1
+        let titleName: String
+        let nextSetText: String
+        let upcomingWeight: Double?
         
+        if isLastSet, let nextEx = nextExercise {
+            titleName = "Připrav se: \(nextEx.name)"
+            let firstSet = nextEx.sets.first
+            let repsMin = firstSet?.targetRepsMin ?? 0
+            let repsMax = firstSet?.targetRepsMax ?? repsMin
+            nextSetText = "1. série · \(repsMin)\(repsMin != repsMax ? "–\(repsMax)" : "") opakování"
+            upcomingWeight = firstSet?.previousWeightKg ?? firstSet?.weightKg
+        } else {
+            titleName = currentExercise.name
+            let completedSets = completedSetIndex + 1
+            let nextSetNumber = completedSets + 1
+            let nextSet = currentExercise.sets[safe: completedSets] ?? currentExercise.sets.last
+            
+            if let safeSet = nextSet {
+                nextSetText = "Série \(nextSetNumber) · \(safeSet.targetRepsMin)\(safeSet.targetRepsMin != safeSet.targetRepsMax ? "–\(safeSet.targetRepsMax)" : "") opakování"
+                upcomingWeight = safeSet.previousWeightKg ?? safeSet.weightKg
+            } else {
+                nextSetText = "Hotovo"
+                upcomingWeight = nil
+            }
+        }
+
         let state = RestTimerAttributes.ContentState(
             restEndsAt:          Date.now.addingTimeInterval(Double(restSeconds)),
             totalRestSeconds:    restSeconds,
-            currentExerciseName: currentExercise.name,
-            nextSetInfo:         "Série \(nextSetNumber) · \(nextSet.targetRepsMin)\(nextSet.targetRepsMin != nextSet.targetRepsMax ? "–\(nextSet.targetRepsMax)" : "") opakování",
-            suggestedWeightKg:   nextSet.weightKg,
+            currentExerciseName: titleName,
+            nextSetInfo:         nextSetText,
+            suggestedWeightKg:   upcomingWeight,
             sessionProgress:     SessionProgress(
-                completedSets:      completedSets,
-                totalSets:          totalSets,
+                completedSets:      completedSetIndex + 1,
+                totalSets:          currentExercise.sets.count,
                 completedExercises: completedExercisesCount
             )
         )

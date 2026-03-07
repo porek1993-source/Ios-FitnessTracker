@@ -59,7 +59,7 @@ actor GeminiAPIClient {
 
     private func performGenerate(systemPrompt: String, userMessage: String, responseSchema: [String: Any]? = nil) async throws -> String {
         var generationConfig: [String: Any] = [
-            "temperature": 0.4,
+            "temperature": 0.2,
             "topP": 0.85,
             "maxOutputTokens": 4096,
             "responseMimeType": "application/json"
@@ -86,7 +86,7 @@ actor GeminiAPIClient {
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.httpBody   = try JSONSerialization.data(withJSONObject: body)
-        request.timeoutInterval = 45
+        request.timeoutInterval = 30
 
         let (data, response) = try await session.data(for: request)
 

@@ -71,16 +71,23 @@ final class WatchConnectivityManager: NSObject, WCSessionDelegate, ObservableObj
         send(["type": "restSkipped"])
     }
 
+    /// ✅ Phase 4: Generický send pro libovolnou typed zprávu (HR RPE, VBT data…)
+    func sendMessage(_ message: [String: Any]) {
+        send(message)
+    }
+
     // MARK: - Interní odesílání
 
     private func send(_ message: [String: Any]) {
-        guard WCSession.default.isReachable else {
-            // Fallback: application context (doručí se při příštím spojení)
-            try? WCSession.default.updateApplicationContext(message)
-            return
-        }
-        WCSession.default.sendMessage(message, replyHandler: nil) { error in
-            print("[WatchConnectivity] Chyba odesílání: \(error)")
+        if WCSession.default.isReachable {
+            WCSession.default.sendMessage(message, replyHandler: nil) { error in
+                print("[WatchConnectivity] Chyba odesílání (přechod do fronty): \(error.localizedDescription)")
+                // Fallback na frontu (transferUserInfo) při selhání
+                WCSession.default.transferUserInfo(message)
+            }
+        } else {
+            // Hodinky/iOS nejsou v dosahu — spolehlivě zařadíme do fronty
+            WCSession.default.transferUserInfo(message)
         }
     }
 
@@ -129,12 +136,23 @@ final class WatchConnectivityManager: NSObject, WCSessionDelegate, ObservableObj
         _ session: WCSession,
         didReceiveApplicationContext applicationContext: [String: Any]
     ) {
-        // Fallback při offline doručení
+        // Fallback při offline doručení (pokud je ještě někde použit)
         Task { @MainActor in
             NotificationCenter.default.post(
                 name: .watchMessageReceived,
                 object: nil,
                 userInfo: applicationContext
+            )
+        }
+    }
+
+    nonisolated func session(_ session: WCSession, didReceiveUserInfo userInfo: [String: Any] = [:]) {
+        // Garantované doručení z fronty (transferUserInfo)
+        Task { @MainActor in
+            NotificationCenter.default.post(
+                name: .watchMessageReceived,
+                object: nil,
+                userInfo: userInfo
             )
         }
     }

@@ -49,14 +49,20 @@ final class WatchIntegrationService {
         wc.sendWorkoutEnded()
     }
 
-    // MARK: - Přijímání zpráv z hodinek
+    private var observerToken: NSObjectProtocol?
 
-    /// Registruj Observer pro příkazy z hodinek (séria potvrzena, pauza přeskočena)
+    /// Registruj Observer pro příkazy z hodinek. 
+    /// ✅ FIX: Ukládá token pro zamezení memory leaks a duplicitních observerů.
     func registerMessageHandler(
         onSetCompleted: @escaping (Int, Double) -> Void,
-        onRestSkipped: @escaping () -> Void
+        onRestSkipped: @escaping () -> Void,
+        onHRRecoveryRPE: @escaping (Int, Double) -> Void
     ) {
-        NotificationCenter.default.addObserver(
+        if let old = observerToken {
+            NotificationCenter.default.removeObserver(old)
+        }
+
+        observerToken = NotificationCenter.default.addObserver(
             forName: .watchMessageReceived,
             object: nil,
             queue: .main
@@ -70,6 +76,10 @@ final class WatchIntegrationService {
                 onSetCompleted(reps, weight)
             case "restSkipped":
                 onRestSkipped()
+            case "hrRecoveryRPE":
+                let setNum = msg["setNumber"] as? Int ?? 0
+                let rpe = msg["estimatedRPE"] as? Double ?? 0.0
+                onHRRecoveryRPE(setNum, rpe)
             default:
                 break
             }
