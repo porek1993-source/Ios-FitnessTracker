@@ -213,47 +213,32 @@ actor SupabaseExerciseRepository {
     }
 
     // MARK: - Workout Session Sync
+    
+    struct WorkoutSessionDTO: Encodable, Sendable {
+        let id: String
+        let startedAt: String
+        let finishedAt: String?
+        let durationMinutes: Int
+        let status: String
+        let plannedDayName: String?
+        let readinessScore: Double?
+        let aiAdaptationNote: String?
+        let userFeedbackEnergy: Int?
+        let userFeedbackDifficulty: Int?
+        let userNotes: String?
+    }
 
     /// Synchronizuje dokončený trénink do Supabase tabulky `public.workout_sessions`.
     /// Používá UPSERT (INSERT OR UPDATE) podle `id` — bezpečné pro opakované volání.
     /// - Returns: `true` při úspěchu, `false` při chybě (nechceme přerušit sync loop)
     @discardableResult
-    func syncWorkoutSession(_ session: WorkoutSession) async throws -> Bool {
+    func syncWorkoutSession(_ dto: WorkoutSessionDTO) async throws -> Bool {
         guard !AppConstants.supabaseURL.isEmpty, !AppConstants.supabaseAnonKey.isEmpty else {
             AppLogger.warning("[OfflineSync] Supabase není nakonfigurován — sync přeskočen.")
             return false
         }
 
-        struct WorkoutSessionDTO: Encodable {
-            let id: String
-            let startedAt: String
-            let finishedAt: String?
-            let durationMinutes: Int
-            let status: String
-            let plannedDayName: String?
-            let readinessScore: Double?
-            let aiAdaptationNote: String?
-            let userFeedbackEnergy: Int?
-            let userFeedbackDifficulty: Int?
-            let userNotes: String?
-        }
-
-        let iso = ISO8601DateFormatter()
-        iso.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-
-        let dto = WorkoutSessionDTO(
-            id:                    session.id.uuidString,
-            startedAt:             iso.string(from: session.startedAt),
-            finishedAt:            session.finishedAt.map { iso.string(from: $0) },
-            durationMinutes:       session.durationMinutes,
-            status:                session.statusRaw,
-            plannedDayName:        session.plannedDay?.label,
-            readinessScore:        session.readinessScore,
-            aiAdaptationNote:      session.aiAdaptationNote,
-            userFeedbackEnergy:    session.userFeedbackEnergy,
-            userFeedbackDifficulty: session.userFeedbackDifficulty,
-            userNotes:             session.userNotes
-        )
+        // DTO logic removed as it's now passed in
 
         var components = URLComponents(string: baseURL + "/rest/v1/workout_sessions")
         components?.queryItems = [URLQueryItem(name: "on_conflict", value: "id")]

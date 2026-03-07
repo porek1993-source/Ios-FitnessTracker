@@ -160,7 +160,7 @@ final class AppEnvironment: ObservableObject {
         
         // 8. Odeslat dřívější offline tréninky (pokud existují a jsme online)
         setupNetworkObservers(modelContext: modelContext)
-        Task { [weak self] in
+        Task {
             await OfflineSyncManager.shared.syncUnsyncedWorkouts(context: modelContext)
         }
     }
@@ -172,7 +172,7 @@ final class AppEnvironment: ObservableObject {
             object: nil,
             queue: .main
         ) { _ in
-            Task {
+            Task { @MainActor in
                 await OfflineSyncManager.shared.syncUnsyncedWorkouts(context: modelContext)
             }
         }
