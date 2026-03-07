@@ -376,7 +376,6 @@ schemes:
       targets:
         AgileTrainer:       all
         AgileTrainerWidget: all
-        AgileTrainerWatch:  [build, run]
         AgileTrainerTests:  [test]
     run:
       config: Debug
@@ -402,6 +401,15 @@ schemes:
     profile:
       config: Release
     analyze:
+      config: Debug
+    archive:
+      config: Release
+
+  AgileTrainerWatch:
+    build:
+      targets:
+        AgileTrainerWatch: all
+    run:
       config: Debug
     archive:
       config: Release
