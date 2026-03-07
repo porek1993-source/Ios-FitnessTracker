@@ -420,9 +420,13 @@ struct QuickWorkoutPickerView: View {
     private func generatePlanWorkout(plan: QuickWorkoutPlan) -> WorkoutSession {
         var exercises: [Exercise] = []
         for t in plan.exercises {
-            let match = allExercises.first(where: {
-                $0.slug == t.slug || $0.nameEN.lowercased() == t.nameEN.lowercased()
-                || $0.name.localizedCaseInsensitiveContains(t.name.components(separatedBy: " — ").first ?? t.name)
+            let match = allExercises.first(where: { db_ex in
+                if !t.slug.isEmpty && db_ex.slug == t.slug { return true }
+                if !t.nameEN.isEmpty && db_ex.nameEN.lowercased() == t.nameEN.lowercased() { return true }
+                
+                let searchName = t.name.components(separatedBy: " — ").first ?? t.name
+                if !searchName.isEmpty && db_ex.name.localizedCaseInsensitiveContains(searchName) { return true }
+                return false
             })
             if let ex = match {
                 exercises.append(ex)
@@ -441,10 +445,16 @@ struct QuickWorkoutPickerView: View {
         modelContext.insert(day)
         let session = WorkoutSession(plan: nil, plannedDay: day)
         modelContext.insert(session)
+        
         for (i, ex) in exercises.enumerated() {
             let p = PlannedExercise(order: i, exercise: ex, targetSets: sets, targetRepsMin: 10, targetRepsMax: 15)
+            modelContext.insert(p)
             p.plannedDay = day
-            _ = SessionExercise(order: i, exercise: ex, session: session)
+            day.plannedExercises.append(p)
+            
+            let se = SessionExercise(order: i, exercise: ex, session: session)
+            modelContext.insert(se)
+            session.exercises.append(se)
         }
         return session
     }
