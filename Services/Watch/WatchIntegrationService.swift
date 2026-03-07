@@ -54,9 +54,9 @@ final class WatchIntegrationService {
     /// Registruj Observer pro příkazy z hodinek. 
     /// ✅ FIX: Ukládá token pro zamezení memory leaks a duplicitních observerů.
     func registerMessageHandler(
-        onSetCompleted: @escaping (Int, Double) -> Void,
-        onRestSkipped: @escaping () -> Void,
-        onHRRecoveryRPE: @escaping (Int, Double) -> Void
+        onSetCompleted: @escaping @Sendable (Int, Double) -> Void,
+        onRestSkipped: @escaping @Sendable () -> Void,
+        onHRRecoveryRPE: @escaping @Sendable (Int, Double) -> Void
     ) {
         if let old = observerToken {
             NotificationCenter.default.removeObserver(old)

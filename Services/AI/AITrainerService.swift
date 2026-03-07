@@ -160,7 +160,6 @@ final class AITrainerService: ObservableObject {
         // Chrání před zneužitím a nadměrnými náklady za API.
         // Pokud uživatel překročil denní limit → automaticky fallback.
         if !AIRateLimiter.canMakeCall() {
-            let remaining = AIRateLimiter.remainingCalls()
             AppLogger.warning("⚠️ [AITrainer] Denní limit AI dosažen (0/\(AIRateLimiter.dailyLimit) zbývá). Vrácen offline plán.")
             let fallback = FallbackWorkoutGenerator.generateFallbackPlan(
                 for: UserContextProfile(fitnessLevel: profile.fitnessLevel.rawValue),

@@ -65,12 +65,30 @@ final class OfflineSyncManager {
         var failCount    = 0
 
         for session in unsynced {
+            // Konstrukce DTO na MainActoru (bezpečné pro ne-Sendable session)
+            let iso = ISO8601DateFormatter()
+            iso.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+            
+            let dto = SupabaseExerciseRepository.WorkoutSessionDTO(
+                id:                    session.id.uuidString,
+                startedAt:             iso.string(from: session.startedAt),
+                finishedAt:            session.finishedAt.map { iso.string(from: $0) },
+                durationMinutes:       session.durationMinutes,
+                status:                session.statusRaw,
+                plannedDayName:        session.plannedDay?.label,
+                readinessScore:        session.readinessScore,
+                aiAdaptationNote:      session.aiAdaptationNote,
+                userFeedbackEnergy:    session.userFeedbackEnergy,
+                userFeedbackDifficulty: session.userFeedbackDifficulty,
+                userNotes:             session.userNotes
+            )
+
             // ✅ Retry s exponential backoff pro přechodné síťové chyby
             var attempts = 0
             var succeeded = false
             while attempts < 2 && !succeeded {
                 do {
-                    try await repository.syncWorkoutSession(session)
+                    try await repository.syncWorkoutSession(dto)
                     session.isSynced = true
                     successCount += 1
                     succeeded = true

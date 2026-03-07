@@ -123,11 +123,12 @@ final class WatchConnectivityManager: NSObject, WCSessionDelegate, ObservableObj
 #endif
 
     nonisolated func session(_ session: WCSession, didReceiveMessage message: [String: Any]) {
+        let msg = message
         Task { @MainActor in
             NotificationCenter.default.post(
                 name: .watchMessageReceived,
                 object: nil,
-                userInfo: message
+                userInfo: msg
             )
         }
     }
@@ -137,22 +138,24 @@ final class WatchConnectivityManager: NSObject, WCSessionDelegate, ObservableObj
         didReceiveApplicationContext applicationContext: [String: Any]
     ) {
         // Fallback při offline doručení (pokud je ještě někde použit)
+        let context = applicationContext
         Task { @MainActor in
             NotificationCenter.default.post(
                 name: .watchMessageReceived,
                 object: nil,
-                userInfo: applicationContext
+                userInfo: context
             )
         }
     }
 
     nonisolated func session(_ session: WCSession, didReceiveUserInfo userInfo: [String: Any] = [:]) {
         // Garantované doručení z fronty (transferUserInfo)
+        let info = userInfo
         Task { @MainActor in
             NotificationCenter.default.post(
                 name: .watchMessageReceived,
                 object: nil,
-                userInfo: userInfo
+                userInfo: info
             )
         }
     }

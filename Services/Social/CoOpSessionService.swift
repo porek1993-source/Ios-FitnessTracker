@@ -3,7 +3,7 @@
 // Publikuje uživatelovu aktivní sérii a odebírá aktivitu přátel.
 
 import Foundation
-import Supabase
+@preconcurrency import Supabase
 
 struct LivePresence: Codable, Identifiable {
     var id: String { userId }
@@ -40,7 +40,7 @@ final class CoOpSessionService: ObservableObject {
                     "set_number":    .double(Double(setNumber)),
                     "timestamp":     .string(ISO8601DateFormatter().string(from: Date()))
                 ]
-                try await AppEnvironment.shared.supabase
+                _ = try await AppEnvironment.shared.supabase
                     .from(tableName)
                     .upsert(payload)
                     .execute()
@@ -82,7 +82,7 @@ final class CoOpSessionService: ObservableObject {
                 .select()
                 .gte("timestamp", value: cutoff)
                 .order("timestamp", ascending: false)
-                .execute()
+                .execute() as PostgrestResponse<Data>
 
             let decoder = JSONDecoder()
             decoder.keyDecodingStrategy = .convertFromSnakeCase
