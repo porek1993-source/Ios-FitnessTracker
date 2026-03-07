@@ -34,7 +34,8 @@ enum AppConstants {
            !url.isEmpty {
             return url
         }
-        return ""
+        AppLogger.warning("SUPABASE_URL není nastaven! Používám placeholder.")
+        return "https://placeholder-v6q9.supabase.co"
     }()
 
     static let supabaseAnonKey: String = {
@@ -47,7 +48,8 @@ enum AppConstants {
            !key.isEmpty {
             return key
         }
-        return ""
+        AppLogger.warning("SUPABASE_ANON_KEY není nastaven!")
+        return "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.placeholder"
     }()
 
     // MARK: - Progressive Overload

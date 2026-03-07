@@ -62,10 +62,10 @@ enum AppTypography {
     static let caption     = Font.system(.caption, design: .default).weight(.medium)
     static let overline    = Font.system(.caption2, design: .default).weight(.black)
 
-    // Monospaced číselníky (skóre, časomíry)
-    static let scoreDisplay = Font.system(size: 58, weight: .black, design: .monospaced)
-    static let scoreMedium  = Font.system(size: 24, weight: .black, design: .rounded)
-    static let scoreSmall   = Font.system(size: 17, weight: .bold, design: .monospaced)
+    // Monospaced číselníky a velké hodnoty (Opatřeno relativeTo pro Dynamic Type scaling)
+    static let scoreDisplay = Font.custom("SFProRounded-Black", size: 58, relativeTo: .largeTitle)
+    static let scoreMedium  = Font.custom("SFProRounded-Black", size: 24, relativeTo: .title2)
+    static let scoreSmall   = Font.custom("SFProRounded-Bold", size: 17, relativeTo: .body)
 }
 
 // MARK: ═══════════════════════════════════════════════════════════════════════

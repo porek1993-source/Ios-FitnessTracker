@@ -63,7 +63,9 @@ struct DebugOverlayView: View {
                         Spacer()
                         Button("Kopírovat") {
                             let logsText = logger.logs.map { "\($0.timestamp) [\($0.type)]: \($0.message)" }.joined(separator: "\n")
+                            #if os(iOS)
                             UIPasteboard.general.string = logsText
+                            #endif
                         }
                         .font(.system(size: 12))
                         Button("Smazat") { logger.logs.removeAll() }

@@ -51,7 +51,8 @@ final class WorkoutSession {
 }
 
 @Model
-final class SessionExercise {
+final class SessionExercise: Identifiable {
+    @Attribute(.unique) var id: UUID
     var order: Int
     var wasSubstituted: Bool
     var substitutionReason: String?
@@ -73,6 +74,7 @@ final class SessionExercise {
     }
 
     init(order: Int, exercise: Exercise?, fallbackSlug: String? = nil, fallbackName: String? = nil, session: WorkoutSession?) {
+        self.id = UUID()
         self.order = order
         self.wasSubstituted = false
         self.exercise = exercise
@@ -84,7 +86,8 @@ final class SessionExercise {
 }
 
 @Model
-final class CompletedSet {
+final class CompletedSet: Identifiable {
+    @Attribute(.unique) var id: UUID
     var setNumber: Int
     var weightKg: Double
     var reps: Int
@@ -111,6 +114,7 @@ final class CompletedSet {
         isWarmupSet: Bool = false,
         type: SetType = .normal
     ) {
+        self.id = UUID()
         self.setNumber = setNumber
         self.weightKg = weightKg
         self.reps = reps

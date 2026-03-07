@@ -18,7 +18,17 @@ final class UserProfile {
     
     // AI Adaptation flags
     var isDeloadRecommended: Bool = false
-    
+
+    // ✅ Phase 4: Klinická data — zranění a životní omezení
+    /// Seznam zranění / bolestí (výstup z Onboarding V2 chatu)
+    /// Příklad: ["levé rameno", "bederní páteř"]
+    var injuries: [String]? = []
+    /// Životní omezení — stres, sedavá práce, spánek, čas
+    /// Příklad: ["sedavé zaměstnání 8h/den", "chronický stres", "5–6 hodin spánku"]
+    var lifestyleConstraints: [String]? = []
+    /// Volný text pro speciální medicínské poznámky / výjimky
+    var medicalNotes: String? = nil
+
     var availableDaysPerWeek: Int
     var preferredSplitType: SplitType
     var sessionDurationMinutes: Int
@@ -66,6 +76,9 @@ final class UserProfile {
         self.currentLocation = "gym"
         self.availableEquipment = [.barbell, .dumbbell, .cable, .machine]
         self.primarySport = nil
+        self.injuries = []
+        self.lifestyleConstraints = []
+        self.medicalNotes = nil
         self.healthKitAuthorized = false
         self.createdAt = .now
         self.updatedAt = .now

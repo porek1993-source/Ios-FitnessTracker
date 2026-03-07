@@ -43,7 +43,8 @@ final class WorkoutPlan {
 }
 
 @Model
-final class PlannedWorkoutDay {
+final class PlannedWorkoutDay: Identifiable {
+    @Attribute(.unique) var id: UUID
     var dayOfWeek: Int   // 1 = Po … 7 = Ne
     var label: String
     var isRestDay: Bool
@@ -56,6 +57,7 @@ final class PlannedWorkoutDay {
     var sessions: [WorkoutSession]
 
     init(dayOfWeek: Int, label: String, isRestDay: Bool = false) {
+        self.id = UUID()
         self.dayOfWeek = dayOfWeek
         self.label = label
         self.isRestDay = isRestDay
@@ -65,7 +67,8 @@ final class PlannedWorkoutDay {
 }
 
 @Model
-final class PlannedExercise {
+final class PlannedExercise: Identifiable {
+    @Attribute(.unique) var id: UUID
     var order: Int
     var targetSets: Int
     var targetRepsMin: Int
@@ -92,6 +95,7 @@ final class PlannedExercise {
         restSeconds: Int = 120,
         supersetId: String? = nil
     ) {
+        self.id = UUID()
         self.order = order
         self.exercise = exercise
         self.fallbackSlug = fallbackSlug

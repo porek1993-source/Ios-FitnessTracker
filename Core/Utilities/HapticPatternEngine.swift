@@ -281,6 +281,37 @@ final class HapticPatternEngine {
         ]
         playPattern(events: events, engine: engine)
     }
+
+    /// ❤️ Narůstající srdeční rytmus v posledních `seconds` sekundách odpočinku (Phase 4 Rest Timer).
+    func playHeartbeatCountdown(seconds: Int) {
+        guard isAvailable, let engine else { return }
+
+        var events: [CHHapticEvent] = []
+        for sec in 0..<seconds {
+            let t = Double(sec)
+            let progress = Double(sec) / Double(seconds)
+            let intensity: Float = Float(0.3 + progress * 0.7)
+            let sharpness: Float = Float(0.3 + progress * 0.4)
+
+            events.append(CHHapticEvent(
+                eventType: .hapticTransient,
+                parameters: [
+                    CHHapticEventParameter(parameterID: .hapticIntensity, value: intensity),
+                    CHHapticEventParameter(parameterID: .hapticSharpness, value: sharpness)
+                ],
+                relativeTime: t
+            ))
+            events.append(CHHapticEvent(
+                eventType: .hapticTransient,
+                parameters: [
+                    CHHapticEventParameter(parameterID: .hapticIntensity, value: intensity * 0.5),
+                    CHHapticEventParameter(parameterID: .hapticSharpness, value: 0.2)
+                ],
+                relativeTime: t + 0.15
+            ))
+        }
+        playPattern(events: events, engine: engine)
+    }
     
     // MARK: - Internal
     

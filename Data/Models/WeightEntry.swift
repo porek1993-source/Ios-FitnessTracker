@@ -6,7 +6,7 @@ import SwiftData
 import Foundation
 
 @Model
-final class WeightEntry {
+final class WeightEntry: Identifiable {
     @Attribute(.unique) var id: UUID
     var weightKg: Double
     var reps: Int

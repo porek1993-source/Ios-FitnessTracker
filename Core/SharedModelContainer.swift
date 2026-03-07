@@ -26,7 +26,9 @@ enum SharedModelContainer {
         HealthMetricsSnapshot.self,
         MuscleXPRecord.self,
         ProgressPhoto.self,
-        SprintGoal.self  // ✅ Sprint Retro model (deepanal.pdf)
+        SprintGoal.self,       // ✅ Sprint Retro model (deepanal.pdf)
+        GymProfile.self,       // ✅ Phase 4: Geo-fencing fitka
+        ExerciseNote.self      // ✅ Poznámky ke cvikům (stroje, nastavení)
     ])
 
     /// Sdílený `ModelContainer` — uložiště dat v App Group kontejneru.

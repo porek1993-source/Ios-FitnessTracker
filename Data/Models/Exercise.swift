@@ -4,7 +4,7 @@ import SwiftData
 import Foundation
 
 @Model
-final class Exercise {
+final class Exercise: Identifiable {
     @Attribute(.unique) var id: UUID
     @Attribute(.unique) var slug: String
     var name: String

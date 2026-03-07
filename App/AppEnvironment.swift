@@ -12,6 +12,7 @@
 
 import SwiftUI
 import SwiftData
+import Supabase
 
 // MARK: ═══════════════════════════════════════════════════════════════════════
 // MARK: AppEnvironment — centrální DI kontejner
@@ -24,6 +25,10 @@ final class AppEnvironment: ObservableObject {
     static let shared = AppEnvironment()
 
     // MARK: - Sdílené služby (inicializovány při startu, singleton pro celou app)
+
+    /// Sdílený Supabase klient pro auth a realtime DB operace
+    let supabase: SupabaseClient
+
 
     /// HealthKit manager — sdílená instance přes celou aplikaci
     let healthKitService: HealthKitService
@@ -56,6 +61,17 @@ final class AppEnvironment: ObservableObject {
         self.healthKitService        = HealthKitService()
         self.healthBackgroundManager = HealthBackgroundManager.shared
         self.exerciseRepository      = SupabaseExerciseRepository()
+        let urlString = AppConstants.supabaseURL
+        let url = URL(string: urlString) ?? URL(string: "https://placeholder-v6q9.supabase.co")!
+        
+        self.supabase = SupabaseClient(
+            supabaseURL: url,
+            supabaseKey: AppConstants.supabaseAnonKey
+        )
+        
+        if urlString.contains("placeholder") {
+            AppLogger.error("‼️ [AppEnvironment] Supabase URL nebyla nalezena (použit placeholder). Aplikace nebude fungovat správně.")
+        }
 
         // ✅ Injektujeme sdílenou HealthKitService do HealthBackgroundManager
         // Odstraňuje třetí duplicitní instanci (background task nyní používá stejnou jako foreground)
@@ -122,6 +138,8 @@ final class AppEnvironment: ObservableObject {
             await self.healthBackgroundManager.performForegroundSync(
                 healthKit: self.healthKitService
             )
+            // ✅ Phase 4: Načtení spánku a výživy z HealthKit (opt-in)
+            await HealthKitNutritionService.shared.fetchAll()
         }
 
         // 6. Synchronizace videí cviků (non-blocking)
@@ -130,9 +148,34 @@ final class AppEnvironment: ObservableObject {
         // 7. Injektujeme sdílenou repository do OfflineSyncManager (odstraňuje duplicitní instanci)
         OfflineSyncManager.shared.configure(repository: exerciseRepository)
 
+        // ✅ Phase 4: Autostart detekce fitcenter na pozadí / při spuštění
+        let gymDescriptor = FetchDescriptor<GymProfile>()
+        if let gyms = try? modelContext.fetch(gymDescriptor) {
+            GymDetectionService.shared.start(gyms: gyms)
+        }
+
         // Startup dokončen — UI může přejít do aktivního stavu
         isStartupComplete = true
         AppLogger.info("🏁 [AppEnvironment] Startup sequence dokončena.")
+        
+        // 8. Odeslat dřívější offline tréninky (pokud existují a jsme online)
+        setupNetworkObservers(modelContext: modelContext)
+        Task { [weak self] in
+            await OfflineSyncManager.shared.syncUnsyncedWorkouts(context: modelContext)
+        }
+    }
+
+    /// Sleduje změny sítě pro automatickou synchronizaci offline dat.
+    private func setupNetworkObservers(modelContext: ModelContext) {
+        NotificationCenter.default.addObserver(
+            forName: NSNotification.Name("NetworkBecameAvailable"),
+            object: nil,
+            queue: .main
+        ) { _ in
+            Task {
+                await OfflineSyncManager.shared.syncUnsyncedWorkouts(context: modelContext)
+            }
+        }
     }
 
     /// Synchronizuje video URL ze Supabase do lokální SwiftData DB.
