@@ -206,13 +206,19 @@ final class WorkoutViewModel: ObservableObject {
         // ✅ Phase 4: Registrace příjmu zpráv z Apple Watch
         WatchIntegrationService.shared.registerMessageHandler(
             onSetCompleted: { [weak self] reps, weight in
-                self?.handleWatchSetCompleted(reps: reps, weight: weight)
+                Task { @MainActor in
+                    self?.handleWatchSetCompleted(reps: reps, weight: weight)
+                }
             },
             onRestSkipped: { [weak self] in
-                self?.handleWatchRestSkipped()
+                Task { @MainActor in
+                    self?.handleWatchRestSkipped()
+                }
             },
             onHRRecoveryRPE: { [weak self] setNum, rpe in
-                self?.handleWatchHRRecoveryRPE(setNumber: setNum, rpe: rpe)
+                Task { @MainActor in
+                    self?.handleWatchHRRecoveryRPE(setNumber: setNum, rpe: rpe)
+                }
             }
         )
     }

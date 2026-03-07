@@ -86,10 +86,14 @@ struct WorkoutViewWithAI: View {
         // nechceme, aby ho AI přepsalo. Vygenerujeme jen mockup odpověď.
         if !session.exercises.isEmpty {
             trainerResponse = TrainerResponse(
-                sessionLabel: plannedDay.label,
                 coachMessage: "Připraveno! Můžeš začít s tréninkem.",
-                warmupItems: [],
-                exercises: []
+                sessionLabel: plannedDay.label,
+                readinessLevel: "green",
+                adaptationReason: nil,
+                estimatedDurationMinutes: 15,
+                warmUp: [],
+                mainBlocks: [],
+                coolDown: []
             )
             withAnimation(.spring(response: 0.5)) {
                 isLoading = false
