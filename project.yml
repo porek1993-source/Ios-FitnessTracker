@@ -101,6 +101,7 @@ targets:
       - path: Features
       - path: LiveActivity
       - path: Services
+      - path: Watch/WatchConnectivityManager.swift
 
     # Statické zdroje
     resources:
@@ -149,10 +150,11 @@ targets:
         # Barevné schéma (vždy dark)
         UIUserInterfaceStyle: Dark
         
-        # Povolení pro běh na pozadí (nutné pro BGTaskScheduler)
+        # Povolení pro běh na pozadí (nutné pro BGTaskScheduler a GeoFencing)
         UIBackgroundModes:
           - fetch
           - processing
+          - location
 
         # API klíče (injektovány přes Build Settings)
         GEMINI_API_KEY:    $(GEMINI_API_KEY)
@@ -302,7 +304,11 @@ targets:
       - path: Watch/Views
       # Sdílené soubory — Watch potřebuje connectivity manager a typy
       - path: Watch/WatchConnectivityManager.swift
-      - path: Watch/WatchWorkoutView.swift   # legacy — ponechat pro backward compat
+      - path: Core/Utilities/AppLogger.swift
+      - path: Core/Constants/AppConstants.swift
+      - path: Core/Extensions/Extensions.swift
+      - path: Core/Extensions/Color+App.swift
+      - path: Core/Theme.swift
 
     settings:
       base:
@@ -329,6 +335,11 @@ targets:
         MinimumOSVersion: "10.0"
         UIUserInterfaceStyle: Dark
         WKApplication: true
+        
+        # Povolení pro běh na pozadí během cvičení (nutné pro VBT a HRR se zhasnutým displejem!)
+        UIBackgroundModes:
+          - workout-processing
+          
         # HealthKit on Watch
         NSHealthShareUsageDescription: >-
           Agile Trainer čte tepovou frekvenci a spalování kalorií
